@@ -8,7 +8,7 @@ public interface IPlayWatchReportService
         PlayWatchTableQuery query,
         CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<PlayWatchRowViewModel>> GetExportRowsAsync(
+    Task<PlayWatchExportViewModel> GetExportAsync(
         PlayWatchTableQuery query,
         CancellationToken cancellationToken = default);
 }

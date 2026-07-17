@@ -54,7 +54,7 @@ BEGIN TRY
     FROM (VALUES (1),(2),(3),(4),(5),(6),(7),(8)) AS n(N);
 
     INSERT INTO [dbo].[Users]
-        ([Id], [FirstName], [LastName], [Phone], [Photo], [Username], [PasswordHash], [Email],
+        ([Id], [FirstName], [LastName], [Phone], [PhotoImageId], [Username], [PasswordHash], [Email],
          [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy], [IsPublished], [RoleCode], [GroupCode])
     SELECT
         j.JuryId,

@@ -10,7 +10,7 @@ namespace YKBAfife.Controllers;
 
 public sealed class HomeController(
     IPlayWatchReportService reportService,
-    IPlayWatchExcelExporter excelExporter) : Controller
+    IExcelExporter excelExporter) : Controller
 {
     [HttpGet]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
@@ -40,11 +40,12 @@ public sealed class HomeController(
         [FromForm] PlayWatchTableQuery query,
         CancellationToken cancellationToken)
     {
-        var rows = await reportService.GetExportRowsAsync(query, cancellationToken);
+        var report = await reportService.GetExportAsync(query, cancellationToken);
         var title = query.Tab == PlayWatchTabs.UnderFour
             ? "4'ten Az İzlenen Oyunlar"
             : "4 Kez ve Üzeri İzlenen Oyunlar";
-        var content = excelExporter.Export(rows, title);
+        var document = PlayWatchExcelExportFactory.Create(report, title);
+        var content = excelExporter.Export(document);
         var fileName = $"oyun-izlenmeleri-{DateTime.Now:yyyyMMdd-HHmm}.xlsx";
 
         return File(

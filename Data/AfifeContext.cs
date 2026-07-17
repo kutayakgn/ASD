@@ -10,9 +10,17 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
     public DbSet<PlayAwardCategory> PlayAwardCategories => Set<PlayAwardCategory>();
     public DbSet<JuryVote> JuryVotes => Set<JuryVote>();
     public DbSet<JuryGameTicketFee> JuryGameTicketFees => Set<JuryGameTicketFee>();
+    public DbSet<Image> Images => Set<Image>();
+    public DbSet<Announcement> Announcements => Set<Announcement>();
+    public DbSet<Form> Forms => Set<Form>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Image>(entity =>
+        {
+            entity.ToTable("Images", "dbo");
+        });
+
         modelBuilder.Entity<User>(entity =>
         {
             entity.ToTable("Users", "dbo");
@@ -21,6 +29,10 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
             entity.Ignore(x => x.AssignedPlays);
             entity.Ignore(x => x.JuryGameTicketFees);
             entity.Ignore(x => x.JuryVotes);
+            entity.HasOne(x => x.PhotoImage)
+                .WithMany(x => x.UserPhotos)
+                .HasForeignKey(x => x.PhotoImageId)
+                .OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<Play>(entity =>
@@ -42,12 +54,33 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
         {
             entity.ToTable("PlayAwardCategories", "dbo");
             entity.Ignore(x => x.AwardCategory);
+            entity.HasOne(x => x.PhotoImage)
+                .WithMany(x => x.CandidatePhotos)
+                .HasForeignKey(x => x.PhotoImageId)
+                .OnDelete(DeleteBehavior.NoAction);
             entity.HasMany(x => x.JuryVotes)
                 .WithOne(x => x.PlayAwardCategory)
                 .HasForeignKey(x => x.PlayAwardCategoryId)
                 .OnDelete(DeleteBehavior.NoAction);
         });
 
+        modelBuilder.Entity<Announcement>(entity =>
+        {
+            entity.ToTable("Announcements", "dbo");
+            entity.HasOne(x => x.ImageAsset)
+                .WithMany(x => x.AnnouncementImages)
+                .HasForeignKey(x => x.ImageId)
+                .OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(x => x.BackgroundImageAsset)
+                .WithMany(x => x.AnnouncementBackgroundImages)
+                .HasForeignKey(x => x.BackgroundImageId)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<Form>(entity =>
+        {
+            entity.ToTable("Form", "dbo");
+        });
         modelBuilder.Entity<JuryVote>(entity =>
         {
             entity.ToTable("JuryVotes", "dbo");

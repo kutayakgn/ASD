@@ -85,7 +85,7 @@ BEGIN TRY
     WHERE NOT EXISTS (SELECT 1 FROM [dbo].[AwardCategories] AS ac WHERE ac.[Id] = s.CategoryId OR ac.[CategoryCode] = s.N);
 
     INSERT INTO [dbo].[Users]
-        ([Id], [FirstName], [LastName], [Phone], [Photo], [Username], [PasswordHash], [Email],
+        ([Id], [FirstName], [LastName], [Phone], [PhotoImageId], [Username], [PasswordHash], [Email],
          [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy], [IsPublished], [RoleCode], [GroupCode])
     SELECT
         s.UserId,
@@ -131,7 +131,7 @@ BEGIN TRY
     WHERE NOT EXISTS (SELECT 1 FROM [dbo].[Plays] AS p WHERE p.[Id] = s.PlayId);
 
     INSERT INTO [dbo].[PlayAwardCategories]
-        ([Id], [PlayId], [Photo], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy], [IsPublished],
+        ([Id], [PlayId], [PhotoImageId], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy], [IsPublished],
          [Candidate], [AwardCategoryCode], [IsCurrent], [Role], [RoleCode], [IsOld])
     SELECT
         s.PlayAwardCategoryId,
@@ -200,7 +200,7 @@ BEGIN TRY
     WHERE NOT EXISTS (SELECT 1 FROM [dbo].[JuryVotes] AS v WHERE v.[Id] = s.VoteId);
 
     INSERT INTO [dbo].[Announcements]
-        ([Id], [AnnouncementLocationId], [Text], [ButtonText], [ButtonLink], [Image], [BackgroundImage],
+        ([Id], [AnnouncementLocationId], [Text], [ButtonText], [ButtonLink], [ImageId], [BackgroundImageId],
          [BackgroundColor], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy], [IsPublished])
     SELECT
         s.AnnouncementId, s.N, CONCAT(N'Test announcement ', s.N), N'Details',

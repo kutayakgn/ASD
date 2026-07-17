@@ -14,7 +14,7 @@ BEGIN TRY
     (
         N int NOT NULL PRIMARY KEY,
         PlayNo int NOT NULL,
-kamera mı açıyom normalde ya kalsın :D        JuryNo int NOT NULL,
+        JuryNo int NOT NULL,
         PlayId uniqueidentifier NOT NULL,
         JuryId uniqueidentifier NOT NULL,
         PlayAwardCategoryId uniqueidentifier NOT NULL,
@@ -50,12 +50,12 @@ kamera mı açıyom normalde ya kalsın :D        JuryNo int NOT NULL,
 
     -- Add 30 historical candidates without creating a second current record.
     INSERT INTO [dbo].[PlayAwardCategories]
-        ([Id], [PlayId], [Photo], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy],
+        ([Id], [PlayId], [PhotoImageId], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy],
          [IsPublished], [Candidate], [AwardCategoryCode], [IsCurrent], [Role], [RoleCode], [IsOld])
     SELECT
         r.PlayAwardCategoryId,
         r.PlayId,
-        CONCAT(N'/images/aday-', r.N, N'.jpg'),
+        NULL,
         DATEADD(minute, -r.N, @Now),
         @CoordinatorUserId,
         NULL,

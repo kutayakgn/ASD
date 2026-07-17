@@ -89,7 +89,42 @@ BEGIN TRY
             FOREIGN KEY ([RoleCode])
             REFERENCES [dbo].[Roles] ([RoleCode]);
 
+    IF OBJECT_ID(N'[dbo].[FK_Announcements_Images_ImageId]', N'F') IS NULL
+        ALTER TABLE [dbo].[Announcements] WITH CHECK
+            ADD CONSTRAINT [FK_Announcements_Images_ImageId]
+            FOREIGN KEY ([ImageId]) REFERENCES [dbo].[Images] ([Id])
+            ON UPDATE NO ACTION ON DELETE NO ACTION;
+
+    IF OBJECT_ID(N'[dbo].[FK_Announcements_Images_BackgroundImageId]', N'F') IS NULL
+        ALTER TABLE [dbo].[Announcements] WITH CHECK
+            ADD CONSTRAINT [FK_Announcements_Images_BackgroundImageId]
+            FOREIGN KEY ([BackgroundImageId]) REFERENCES [dbo].[Images] ([Id])
+            ON UPDATE NO ACTION ON DELETE NO ACTION;
+
+    IF OBJECT_ID(N'[dbo].[FK_Users_Images_PhotoImageId]', N'F') IS NULL
+        ALTER TABLE [dbo].[Users] WITH CHECK
+            ADD CONSTRAINT [FK_Users_Images_PhotoImageId]
+            FOREIGN KEY ([PhotoImageId]) REFERENCES [dbo].[Images] ([Id])
+            ON UPDATE NO ACTION ON DELETE NO ACTION;
+
+    IF OBJECT_ID(N'[dbo].[FK_PlayAwardCategories_Images_PhotoImageId]', N'F') IS NULL
+        ALTER TABLE [dbo].[PlayAwardCategories] WITH CHECK
+            ADD CONSTRAINT [FK_PlayAwardCategories_Images_PhotoImageId]
+            FOREIGN KEY ([PhotoImageId]) REFERENCES [dbo].[Images] ([Id])
+            ON UPDATE NO ACTION ON DELETE NO ACTION;
     -- SQL Server does not automatically index foreign key columns.
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'[dbo].[Announcements]') AND name = N'IX_Announcements_ImageId')
+        CREATE INDEX [IX_Announcements_ImageId] ON [dbo].[Announcements] ([ImageId]);
+
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'[dbo].[Announcements]') AND name = N'IX_Announcements_BackgroundImageId')
+        CREATE INDEX [IX_Announcements_BackgroundImageId] ON [dbo].[Announcements] ([BackgroundImageId]);
+
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'[dbo].[Users]') AND name = N'IX_Users_PhotoImageId')
+        CREATE INDEX [IX_Users_PhotoImageId] ON [dbo].[Users] ([PhotoImageId]);
+
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'[dbo].[PlayAwardCategories]') AND name = N'IX_PlayAwardCategories_PhotoImageId')
+        CREATE INDEX [IX_PlayAwardCategories_PhotoImageId] ON [dbo].[PlayAwardCategories] ([PhotoImageId]);
+
     IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'[dbo].[PlayAwardCategories]') AND name = N'IX_PlayAwardCategories_AwardCategoryCode')
         CREATE INDEX [IX_PlayAwardCategories_AwardCategoryCode]
             ON [dbo].[PlayAwardCategories] ([AwardCategoryCode]);

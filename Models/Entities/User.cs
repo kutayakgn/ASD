@@ -11,7 +11,7 @@ public class User
     public string FirstName { get; set; } = null!;
     public string LastName { get; set; } = null!;
     public string? Phone { get; set; }
-    public string? Photo { get; set; }
+    public Guid? PhotoImageId { get; set; }
     public string Username { get; set; } = null!;
     public string PasswordHash { get; set; } = null!;
     public string Email { get; set; } = null!;
@@ -23,6 +23,7 @@ public class User
     public int RoleCode { get; set; }
     public int? GroupCode { get; set; }
 
+    public Image? PhotoImage { get; set; }
     public Role Role { get; set; } = null!;
     public Group? Group { get; set; }
     public ICollection<JuryAssignedPlay> AssignedPlays { get; set; } = [];

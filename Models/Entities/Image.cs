@@ -16,4 +16,9 @@ public class Image
     public Guid CreatedBy { get; set; }
     public Guid? UpdatedBy { get; set; }
     public bool IsPublished { get; set; }
+
+    public ICollection<User> UserPhotos { get; set; } = [];
+    public ICollection<PlayAwardCategory> CandidatePhotos { get; set; } = [];
+    public ICollection<Announcement> AnnouncementImages { get; set; } = [];
+    public ICollection<Announcement> AnnouncementBackgroundImages { get; set; } = [];
 }

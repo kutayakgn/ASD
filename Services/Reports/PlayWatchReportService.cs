@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using YKBAfife.Data;
 using YKBAfife.Models.ViewModels;
@@ -15,8 +16,6 @@ public sealed class PlayWatchReportService(AfifeContext context) : IPlayWatchRep
         var filteredQuery = BuildFilteredQuery(normalized, uniqueViewers);
 
         var totalCount = await filteredQuery.CountAsync(cancellationToken);
-        // Count the filtered unique viewer rows directly. SQL Server cannot SUM
-        // a projection that already contains a correlated COUNT subquery.
         var filteredPlayIds = filteredQuery.Select(x => x.PlayId);
         var totalViewCount = await uniqueViewers
             .Where(viewer => filteredPlayIds.Contains(viewer.PlayId))
@@ -43,15 +42,55 @@ public sealed class PlayWatchReportService(AfifeContext context) : IPlayWatchRep
         };
     }
 
-    public async Task<IReadOnlyList<PlayWatchRowViewModel>> GetExportRowsAsync(
+    public async Task<PlayWatchExportViewModel> GetExportAsync(
         PlayWatchTableQuery query,
         CancellationToken cancellationToken = default)
     {
         var normalized = Normalize(query);
         var uniqueViewers = BuildUniqueViewerQuery();
+        var filteredQuery = BuildFilteredQuery(normalized, uniqueViewers);
+        var filteredPlayIds = filteredQuery.Select(row => row.PlayId);
 
-        return await ApplySorting(BuildFilteredQuery(normalized, uniqueViewers), normalized)
+        var rows = await ApplySorting(filteredQuery, normalized)
             .ToListAsync(cancellationToken);
+
+        var viewerRows = await uniqueViewers
+            .Where(viewer => filteredPlayIds.Contains(viewer.PlayId))
+            .ToListAsync(cancellationToken);
+
+        var filteredViewerIds = uniqueViewers
+            .Where(viewer => filteredPlayIds.Contains(viewer.PlayId))
+            .Select(viewer => viewer.UserId);
+
+        var juryRows = await context.Users
+            .AsNoTracking()
+            .Where(user => filteredViewerIds.Contains(user.Id))
+            .Select(user => new PlayWatchExportJuryViewModel
+            {
+                Id = user.Id,
+                FullName = (user.FirstName + " " + user.LastName).Trim()
+            })
+            .ToListAsync(cancellationToken);
+
+        var turkishComparer = StringComparer.Create(new CultureInfo("tr-TR"), ignoreCase: true);
+        var juries = juryRows
+            .OrderBy(jury => jury.FullName, turkishComparer)
+            .ThenBy(jury => jury.Id)
+            .ToArray();
+        var viewersByPlay = viewerRows.ToLookup(viewer => viewer.PlayId, viewer => viewer.UserId);
+        var exportRows = rows.Select(row => new PlayWatchExportRowViewModel
+        {
+            PlayId = row.PlayId,
+            PlayName = row.PlayName,
+            ViewCount = row.ViewCount,
+            ViewerIds = viewersByPlay[row.PlayId].ToHashSet()
+        }).ToArray();
+
+        return new PlayWatchExportViewModel
+        {
+            Juries = juries,
+            Rows = exportRows
+        };
     }
 
     private IQueryable<PlayViewerRow> BuildUniqueViewerQuery()
