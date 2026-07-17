@@ -142,15 +142,59 @@
             </table>
         </div>
 
+       
+
+        @if (Model.SummaryContent.Count > 0 || !string.IsNullOrWhiteSpace(Model.ExportActionName))
+        {
+            <footer class="complex-table-summary">
+                @if (Model.SummaryContent.Count > 0)
+                {
+                    <p class="complex-table-summary-content">
+                        @foreach (var segment in Model.SummaryContent)
+                        {
+                            <span class="@segment.CssClass">
+                                @if (segment.IsEmphasized)
+                                {
+                                    <strong>@segment.Text</strong>
+                                }
+                                else
+                                {
+                                    @segment.Text
+                                }
+                            </span>
+                        }
+                    </p>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(Model.ExportActionName))
+                {
+                    <form method="post" action="@Url.Action(Model.ExportActionName, Model.ExportControllerName)" class="complex-table-export-form">
+                        @Html.AntiForgeryToken()
+                        @foreach (var routeValue in Model.AdditionalRouteValues)
+                        {
+                            <input type="hidden" name="@routeValue.Key" value="@routeValue.Value" />
+                        }
+                        <input type="hidden" name="tab" value="@activeTab.Key" />
+                        <input type="hidden" name="search" value="@activeTab.Search" />
+                        <input type="hidden" name="sortBy" value="@activeTab.SortBy" />
+                        <input type="hidden" name="sortDirection" value="@activeTab.SortDirection" />
+                        <input type="hidden" name="page" value="1" />
+                        <button type="submit" class="excel-export-button" disabled="@(!Model.IsExportEnabled)" aria-disabled="@(!Model.IsExportEnabled ? "true" : "false")">
+                            <span aria-hidden="true">↗</span> @Model.ExportButtonText
+                        </button>
+                    </form>
+                }
+            </footer>
+        }
         @if (activeTab.TotalPages > 1)
         {
             <nav class="jury-voting-pagination" aria-label="Tablo sayfaları">
                 <button type="button"
-                        class="jury-voting-pagination-link jury-voting-pagination-arrow"
+                        class="jury-voting-pagination-link jury-voting-pagination-arrow @(activeTab.CurrentPage == 1 ? "disabled":"")"
                         disabled="@(activeTab.CurrentPage == 1)"
                         aria-label="Önceki sayfa"
                         data-complex-table-action
-                        data-page="@(activeTab.CurrentPage - 1)">←</button>
+                        data-page="@(activeTab.CurrentPage - 1)"><img src="icons/angle-left-solid-full.svg"></button>
 
                 @if (startPage > 1)
                 {
@@ -177,43 +221,12 @@
                 }
 
                 <button type="button"
-                        class="jury-voting-pagination-link jury-voting-pagination-arrow"
+                        class="jury-voting-pagination-link jury-voting-pagination-arrow @(activeTab.CurrentPage == activeTab.TotalPages ? "disabled":"")"
                         disabled="@(activeTab.CurrentPage == activeTab.TotalPages)"
                         aria-label="Sonraki sayfa"
                         data-complex-table-action
-                        data-page="@(activeTab.CurrentPage + 1)">→</button>
+                        data-page="@(activeTab.CurrentPage + 1)"><img src="icons/angle-right-solid-full.svg"></button>
             </nav>
-        }
-
-        @if (Model.SummaryItems.Count > 0 || !string.IsNullOrWhiteSpace(Model.ExportActionName))
-        {
-            <footer class="complex-table-summary">
-                <div class="complex-table-totals">
-                    @foreach (var summary in Model.SummaryItems)
-                    {
-                        <span><strong>@summary.Value</strong> @summary.Label</span>
-                    }
-                </div>
-
-                @if (!string.IsNullOrWhiteSpace(Model.ExportActionName))
-                {
-                    <form method="post" action="@Url.Action(Model.ExportActionName, Model.ExportControllerName)" class="complex-table-export-form">
-                        @Html.AntiForgeryToken()
-                        @foreach (var routeValue in Model.AdditionalRouteValues)
-                        {
-                            <input type="hidden" name="@routeValue.Key" value="@routeValue.Value" />
-                        }
-                        <input type="hidden" name="tab" value="@activeTab.Key" />
-                        <input type="hidden" name="search" value="@activeTab.Search" />
-                        <input type="hidden" name="sortBy" value="@activeTab.SortBy" />
-                        <input type="hidden" name="sortDirection" value="@activeTab.SortDirection" />
-                        <input type="hidden" name="page" value="1" />
-                        <button type="submit" class="excel-export-button">
-                            <span aria-hidden="true">↗</span> @Model.ExportButtonText
-                        </button>
-                    </form>
-                }
-            </footer>
         }
     </section>
 }

@@ -11,8 +11,6 @@
     flex-direction: column;
     overflow: hidden;
     background: #fff;
-    border-radius: .5rem;
-    box-shadow: 0 1.5rem 4rem rgba(23, 34, 59, .07);
 }
 
 .complex-table-state {
@@ -36,8 +34,8 @@
     align-items: center;
     gap: 6px;
     border-radius: 4px;
-    border: 1px solid #171717;
-    background: #fff;
+    border: none;
+    background: #f5f5f5;
     text-decoration: none;
     color: #171717;
     font-family: Outfit;
@@ -48,9 +46,8 @@
 
     .jury-voting-tab-button:hover,
     .jury-voting-tab-button.active {
-        color: var(--admin-ink);
         background: #fff;
-        border-color: var(--admin-ink);
+        border: 1px solid #171717;
     }
 
 .complex-table-heading {
@@ -97,6 +94,7 @@
     .jury-voting-table-search-input:focus {
         border-color: #171717;
     }
+
     .jury-voting-table-search-input::-webkit-search-cancel-button {
         -webkit-appearance: none;
         appearance: none;
@@ -144,6 +142,10 @@
     overflow-x: auto;
 }
 
+tr {
+    border: none;
+}
+
 .jury-voting-table {
     width: 100%;
     min-width: var(--complex-table-min-width, 720px);
@@ -152,20 +154,29 @@
 }
 
     .jury-voting-table th {
-        padding: .9rem 1.25rem;
-        color: #fff;
-        background: var(--admin-ink);
-        border-right: 1px solid rgba(255, 255, 255, .12);
-        font-size: .82rem;
-        letter-spacing: .035em;
+        padding: 10px 16px;
+        color: #171717;
+        background: #f4f2ed;
+        border-right: none;
+        font-family: Outfit;
+        font-size: 16px;
+        font-style: normal;
+        font-weight: 600;
+        line-height: 22px;
         text-align: left;
     }
 
     .jury-voting-table td {
-        height: 4rem;
-        padding: .9rem 1.25rem;
-        color: #34363d;
-        border-bottom: 1px solid #e8e3d9;
+        padding: 12px 16px;
+        background: #fff;
+        border: 1px solid #f4f2ed;
+        gap: 8px;
+        font-family: Outfit;
+        font-size: 14px;
+        font-style: normal;
+        font-weight: 400;
+        line-height: 20px;
+        text-align: left;
     }
 
     .jury-voting-table tbody tr:hover {
@@ -180,17 +191,7 @@
     text-align: start !important;
 }
 
-.watch-count-badge {
-    display: inline-grid;
-    place-items: center;
-    min-width: 2.5rem;
-    min-height: 2rem;
-    padding: .25rem .65rem;
-    color: #166c3b;
-    background: #e8f5ec;
-    border-radius: 999px;
-    font-weight: 700;
-}
+
 
 .jury-voting-sort-button {
     display: inline-flex;
@@ -209,7 +210,7 @@
     }
 
 .complex-table-empty {
-    height: 8rem !important;
+    height: 32px !important;
     color: #747783 !important;
     text-align: center;
 }
@@ -218,7 +219,7 @@
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    gap: .4rem;
+    gap: 8px;
     padding: 1.25rem;
     background: #fff;
     border-top: 1px solid #e3dfd3;
@@ -230,20 +231,26 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 2rem;
-    height: 2rem;
-    padding: .35rem .65rem;
-    color: #171717;
+    padding: 6px 12px;
+    color: #616161;
     background: #fff;
     border: 0;
-    border-radius: .25rem;
-    font-size: .82rem;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 20px;
+    font-family: Outfit;
     text-decoration: none;
 }
 
+.jury-voting-pagination-link img{
+    width:16px;
+    height:16px;
+}
+
 .jury-voting-pagination-current {
-    color: #fff;
-    background: var(--admin-ink);
+    border: 1px solid #171717;
+    color: #171717;
 }
 
 .jury-voting-pagination-link:hover {
@@ -259,44 +266,51 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
-    padding: 1.25rem;
-    background: #f8f6f1;
-    border-top: 1px solid #e3dfd3;
+    gap: 10px;
+    padding: 8px;
+    background: #f4f2ed;
+   
 }
 
-.complex-table-totals {
-    display: flex;
-    gap: 1.4rem;
-    flex-wrap: wrap;
-    color: #6d7180;
-    font-size: .84rem;
+.complex-table-summary-content {
+    margin: 0;
+    color: #171717;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 20px;
 }
 
-    .complex-table-totals strong {
-        color: var(--admin-ink);
+    .complex-table-summary-content strong {
+        color: #171717;
+        font-weight: 600;
     }
 
 .excel-export-button {
     display: inline-flex;
     align-items: center;
-    gap: .5rem;
+    gap: 6px;
     flex: 0 0 auto;
-    min-height: 2.6rem;
-    padding: .6rem .9rem;
+    padding: 7px 12px;
     color: #fff;
-    background: #1f7a46;
+    background: #171717;
     border: 0;
-    border-radius: .25rem;
-    font-size: .84rem;
-    font-weight: 700;
+    border-radius: 0;
+    font-size: 13px;
+    font-weight: 600;
     text-decoration: none;
+    transition: background .3s ease-in-out; 
 }
 
-    .excel-export-button:hover {
-        color: #fff;
-        background: #176139;
+    .excel-export-button:not(:disabled):hover {
+       
+        background: #918150;
     }
+.excel-export-button:disabled {
+    color: #fff;
+    background: #8c8c8c;
+    cursor: not-allowed;
+    opacity: .55;
+}
 
 @media (max-width: 768px) {
     .complex-table-heading,
@@ -317,15 +331,6 @@
     .excel-export-button {
         justify-content: center;
     }
-}
-
-.complex-table-primary-cell {
-    font-weight: 700;
-}
-
-.complex-table-cell-content.watch-count-badge {
-    width: fit-content;
-    margin-inline: auto;
 }
 
 .complex-table-linked-row {

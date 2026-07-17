@@ -11,11 +11,12 @@ public sealed class ComplexTableViewModel
     public string ExportControllerName { get; init; } = string.Empty;
     public string ExportActionName { get; init; } = string.Empty;
     public string ExportButtonText { get; init; } = "Excel'e Aktar";
+    public bool IsExportEnabled { get; init; } = true;
     public int MinimumTableWidth { get; init; } = 720;
     public IReadOnlyDictionary<string, string?> AdditionalRouteValues { get; init; } =
         new Dictionary<string, string?>();
     public IReadOnlyList<ComplexTableTabViewModel> Tabs { get; init; } = [];
-    public IReadOnlyList<ComplexTableSummaryItemViewModel> SummaryItems { get; init; } = [];
+    public IReadOnlyList<ComplexTableSummarySegmentViewModel> SummaryContent { get; init; } = [];
 }
 
 public sealed class ComplexTableTabViewModel
@@ -58,4 +59,9 @@ public sealed class ComplexTableCellViewModel
     public string CssClass { get; init; } = string.Empty;
 }
 
-public sealed record ComplexTableSummaryItemViewModel(string Value, string Label);
+public sealed class ComplexTableSummarySegmentViewModel
+{
+    public string Text { get; init; } = string.Empty;
+    public bool IsEmphasized { get; init; }
+    public string CssClass { get; init; } = string.Empty;
+}

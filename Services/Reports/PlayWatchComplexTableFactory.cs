@@ -12,13 +12,13 @@ public static class PlayWatchComplexTableFactory
         {
             Title = "Oyun Adı",
             Key = PlayWatchSortColumns.PlayName,
-            ColWidth = 75
+            ColWidth = 50
         },
         new()
         {
             Title = "İzlenme Sayısı",
             Key = PlayWatchSortColumns.ViewCount,
-            ColWidth = 25,
+            ColWidth = 50,
             CssClass = "watch-count-column"
         }
     ];
@@ -33,12 +33,12 @@ public static class PlayWatchComplexTableFactory
                 new ComplexTableCellViewModel
                 {
                     Content = row.PlayName,
-                    CssClass = "complex-table-primary-cell"
+                    CssClass = ""
                 },
                 new ComplexTableCellViewModel
                 {
                     Content = row.ViewCount.ToString(CultureInfo.CurrentCulture),
-                    CssClass = "watch-count-badge"
+                    CssClass = ""
                 }
             ]
         }).ToArray();
@@ -70,16 +70,26 @@ public static class PlayWatchComplexTableFactory
             MinimumTableWidth = 720,
             ExportControllerName = "Home",
             ExportActionName = "Export",
+            IsExportEnabled = report.TotalCount > 0,
             Tabs =
             [
                 CreateTab(PlayWatchTabs.FourOrMore, "4 Kez ve Üzeri İzlenen Oyunlar"),
                 CreateTab(PlayWatchTabs.UnderFour, "4'ten Az İzlenen Oyunlar")
             ],
-            SummaryItems =
+            SummaryContent =
             [
-                new(report.TotalCount.ToString(CultureInfo.CurrentCulture), "toplam oyun"),
-                new(report.TotalViewCount.ToString(CultureInfo.CurrentCulture), "toplam izlenme"),
-                new(report.Rows.Count.ToString(CultureInfo.CurrentCulture), "bu sayfadaki kayıt")
+                new()
+                {
+                    Text = report.TotalCount.ToString(CultureInfo.CurrentCulture),
+                    IsEmphasized = true
+                },
+                new() { Text = " kayıt bulundu. Bulunan kayıtlarda toplam " },
+                new()
+                {
+                    Text = report.TotalViewCount.ToString(CultureInfo.CurrentCulture),
+                    IsEmphasized = true
+                },
+                new() { Text = " izlenme sayısı mevcut." }
             ]
         };
     }

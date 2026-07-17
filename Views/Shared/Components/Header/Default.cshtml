@@ -64,7 +64,10 @@
                     <li class="nav-item"><a class="nav-link@(ActiveClass("Plays"))" asp-controller="Management" asp-action="Plays">Oyunlar</a></li>
                     <li class="nav-item"><a class="nav-link@(ActiveClass("Rankings"))" asp-controller="Management" asp-action="Rankings">Sıralamalar</a></li>
                     <li class="nav-item dropdown">
-                        <button class="nav-link dropdown-toggle admin-dropdown-toggle@(isOtherActive ? " active" : string.Empty)" type="button" data-bs-toggle="dropdown" aria-expanded="false">Diğer</button>
+                        <button class="nav-link dropdown-toggle admin-dropdown-toggle@(isOtherActive ? " active" : string.Empty)" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <span>Diğer</span>
+                            <img class="admin-dropdown-angle" src="~/icons/angle-down-solid-full-white.svg" alt="" aria-hidden="true" />
+                        </button>
                         <ul class="dropdown-menu dropdown-menu-end admin-dropdown-menu">
                             <li><a class="dropdown-item" asp-controller="Management" asp-action="Editors">Editörler</a></li>
                             <li><a class="dropdown-item" asp-controller="Management" asp-action="VotingHistory">Oylama Geçmişi</a></li>

@@ -99,9 +99,25 @@
             transform: scaleX(1);
         }
 
+.admin-navbar .admin-menu .admin-dropdown-toggle {
+    display: inline-flex;
+    flex-direction: row;
+    gap: 8px;
+}
+
 .admin-dropdown-toggle::after {
-    margin-left: .45rem;
-    vertical-align: .14em;
+    display: none;
+}
+
+.admin-dropdown-angle {
+    width: 16px;
+    height: 16px;
+    filter: brightness(0) invert(1);
+    transition: transform .2s ease-in-out;
+}
+
+.admin-dropdown-toggle[aria-expanded="true"] .admin-dropdown-angle {
+    transform: rotate(180deg);
 }
 
 .admin-dropdown-menu {
