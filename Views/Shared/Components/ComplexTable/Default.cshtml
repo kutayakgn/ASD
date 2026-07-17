@@ -1,0 +1,219 @@
+@model YKBAfife.Models.Components.ComplexTableViewModel
+@{
+    var activeTab = Model.Tabs.FirstOrDefault(x => x.Key == Model.CurrentTabKey)
+        ?? Model.Tabs.FirstOrDefault();
+
+    string NextSortDirection(string column) =>
+        activeTab?.SortBy == column && activeTab.SortDirection == "asc" ? "desc" : "asc";
+
+    string SortIndicator(string column) => activeTab?.SortBy == column
+        ? activeTab.SortDirection == "asc" ? "↑" : "↓"
+        : string.Empty;
+
+    var startPage = activeTab is null ? 1 : Math.Max(1, activeTab.CurrentPage - 2);
+    var endPage = activeTab is null ? 1 : Math.Min(activeTab.TotalPages, activeTab.CurrentPage + 2);
+    var dataUrl = Url.Action(Model.DataActionName, Model.ControllerName);
+}
+
+@if (activeTab is not null)
+{
+    <section id="@Model.Id"
+             class="jury-voting-complex-table-section"
+             aria-labelledby="@(Model.Id)-title"
+             data-complex-table
+             data-complex-table-url="@dataUrl">
+        <form class="complex-table-state" data-complex-table-state>
+            @Html.AntiForgeryToken()
+            @foreach (var routeValue in Model.AdditionalRouteValues)
+            {
+                <input type="hidden" name="@routeValue.Key" value="@routeValue.Value" />
+            }
+            <input type="hidden" name="tab" value="@activeTab.Key" />
+            <input type="hidden" name="sortBy" value="@activeTab.SortBy" />
+            <input type="hidden" name="sortDirection" value="@activeTab.SortDirection" />
+            <input type="hidden" name="page" value="@activeTab.CurrentPage" />
+
+            @if (Model.Tabs.Count > 1)
+            {
+                <div class="jury-voting-tab-header" role="tablist" aria-label="Tablo grupları">
+                    @foreach (var tab in Model.Tabs)
+                    {
+                        <button type="button"
+                                class="jury-voting-tab-button @(tab.Key == activeTab.Key ? "active" : string.Empty)"
+                                role="tab"
+                                aria-selected="@(tab.Key == activeTab.Key ? "true" : "false")"
+                                data-complex-table-action
+                                data-tab="@tab.Key"
+                                data-page="1">
+                            @tab.Title
+                        </button>
+                    }
+                </div>
+            }
+
+            <div class="complex-table-heading">
+                <h2 id="@(Model.Id)-title">@activeTab.Title</h2>
+                <div class="jury-voting-table-search-form">
+                    <label class="visually-hidden" for="@(Model.Id)-search">@Model.SearchPlaceholder</label>
+                    <input id="@(Model.Id)-search"
+                           type="search"
+                           name="search"
+                           value="@activeTab.Search"
+                           class="jury-voting-table-search-input"
+                           placeholder="@Model.SearchPlaceholder"
+                           autocomplete="off"
+                           data-complex-table-search />
+                    <button type="button"
+                            class="complex-table-search-clear"
+                            aria-label="Aramayı temizle"
+                            data-complex-table-clear>×</button>
+                </div>
+            </div>
+        </form>
+
+        <div class="jury-voting-table-wrapper">
+            <table class="jury-voting-table" style="--complex-table-min-width: @(Model.MinimumTableWidth)px;">
+                <colgroup>
+                    @foreach (var column in activeTab.Columns)
+                    {
+                        <col style="width: @(column.ColWidth)%;" />
+                    }
+                </colgroup>
+                <thead>
+                    <tr>
+                        @foreach (var column in activeTab.Columns)
+                        {
+                            <th scope="col" class="@column.CssClass">
+                                @if (column.IsSortable)
+                                {
+                                    <button type="button"
+                                            class="jury-voting-sort-button"
+                                            data-complex-table-action
+                                            data-sort-by="@column.Key"
+                                            data-sort-direction="@NextSortDirection(column.Key)"
+                                            data-page="1">
+                                        @column.Title <span aria-hidden="true">@SortIndicator(column.Key)</span>
+                                    </button>
+                                }
+                                else
+                                {
+                                    @column.Title
+                                }
+                            </th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (activeTab.Rows.Count > 0)
+                    {
+                        foreach (var row in activeTab.Rows)
+                        {
+                            <tr id="@row.Id" class="@(!string.IsNullOrWhiteSpace(row.Link) ? "complex-table-linked-row" : string.Empty)"
+                                data-row-link="@row.Link"
+                                tabindex="@(!string.IsNullOrWhiteSpace(row.Link) ? "0" : null)"
+                                role="@(!string.IsNullOrWhiteSpace(row.Link) ? "link" : null)">
+                                @for (var index = 0; index < activeTab.Columns.Count; index++)
+                                {
+                                    var cell = index < row.Cells.Count ? row.Cells[index] : null;
+                                    <td class="@activeTab.Columns[index].CssClass">
+                                        @if (cell is not null)
+                                        {
+                                            <div class="complex-table-cell-content @cell.CssClass">
+                                                @if (cell.IsHtml)
+                                                {
+                                                    @Html.Raw(cell.Content)
+                                                }
+                                                else
+                                                {
+                                                    @cell.Content
+                                                }
+                                            </div>
+                                        }
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr><td colspan="@activeTab.Columns.Count" class="complex-table-empty">@activeTab.EmptyMessage</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (activeTab.TotalPages > 1)
+        {
+            <nav class="jury-voting-pagination" aria-label="Tablo sayfaları">
+                <button type="button"
+                        class="jury-voting-pagination-link jury-voting-pagination-arrow"
+                        disabled="@(activeTab.CurrentPage == 1)"
+                        aria-label="Önceki sayfa"
+                        data-complex-table-action
+                        data-page="@(activeTab.CurrentPage - 1)">←</button>
+
+                @if (startPage > 1)
+                {
+                    <button type="button" class="jury-voting-pagination-link" data-complex-table-action data-page="1">1</button>
+                    @if (startPage > 2) { <span class="jury-voting-pagination-ellipsis">…</span> }
+                }
+
+                @for (var pageNumber = startPage; pageNumber <= endPage; pageNumber++)
+                {
+                    if (pageNumber == activeTab.CurrentPage)
+                    {
+                        <span class="jury-voting-pagination-current" aria-current="page">@pageNumber</span>
+                    }
+                    else
+                    {
+                        <button type="button" class="jury-voting-pagination-link" data-complex-table-action data-page="@pageNumber">@pageNumber</button>
+                    }
+                }
+
+                @if (endPage < activeTab.TotalPages)
+                {
+                    @if (endPage < activeTab.TotalPages - 1) { <span class="jury-voting-pagination-ellipsis">…</span> }
+                    <button type="button" class="jury-voting-pagination-link" data-complex-table-action data-page="@activeTab.TotalPages">@activeTab.TotalPages</button>
+                }
+
+                <button type="button"
+                        class="jury-voting-pagination-link jury-voting-pagination-arrow"
+                        disabled="@(activeTab.CurrentPage == activeTab.TotalPages)"
+                        aria-label="Sonraki sayfa"
+                        data-complex-table-action
+                        data-page="@(activeTab.CurrentPage + 1)">→</button>
+            </nav>
+        }
+
+        @if (Model.SummaryItems.Count > 0 || !string.IsNullOrWhiteSpace(Model.ExportActionName))
+        {
+            <footer class="complex-table-summary">
+                <div class="complex-table-totals">
+                    @foreach (var summary in Model.SummaryItems)
+                    {
+                        <span><strong>@summary.Value</strong> @summary.Label</span>
+                    }
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(Model.ExportActionName))
+                {
+                    <form method="post" action="@Url.Action(Model.ExportActionName, Model.ExportControllerName)" class="complex-table-export-form">
+                        @Html.AntiForgeryToken()
+                        @foreach (var routeValue in Model.AdditionalRouteValues)
+                        {
+                            <input type="hidden" name="@routeValue.Key" value="@routeValue.Value" />
+                        }
+                        <input type="hidden" name="tab" value="@activeTab.Key" />
+                        <input type="hidden" name="search" value="@activeTab.Search" />
+                        <input type="hidden" name="sortBy" value="@activeTab.SortBy" />
+                        <input type="hidden" name="sortDirection" value="@activeTab.SortDirection" />
+                        <input type="hidden" name="page" value="1" />
+                        <button type="submit" class="excel-export-button">
+                            <span aria-hidden="true">↗</span> @Model.ExportButtonText
+                        </button>
+                    </form>
+                }
+            </footer>
+        }
+    </section>
+}

@@ -1,0 +1,17 @@
+@model YKBAfife.Models.ViewModels.ManagementPageViewModel
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<section class="management-page-heading">
+    <h1>@Model.Title</h1>
+    <p>@Model.Description</p>
+</section>
+
+<section class="management-placeholder">
+    <span aria-hidden="true">A</span>
+    <div>
+        <h2>@Model.Title modülü hazır</h2>
+        <p>Bu sayfanın yönetim işlevleri sonraki adımda eklenebilir.</p>
+    </div>
+</section>

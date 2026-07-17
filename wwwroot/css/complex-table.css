@@ -1,0 +1,333 @@
+@font-face {
+    font-family: "LimeLight";
+    src: url("/fonts/Limelight/Limelight-Regular.ttf") format("truetype");
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+}
+
+.jury-voting-complex-table-section {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #fff;
+    border-radius: .5rem;
+    box-shadow: 0 1.5rem 4rem rgba(23, 34, 59, .07);
+}
+
+.complex-table-state {
+    margin: 0;
+}
+
+.jury-voting-tab-header {
+    height: 64px;
+    padding: 14px 16px;
+    align-items: center;
+    justify-content: flex-start;
+    display: flex;
+    gap: 16px;
+    border-bottom: 2px solid #171717;
+}
+
+.jury-voting-tab-button {
+    display: flex;
+    padding: 8px 12px;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    border-radius: 4px;
+    border: 1px solid #171717;
+    background: #fff;
+    text-decoration: none;
+    color: #171717;
+    font-family: Outfit;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 20px;
+}
+
+    .jury-voting-tab-button:hover,
+    .jury-voting-tab-button.active {
+        color: var(--admin-ink);
+        background: #fff;
+        border-color: var(--admin-ink);
+    }
+
+.complex-table-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 34px 16px 16px 16px;
+}
+
+    .complex-table-heading h2 {
+        margin: 0;
+        padding: 0;
+        font-family: LimeLight;
+        font-size: 28px;
+        font-style: normal;
+        line-height: 36px;
+        font-weight: 400;
+    }
+
+.jury-voting-table-search-form {
+    display: flex;
+    align-items: center;
+    position: relative;
+    justify-content: center;
+    width: min(100%, 453px);
+}
+
+.jury-voting-table-search-input {
+    width: calc(100% - 12px);
+    min-height: 2.75rem;
+    padding: 10px 72px 10px 8px;
+    color: #171717;
+    background-color: #fff;
+    background-image: url("/icons/magnifier-icon.svg");
+    background-position: calc(100% - 12px) center;
+    background-repeat: no-repeat;
+    background-size: 16px 16px;
+    border: 1px solid #bdbdbd;
+    border-radius: 0;
+    outline: none;
+}
+
+    .jury-voting-table-search-input:focus {
+        border-color: #171717;
+    }
+    .jury-voting-table-search-input::-webkit-search-cancel-button {
+        -webkit-appearance: none;
+        appearance: none;
+    }
+
+.complex-table-search-clear {
+    position: absolute;
+    top: 50%;
+    right: 40px;
+    display: inline-grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    color: #6d7180;
+    background: transparent;
+    border: 0;
+    font-size: 21px;
+    line-height: 1;
+    transform: translateY(-50%);
+}
+
+.jury-voting-table-search-input:placeholder-shown + .complex-table-search-clear {
+    display: none;
+}
+
+.complex-table-search-clear:hover,
+.complex-table-search-clear:focus-visible {
+    color: #171717;
+    outline: none;
+}
+
+.jury-voting-complex-table-section.is-loading .jury-voting-table-wrapper,
+.jury-voting-complex-table-section.is-loading .jury-voting-pagination,
+.jury-voting-complex-table-section.is-loading .complex-table-summary {
+    opacity: .55;
+    transition: opacity .15s ease-in-out;
+}
+
+.complex-table-export-form {
+    margin: 0;
+}
+
+.jury-voting-table-wrapper {
+    overflow-x: auto;
+}
+
+.jury-voting-table {
+    width: 100%;
+    min-width: var(--complex-table-min-width, 720px);
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+
+    .jury-voting-table th {
+        padding: .9rem 1.25rem;
+        color: #fff;
+        background: var(--admin-ink);
+        border-right: 1px solid rgba(255, 255, 255, .12);
+        font-size: .82rem;
+        letter-spacing: .035em;
+        text-align: left;
+    }
+
+    .jury-voting-table td {
+        height: 4rem;
+        padding: .9rem 1.25rem;
+        color: #34363d;
+        border-bottom: 1px solid #e8e3d9;
+    }
+
+    .jury-voting-table tbody tr:hover {
+        background: #faf8f3;
+    }
+
+    .jury-voting-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+.watch-count-column {
+    text-align: start !important;
+}
+
+.watch-count-badge {
+    display: inline-grid;
+    place-items: center;
+    min-width: 2.5rem;
+    min-height: 2rem;
+    padding: .25rem .65rem;
+    color: #166c3b;
+    background: #e8f5ec;
+    border-radius: 999px;
+    font-weight: 700;
+}
+
+.jury-voting-sort-button {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: 0;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    font: inherit;
+    text-decoration: none;
+}
+
+    .jury-voting-sort-button:hover {
+        color: #f0b9bd;
+    }
+
+.complex-table-empty {
+    height: 8rem !important;
+    color: #747783 !important;
+    text-align: center;
+}
+
+.jury-voting-pagination {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: .4rem;
+    padding: 1.25rem;
+    background: #fff;
+    border-top: 1px solid #e3dfd3;
+}
+
+.jury-voting-pagination-link,
+.jury-voting-pagination-current,
+.jury-voting-pagination-ellipsis {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    height: 2rem;
+    padding: .35rem .65rem;
+    color: #171717;
+    background: #fff;
+    border: 0;
+    border-radius: .25rem;
+    font-size: .82rem;
+    text-decoration: none;
+}
+
+.jury-voting-pagination-current {
+    color: #fff;
+    background: var(--admin-ink);
+}
+
+.jury-voting-pagination-link:hover {
+    background: #f1efe9;
+}
+
+.jury-voting-pagination-link.disabled {
+    opacity: .35;
+    pointer-events: none;
+}
+
+.complex-table-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.25rem;
+    background: #f8f6f1;
+    border-top: 1px solid #e3dfd3;
+}
+
+.complex-table-totals {
+    display: flex;
+    gap: 1.4rem;
+    flex-wrap: wrap;
+    color: #6d7180;
+    font-size: .84rem;
+}
+
+    .complex-table-totals strong {
+        color: var(--admin-ink);
+    }
+
+.excel-export-button {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    flex: 0 0 auto;
+    min-height: 2.6rem;
+    padding: .6rem .9rem;
+    color: #fff;
+    background: #1f7a46;
+    border: 0;
+    border-radius: .25rem;
+    font-size: .84rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+    .excel-export-button:hover {
+        color: #fff;
+        background: #176139;
+    }
+
+@media (max-width: 768px) {
+    .complex-table-heading,
+    .complex-table-summary {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .jury-voting-table-search-form {
+        width: 100%;
+    }
+
+    .jury-voting-pagination {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .excel-export-button {
+        justify-content: center;
+    }
+}
+
+.complex-table-primary-cell {
+    font-weight: 700;
+}
+
+.complex-table-cell-content.watch-count-badge {
+    width: fit-content;
+    margin-inline: auto;
+}
+
+.complex-table-linked-row {
+    cursor: pointer;
+}
