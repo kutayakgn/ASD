@@ -1,21 +1,86 @@
 @model YKBAfife.Models.ViewModels.PlayDetailsViewModel
 @{
     ViewData["Title"] = Model.PlayName;
+
+    string DisplayValue(string? value) => string.IsNullOrWhiteSpace(value) ? "-" : value;
+    string StatusValue(bool value) => value ? "Aktif" : "Pasif";
+    string AuditValue(string? userName, DateTime? date) => date.HasValue
+        ? $"{date.Value:dd.MM.yyyy} / {DisplayValue(userName)} "
+        : DisplayValue(userName);
 }
 
 <section class="play-details-page">
-    <a asp-controller="Home" asp-action="Index" class="play-details-back">← Oyun izlenmelerine dön</a>
-    <header class="play-details-header">
-        <p>Oyun detayı</p>
-        <h1>@Model.PlayName</h1>
-        <span>@Model.TheaterName</span>
+    <a asp-controller="Home" asp-action="Index" class="play-details-back">
+        <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
+        <span>Oyunlar'a Dön</span>
+    </a>
+
+    <header class="play-details-toolbar">
+        <h1>Oyun Detay</h1>
+        <div class="play-details-actions">
+            <button type="button" class="play-detail-action play-detail-action-secondary" onclick="window.print()">
+                Tüm Oyları Yazdır
+            </button>
+            <a asp-controller="Management"
+               asp-action="VotingHistory"
+               asp-route-playId="@Model.Id"
+               class="play-detail-action play-detail-action-secondary">Oylamaları Gör</a>
+            <a asp-controller="Management"
+               asp-action="Plays"
+               asp-route-edit="@Model.Slug"
+               class="play-detail-action play-detail-action-primary">Oyunu Düzenle</a>
+        </div>
     </header>
-    <dl class="play-details-grid">
-        <div><dt>İletişim kişisi</dt><dd>@(Model.ContactPersonName ?? "-")</dd></div>
-        <div><dt>İletişim telefonu</dt><dd>@(Model.ContactPersonPhone ?? "-")</dd></div>
-        <div><dt>Tiyatro telefonu</dt><dd>@(Model.Phone ?? "-")</dd></div>
-        <div><dt>E-posta</dt><dd>@(Model.Email ?? "-")</dd></div>
-        <div class="play-details-address"><dt>Adres</dt><dd>@(Model.Address ?? "-")</dd></div>
-        <div><dt>Künye kaynağı</dt><dd>@(Model.FromKunye ? "Evet" : "Hayır")</dd></div>
+
+    <dl class="play-details-content">
+        <div class="play-detail-field">
+            <dt>Oyun Detay</dt>
+            <dd>@DisplayValue(Model.PlayName)</dd>
+        </div>
+        <div class="play-detail-field">
+            <dt>Tiyatro Adı</dt>
+            <dd>@DisplayValue(Model.TheaterName)</dd>
+        </div>
+        <div class="play-detail-field">
+            <dt>Jüri Oylama Sitesi Statü</dt>
+            <dd>@StatusValue(Model.JuriOylamaStatus)</dd>
+        </div>
+        <div class="play-detail-field">
+            <dt>Künye Giriş Sistemi Statü</dt>
+            <dd>@StatusValue(Model.FromKunye)</dd>
+        </div>
+        <div class="play-detail-field">
+            <dt>Jüri Grup Bilgisi</dt>
+            <dd>@DisplayValue(Model.JuryGroupInfo)</dd>
+        </div>
+        <div class="play-detail-field">
+            <dt>Oyun Statüsü</dt>
+            <dd class="play-status-value">
+                <span class="play-status-dot" style="background-color: @Model.PlayStatusColor" aria-hidden="true"></span>
+                <span>@DisplayValue(Model.PlayStatus)</span>
+            </dd>
+        </div>
+        <div class="play-detail-field">
+            <dt>Eklenme Yöntemi</dt>
+            <dd>@(Model.RecordType ? "Admin Giri\u015F" : "K\u00FCnye Giri\u015F")</dd>
+        </div>
+        <div class="play-detail-field">
+            <dt>Ekleyen</dt>
+            <dd>@AuditValue(Model.CreatedByName, Model.CreatedAt)</dd>
+        </div>
+        <div class="play-detail-field">
+            <dt>Düzenleyen</dt>
+            <dd>@AuditValue(Model.UpdatedByName, Model.UpdatedAt)</dd>
+        </div>
     </dl>
+
+    <div class="play-details-divider" role="separator"></div>
+
+    <div id="aday-ekle">
+        @await Component.InvokeAsync("AddCandidate", new
+        {
+            playId = Model.Id,
+            formAction = Url.Action("AddCandidate", "Management", new { slug = Model.Slug })
+        })
+    </div>
 </section>

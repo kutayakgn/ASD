@@ -20,7 +20,7 @@ public class PlayAwardCategory
     public bool IsCurrent { get; set; }
     public string? Role { get; set; }
     public int RoleCode { get; set; }
-    public bool IsOld { get; set; }
+    public bool IsActive { get; set; }
 
     public Image? PhotoImage { get; set; }
     public Play Play { get; set; } = null!;

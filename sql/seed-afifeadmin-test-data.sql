@@ -132,7 +132,7 @@ BEGIN TRY
 
     INSERT INTO [dbo].[PlayAwardCategories]
         ([Id], [PlayId], [PhotoImageId], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy], [IsPublished],
-         [Candidate], [AwardCategoryCode], [IsCurrent], [Role], [RoleCode], [IsOld])
+         [Candidate], [AwardCategoryCode], [IsCurrent], [Role], [RoleCode], [IsActive])
     SELECT
         s.PlayAwardCategoryId,
         s.PlayId,

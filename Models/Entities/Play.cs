@@ -23,6 +23,8 @@ public class Play
     public string? Address { get; set; }
     public string? Email { get; set; }
     public bool FromKunye { get; set; }
+    public bool JuriOylamaStatus { get; set; }
+    public bool RecordType { get; set; }
 
     public PlayStatus Status { get; set; } = null!;
     public ICollection<JuryAssignedPlay> JuryAssignments { get; set; } = [];

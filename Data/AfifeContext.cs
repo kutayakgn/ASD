@@ -13,6 +13,10 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
     public DbSet<Image> Images => Set<Image>();
     public DbSet<Announcement> Announcements => Set<Announcement>();
     public DbSet<Form> Forms => Set<Form>();
+    public DbSet<Group> Groups => Set<Group>();
+    public DbSet<PlayStatus> PlayStatuses => Set<PlayStatus>();
+    public DbSet<JuryAssignedPlay> JuryAssignedPlays => Set<JuryAssignedPlay>();
+    public DbSet<AwardCategory> AwardCategories => Set<AwardCategory>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -80,6 +84,31 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
         modelBuilder.Entity<Form>(entity =>
         {
             entity.ToTable("Form", "dbo");
+        });
+
+        modelBuilder.Entity<Group>(entity =>
+        {
+            entity.ToTable("Group", "dbo");
+            entity.Ignore(x => x.Users);
+        });
+
+        modelBuilder.Entity<PlayStatus>(entity =>
+        {
+            entity.ToTable("PlayStatuses", "dbo");
+            entity.Ignore(x => x.Plays);
+        });
+
+        modelBuilder.Entity<AwardCategory>(entity =>
+        {
+            entity.ToTable("AwardCategories", "dbo");
+            entity.Ignore(x => x.PlayAwardCategories);
+        });
+
+        modelBuilder.Entity<JuryAssignedPlay>(entity =>
+        {
+            entity.ToTable("JuryAssignedPlays", "dbo");
+            entity.Ignore(x => x.Play);
+            entity.Ignore(x => x.Jury);
         });
         modelBuilder.Entity<JuryVote>(entity =>
         {

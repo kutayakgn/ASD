@@ -1,0 +1,56 @@
+@model YKBAfife.Models.Components.AddCandidateViewModel
+
+<section class="add-candidate" data-add-candidate>
+    <header class="add-candidate-header"><h2>Aday Ekle</h2></header>
+
+    @if (TempData["CandidateSuccess"] is string successMessage)
+    {
+        <div class="add-candidate-message add-candidate-message-success" role="status">@successMessage</div>
+    }
+    @if (TempData["CandidateError"] is string errorMessage)
+    {
+        <div class="add-candidate-message add-candidate-message-error" role="alert">@errorMessage</div>
+    }
+
+    <form method="post" action="@Model.FormAction" class="add-candidate-form">
+        @Html.AntiForgeryToken()
+        <fieldset class="add-candidate-mode-group">
+            <legend class="visually-hidden">Aday işlem türü</legend>
+            <label class="add-candidate-mode"><input type="radio" asp-for="Input.Mode" value="new" checked /><span>Yeni Aday</span></label>
+            <label class="add-candidate-mode"><input type="radio" asp-for="Input.Mode" value="change" /><span>Aday/Rol Değişimi</span></label>
+        </fieldset>
+
+        <div data-candidate-fields="new">
+            <div class="add-candidate-grid">
+                <div class="add-candidate-field">
+                    <label asp-for="Input.PlayId">Oyun Adı</label>
+                    <select asp-for="Input.PlayId" asp-items="Model.Plays" disabled="@Model.LockPlay"><option value="">Oyun seçiniz</option></select>
+                    @if (Model.LockPlay) { <input type="hidden" asp-for="Input.PlayId" /> }
+                </div>
+                <div class="add-candidate-field">
+                    <label asp-for="Input.AwardCategoryCode">Ödül Kategorisi</label>
+                    <select asp-for="Input.AwardCategoryCode" asp-items="Model.AwardCategories"><option value="">Kategori seçiniz</option></select>
+                </div>
+                <div class="add-candidate-field">
+                    <label asp-for="Input.Candidate">Adı Soyadı</label>
+                    <input asp-for="Input.Candidate" autocomplete="off" minlength="2" required />
+                </div>
+                <div class="add-candidate-field">
+                    <label asp-for="Input.Role">Rolü</label>
+                    <input asp-for="Input.Role" autocomplete="off" />
+                </div>
+                <fieldset class="add-candidate-status">
+                    <legend>Statü</legend>
+                    <label><input type="radio" asp-for="Input.IsActive" value="true" checked required /><span>Aktif</span></label>
+                    <label><input type="radio" asp-for="Input.IsActive" value="false" required /><span>Aktif değil</span></label>
+                </fieldset>
+            </div>
+            <div asp-validation-summary="ModelOnly" class="add-candidate-validation"></div>
+            <div class="add-candidate-actions"><button type="submit" class="add-candidate-submit">Kaydet</button></div>
+        </div>
+
+        <div class="add-candidate-change-fields" data-candidate-fields="change" hidden>
+            <p>Aday/Rol Değişimi alanları sonraki adımda tanımlanacaktır.</p>
+        </div>
+    </form>
+</section>

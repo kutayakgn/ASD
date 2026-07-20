@@ -212,7 +212,7 @@ BEGIN
         [IsCurrent] [bit] NOT NULL,
         [Role] [nvarchar](200) NULL,
         [RoleCode] [int] NOT NULL,
-        [IsOld] [bit] NOT NULL,
+        [IsActive] [bit] NOT NULL CONSTRAINT [DF_PlayAwardCategories_IsActive] DEFAULT (1),
         CONSTRAINT [PK_PlayAwardCategories] PRIMARY KEY CLUSTERED ([Id])
     );
 END;
@@ -236,6 +236,9 @@ BEGIN
         [ContactPersonPhone] [varchar](255) NULL,
         [Address] [varchar](255) NULL,
         [Email] [varchar](255) NULL,
+        [FromKunye] [bit] NOT NULL CONSTRAINT [DF_Plays_FromKunye] DEFAULT (0),
+        [JuriOylamaStatus] [bit] NOT NULL CONSTRAINT [DF_Plays_JuriOylamaStatus] DEFAULT (0),
+        [RecordType] [bit] NOT NULL CONSTRAINT [DF_Plays_RecordType] DEFAULT (0),
         CONSTRAINT [PK_Plays] PRIMARY KEY CLUSTERED ([Id])
     );
 END;
