@@ -1,0 +1,21 @@
+@model YKBAfife.Models.ViewModels.PlayViewerModalViewModel
+
+<div class="modal fade play-viewers-modal"
+     id="playViewersModal"
+     tabindex="-1"
+     aria-labelledby="playViewersModalTitle"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <header class="modal-header play-viewers-modal-header">
+                <div>
+                    <p>İzleyen jüri üyeleri</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </header>
+            <div class="modal-body play-viewers-modal-body">
+                @await Component.InvokeAsync("ComplexTable", new { model = Model.Table })
+            </div>
+        </div>
+    </div>
+</div>

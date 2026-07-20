@@ -7,6 +7,7 @@ public sealed class ExcelExportDocument
     public string TableName { get; init; } = "RaporTablosu";
     public IReadOnlyList<ExcelExportColumn> Columns { get; init; } = [];
     public IReadOnlyList<IReadOnlyList<ExcelExportCell>> Rows { get; init; } = [];
+    public IReadOnlyList<string> FooterLines { get; init; } = [];
 }
 
 public sealed class ExcelExportColumn

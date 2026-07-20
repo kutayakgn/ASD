@@ -93,6 +93,83 @@ public sealed class PlayWatchReportService(AfifeContext context) : IPlayWatchRep
         };
     }
 
+    public async Task<PlayViewerTableViewModel> GetViewersPageAsync(
+        PlayViewerTableQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        var playName = await context.Plays
+            .AsNoTracking()
+            .Where(play => play.Id == query.PlayId && play.IsPublished)
+            .Select(play => play.PlayName)
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (playName is null)
+        {
+            return new PlayViewerTableViewModel { PlayId = query.PlayId };
+        }
+
+        var viewers = BuildPlayViewerQuery(query.PlayId);
+        var totalCount = await viewers.CountAsync(cancellationToken);
+        var totalPages = Math.Max(1, (int)Math.Ceiling(totalCount / (double)PlayViewerTableViewModel.PageSize));
+        var currentPage = Math.Min(Math.Max(1, query.Page), totalPages);
+        var rows = await viewers
+            .OrderBy(viewer => viewer.FullName)
+            .ThenBy(viewer => viewer.JuryId)
+            .Skip((currentPage - 1) * PlayViewerTableViewModel.PageSize)
+            .Take(PlayViewerTableViewModel.PageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PlayViewerTableViewModel
+        {
+            PlayId = query.PlayId,
+            PlayName = playName,
+            CurrentPage = currentPage,
+            TotalCount = totalCount,
+            Rows = rows
+        };
+    }
+
+    public async Task<PlayViewerExportViewModel> GetViewersExportAsync(
+        Guid playId,
+        CancellationToken cancellationToken = default)
+    {
+        var playName = await context.Plays
+            .AsNoTracking()
+            .Where(play => play.Id == playId && play.IsPublished)
+            .Select(play => play.PlayName)
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (playName is null)
+        {
+            return new PlayViewerExportViewModel { PlayId = playId };
+        }
+
+        var viewers = await BuildPlayViewerQuery(playId)
+            .OrderBy(viewer => viewer.FullName)
+            .ThenBy(viewer => viewer.JuryId)
+            .ToListAsync(cancellationToken);
+
+        return new PlayViewerExportViewModel
+        {
+            PlayId = playId,
+            PlayName = playName,
+            Viewers = viewers
+        };
+    }
+
+    private IQueryable<PlayViewerRowViewModel> BuildPlayViewerQuery(Guid playId)
+    {
+        return
+            from viewer in BuildUniqueViewerQuery()
+            join user in context.Users.AsNoTracking()
+                on viewer.UserId equals user.Id
+            where viewer.PlayId == playId
+            select new PlayViewerRowViewModel
+            {
+                JuryId = user.Id,
+                FullName = (user.FirstName + " " + user.LastName).Trim()
+            };
+    }
     private IQueryable<PlayViewerRow> BuildUniqueViewerQuery()
     {
         var votedViewers =
@@ -129,6 +206,7 @@ public sealed class PlayWatchReportService(AfifeContext context) : IPlayWatchRep
             {
                 PlayId = play.Id,
                 PlayName = play.PlayName,
+                Slug = play.Slug,
                 ViewCount = uniqueViewers.Count(viewer => viewer.PlayId == play.Id)
             });
 

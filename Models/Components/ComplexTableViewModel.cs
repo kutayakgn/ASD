@@ -12,6 +12,9 @@ public sealed class ComplexTableViewModel
     public string ExportActionName { get; init; } = string.Empty;
     public string ExportButtonText { get; init; } = "Excel'e Aktar";
     public bool IsExportEnabled { get; init; } = true;
+    public bool ShowHeading { get; init; } = true;
+    public bool ShowSearch { get; init; } = true;
+    public bool ShowColumnHeaders { get; init; } = true;
     public int MinimumTableWidth { get; init; } = 720;
     public IReadOnlyDictionary<string, string?> AdditionalRouteValues { get; init; } =
         new Dictionary<string, string?>();
@@ -57,6 +60,9 @@ public sealed class ComplexTableCellViewModel
     public string Content { get; init; } = string.Empty;
     public bool IsHtml { get; init; }
     public string CssClass { get; init; } = string.Empty;
+    public string Link { get; init; } = string.Empty;
+    public string ModalUrl { get; init; } = string.Empty;
+    public string AccessibleLabel { get; init; } = string.Empty;
 }
 
 public sealed class ComplexTableSummarySegmentViewModel

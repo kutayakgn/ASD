@@ -1,4 +1,5 @@
 using System.Globalization;
+using YKBAfife.Helpers;
 using YKBAfife.Models.Components;
 using YKBAfife.Models.ViewModels;
 
@@ -33,12 +34,14 @@ public static class PlayWatchComplexTableFactory
                 new ComplexTableCellViewModel
                 {
                     Content = row.PlayName,
-                    CssClass = ""
+                    Link = $"/oyunlar/{Uri.EscapeDataString(SlugHelper.Resolve(row.Slug, row.PlayName))}",
+                    AccessibleLabel = $"{row.PlayName} oyun detayını aç"
                 },
                 new ComplexTableCellViewModel
                 {
                     Content = row.ViewCount.ToString(CultureInfo.CurrentCulture),
-                    CssClass = ""
+                    ModalUrl = $"/oyun-izlenmeleri/{row.PlayId:D}/juriler",
+                    AccessibleLabel = $"{row.PlayName} oyununu izleyen {row.ViewCount} jüri üyesini göster"
                 }
             ]
         }).ToArray();

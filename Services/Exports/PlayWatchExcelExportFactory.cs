@@ -48,7 +48,8 @@ public static class PlayWatchExcelExportFactory
             TableName = "OyunIzlenmeRaporu",
             Title = title,
             Columns = columns,
-            Rows = rows
+            Rows = rows,
+            FooterLines = [$"Toplam kayıt sayısı: {rows.Length}"]
         };
     }
 

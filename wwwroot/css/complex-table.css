@@ -5,7 +5,10 @@
     font-weight: 400;
     font-display: swap;
 }
-
+p {
+    padding: 0px;
+    margin: 0px;
+}
 .jury-voting-complex-table-section {
     display: flex;
     flex-direction: column;
@@ -23,7 +26,7 @@
     align-items: center;
     justify-content: flex-start;
     display: flex;
-    flex-wrap:wrap;
+    flex-wrap: wrap;
     gap: 16px;
     border-bottom: 2px solid #171717;
 }
@@ -244,10 +247,10 @@ tr {
     text-decoration: none;
 }
 
-.jury-voting-pagination-link img{
-    width:16px;
-    height:16px;
-}
+    .jury-voting-pagination-link img {
+        width: 16px;
+        height: 16px;
+    }
 
 .jury-voting-pagination-current {
     border: 1px solid #171717;
@@ -270,7 +273,6 @@ tr {
     gap: 10px;
     padding: 8px;
     background: #f4f2ed;
-   
 }
 
 .complex-table-summary-content {
@@ -299,19 +301,19 @@ tr {
     font-size: 13px;
     font-weight: 600;
     text-decoration: none;
-    transition: background .3s ease-in-out; 
+    transition: background .3s ease-in-out;
 }
 
     .excel-export-button:not(:disabled):hover {
-       
         background: #918150;
     }
-.excel-export-button:disabled {
-    color: #fff;
-    background: #8c8c8c;
-    cursor: not-allowed;
-    opacity: .55;
-}
+
+    .excel-export-button:disabled {
+        color: #fff;
+        background: #8c8c8c;
+        cursor: not-allowed;
+        opacity: .55;
+    }
 
 @media (max-width: 768px) {
     .complex-table-heading,
@@ -336,4 +338,118 @@ tr {
 
 .complex-table-linked-row {
     cursor: pointer;
+}
+
+.complex-table-cell-content {
+    width: 100%;
+}
+
+.jury-voting-table td.complex-table-action-cell {
+    position: relative;
+}
+
+.complex-table-action-cell .complex-table-cell-content {
+    min-height: 20px;
+}
+
+.complex-table-cell-action {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    width: 100%;
+    padding: 12px 16px;
+    align-items: center;
+    color: #171717;
+    background: transparent;
+    border: 0;
+    font: inherit;
+    text-align: left;
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    text-underline-offset: 3px;
+    transition: color .15s ease-in-out, text-decoration-color .15s ease-in-out;
+}
+
+    .complex-table-cell-action:hover,
+    .complex-table-cell-action:focus-visible {
+        color: #918150;
+        text-decoration-color: currentColor;
+        outline: none;
+    }
+
+.complex-table-cell-button[aria-busy="true"] {
+    opacity: .55;
+    pointer-events: none;
+}
+
+.play-viewers-modal .modal-dialog {
+    width: min(calc(100% - 32px), 680px);
+    max-width: 680px;
+}
+
+.play-viewers-modal .modal-content {
+    overflow: hidden;
+    border: 0;
+    border-radius: 0;
+
+}
+
+.play-viewers-modal-header {
+    height: fit-content;
+    align-items: flex-start;
+    padding: 16px 24px;
+    color: #171717;
+    background: #c8c0a7;
+    border: 0;
+}
+
+    .play-viewers-modal-header p {
+        color: #1c1c1c;
+        font-size: 16px;
+        font-weight: 600;
+        line-height: 22px;
+        font-family: Outfit;
+    }
+
+
+    .play-viewers-modal-header .btn-close {
+        margin: 0;
+        width: 16px;
+        height: 16px;
+        padding: 0;
+        background-color: transparent;
+        background-size: 16px 16px;
+        filter: none;
+        opacity: 1;
+    }
+
+.play-viewers-modal-body {
+    padding: 0;
+}
+
+.play-viewers-modal .jury-voting-table {
+    min-width: 320px;
+}
+
+.play-viewers-modal .complex-table-summary {
+    padding: 12px 16px;
+}
+
+.play-viewers-modal .jury-voting-pagination {
+    padding: 14px 16px;
+}
+
+@media (max-width: 575.98px) {
+    .play-viewers-modal .modal-dialog {
+        width: calc(100% - 20px);
+        margin: 10px;
+    }
+
+    .play-viewers-modal-header {
+        padding: 18px 16px;
+    }
+
+    .play-viewers-modal .complex-table-summary {
+        align-items: stretch;
+    }
 }

@@ -54,6 +54,68 @@ public sealed class HomeController(
             fileName);
     }
 
+    [HttpGet("oyun-izlenmeleri/{playId:guid}/juriler")]
+    public async Task<IActionResult> PlayViewersModal(
+        Guid playId,
+        CancellationToken cancellationToken)
+    {
+        var report = await reportService.GetViewersPageAsync(
+            new PlayViewerTableQuery { PlayId = playId },
+            cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(report.PlayName))
+        {
+            return NotFound();
+        }
+
+        return PartialView("_PlayViewersModal", new PlayViewerModalViewModel
+        {
+            PlayId = report.PlayId,
+            PlayName = report.PlayName,
+            Table = PlayViewerComplexTableFactory.Create(report)
+        });
+    }
+
+    [HttpPost("oyun-izlenmeleri/juriler/tablo")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> PlayViewersTable(
+        [FromForm] PlayViewerTableQuery query,
+        CancellationToken cancellationToken)
+    {
+        var report = await reportService.GetViewersPageAsync(query, cancellationToken);
+        if (string.IsNullOrWhiteSpace(report.PlayName))
+        {
+            return NotFound();
+        }
+
+        return ViewComponent("ComplexTable", new
+        {
+            model = PlayViewerComplexTableFactory.Create(report)
+        });
+    }
+
+    [HttpPost("oyun-izlenmeleri/juriler/excel")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ExportPlayViewers(
+        [FromForm] Guid playId,
+        CancellationToken cancellationToken)
+    {
+        var report = await reportService.GetViewersExportAsync(playId, cancellationToken);
+        if (string.IsNullOrWhiteSpace(report.PlayName))
+        {
+            return NotFound();
+        }
+
+        var document = PlayViewerExcelExportFactory.Create(report.PlayName, report.Viewers);
+        var content = excelExporter.Export(document);
+        var fileName = $"oyunu-izleyen-juriler-{DateTime.Now:yyyyMMdd-HHmm}.xlsx";
+
+        return File(
+            content,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            fileName);
+    }
+
     [AllowAnonymous]
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public IActionResult Error() => View(new ErrorViewModel

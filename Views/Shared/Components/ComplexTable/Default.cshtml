@@ -19,7 +19,8 @@
 {
     <section id="@Model.Id"
              class="jury-voting-complex-table-section"
-             aria-labelledby="@(Model.Id)-title"
+             aria-labelledby="@(Model.ShowHeading ? $"{Model.Id}-title" : null)"
+             aria-label="@(!Model.ShowHeading ? activeTab.Title : null)"
              data-complex-table
              data-complex-table-url="@dataUrl">
         <form class="complex-table-state" data-complex-table-state>
@@ -50,26 +51,34 @@
                     }
                 </div>
             }
-
-            <div class="complex-table-heading">
-                <h2 id="@(Model.Id)-title">@activeTab.Title</h2>
-                <div class="jury-voting-table-search-form">
-                    <label class="visually-hidden" for="@(Model.Id)-search">@Model.SearchPlaceholder</label>
-                    <input id="@(Model.Id)-search"
-                           type="search"
-                           name="search"
-                           value="@activeTab.Search"
-                           class="jury-voting-table-search-input"
-                           placeholder="@Model.SearchPlaceholder"
-                           autocomplete="off"
-                           data-complex-table-search />
-                    <button type="button"
-                            class="complex-table-search-clear"
-                            aria-label="Aramayı temizle"
-                            data-complex-table-clear>×</button>
+            @if (Model.ShowHeading || Model.ShowSearch)
+            {
+                <div class="complex-table-heading">
+                    @if (Model.ShowHeading)
+                    {
+                        <h2 id="@(Model.Id)-title">@activeTab.Title</h2>
+                    }
+                    @if (Model.ShowSearch)
+                    {
+                        <div class="jury-voting-table-search-form">
+                            <label class="visually-hidden" for="@(Model.Id)-search">@Model.SearchPlaceholder</label>
+                            <input id="@(Model.Id)-search"
+                                   type="search"
+                                   name="search"
+                                   value="@activeTab.Search"
+                                   class="jury-voting-table-search-input"
+                                   placeholder="@Model.SearchPlaceholder"
+                                   autocomplete="off"
+                                   data-complex-table-search />
+                            <button type="button"
+                                    class="complex-table-search-clear"
+                                    aria-label="Aramayı temizle"
+                                    data-complex-table-clear>×</button>
+                        </div>
+                    }
                 </div>
-            </div>
-        </form>
+            }
+            </form>
 
         <div class="jury-voting-table-wrapper">
             <table class="jury-voting-table" style="--complex-table-min-width: @(Model.MinimumTableWidth)px;">
@@ -79,30 +88,33 @@
                         <col style="width: @(column.ColWidth)%;" />
                     }
                 </colgroup>
-                <thead>
-                    <tr>
-                        @foreach (var column in activeTab.Columns)
-                        {
-                            <th scope="col" class="@column.CssClass">
-                                @if (column.IsSortable)
-                                {
-                                    <button type="button"
-                                            class="jury-voting-sort-button"
-                                            data-complex-table-action
-                                            data-sort-by="@column.Key"
-                                            data-sort-direction="@NextSortDirection(column.Key)"
-                                            data-page="1">
-                                        @column.Title <span aria-hidden="true">@SortIndicator(column.Key)</span>
-                                    </button>
-                                }
-                                else
-                                {
-                                    @column.Title
-                                }
-                            </th>
-                        }
-                    </tr>
-                </thead>
+                @if (Model.ShowColumnHeaders)
+                {
+                    <thead>
+                        <tr>
+                            @foreach (var column in activeTab.Columns)
+                            {
+                                <th scope="col" class="@column.CssClass">
+                                    @if (column.IsSortable)
+                                    {
+                                        <button type="button"
+                                                class="jury-voting-sort-button"
+                                                data-complex-table-action
+                                                data-sort-by="@column.Key"
+                                                data-sort-direction="@NextSortDirection(column.Key)"
+                                                data-page="1">
+                                            @column.Title <span aria-hidden="true">@SortIndicator(column.Key)</span>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        @column.Title
+                                    }
+                                </th>
+                            }
+                        </tr>
+                    </thead>
+                }
                 <tbody>
                     @if (activeTab.Rows.Count > 0)
                     {
@@ -115,11 +127,24 @@
                                 @for (var index = 0; index < activeTab.Columns.Count; index++)
                                 {
                                     var cell = index < row.Cells.Count ? row.Cells[index] : null;
-                                    <td class="@activeTab.Columns[index].CssClass">
+                                    <td class="@activeTab.Columns[index].CssClass @((cell is not null && (!string.IsNullOrWhiteSpace(cell.Link) || !string.IsNullOrWhiteSpace(cell.ModalUrl))) ? "complex-table-action-cell" : string.Empty)">
                                         @if (cell is not null)
                                         {
                                             <div class="complex-table-cell-content @cell.CssClass">
-                                                @if (cell.IsHtml)
+                                                @if (!string.IsNullOrWhiteSpace(cell.Link))
+                                                {
+                                                    <a href="@cell.Link"
+                                                       class="complex-table-cell-action"
+                                                       aria-label="@(string.IsNullOrWhiteSpace(cell.AccessibleLabel) ? null : cell.AccessibleLabel)">@cell.Content</a>
+                                                }
+                                                else if (!string.IsNullOrWhiteSpace(cell.ModalUrl))
+                                                {
+                                                    <button type="button"
+                                                            class="complex-table-cell-action complex-table-cell-button"
+                                                            data-play-viewers-modal-url="@cell.ModalUrl"
+                                                            aria-label="@(string.IsNullOrWhiteSpace(cell.AccessibleLabel) ? null : cell.AccessibleLabel)">@cell.Content</button>
+                                                }
+                                                else if (cell.IsHtml)
                                                 {
                                                     @Html.Raw(cell.Content)
                                                 }

@@ -14,8 +14,8 @@
         "ArchiveComparison"
     };
 
-    string ActiveClass(string action) =>
-        isManagementPage && string.Equals(currentAction, action, StringComparison.OrdinalIgnoreCase)
+    string ActiveClass(params string[] actions) =>
+        isManagementPage && currentAction is not null && actions.Contains(currentAction, StringComparer.OrdinalIgnoreCase)
             ? " active"
             : string.Empty;
 
@@ -66,7 +66,7 @@
                 <ul class="navbar-nav ms-auto align-items-xl-center admin-menu">
                     <li class="nav-item"><a class="nav-link@(ActiveClass("ArtPromise"))" asp-controller="Management" asp-action="ArtPromise">Sanata Sözümüz</a></li>
                     <li class="nav-item"><a class="nav-link@(ActiveClass("Juries"))" asp-controller="Management" asp-action="Juries">Jüriler</a></li>
-                    <li class="nav-item"><a class="nav-link@(ActiveClass("Plays"))" asp-controller="Management" asp-action="Plays">Oyunlar</a></li>
+                    <li class="nav-item"><a class="nav-link@(ActiveClass("Plays", "PlayDetails"))" asp-controller="Management" asp-action="Plays">Oyunlar</a></li>
                     <li class="nav-item"><a class="nav-link@(ActiveClass("Rankings"))" asp-controller="Management" asp-action="Rankings">Sıralamalar</a></li>
                     <li class="nav-item dropdown admin-other-menu">
                         <button class="nav-link dropdown-toggle admin-dropdown-toggle@(isOtherActive ? " active" : string.Empty)" type="button" data-bs-toggle="dropdown" aria-expanded="false">

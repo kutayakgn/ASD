@@ -1,0 +1,21 @@
+@model YKBAfife.Models.ViewModels.PlayDetailsViewModel
+@{
+    ViewData["Title"] = Model.PlayName;
+}
+
+<section class="play-details-page">
+    <a asp-controller="Home" asp-action="Index" class="play-details-back">← Oyun izlenmelerine dön</a>
+    <header class="play-details-header">
+        <p>Oyun detayı</p>
+        <h1>@Model.PlayName</h1>
+        <span>@Model.TheaterName</span>
+    </header>
+    <dl class="play-details-grid">
+        <div><dt>İletişim kişisi</dt><dd>@(Model.ContactPersonName ?? "-")</dd></div>
+        <div><dt>İletişim telefonu</dt><dd>@(Model.ContactPersonPhone ?? "-")</dd></div>
+        <div><dt>Tiyatro telefonu</dt><dd>@(Model.Phone ?? "-")</dd></div>
+        <div><dt>E-posta</dt><dd>@(Model.Email ?? "-")</dd></div>
+        <div class="play-details-address"><dt>Adres</dt><dd>@(Model.Address ?? "-")</dd></div>
+        <div><dt>Künye kaynağı</dt><dd>@(Model.FromKunye ? "Evet" : "Hayır")</dd></div>
+    </dl>
+</section>

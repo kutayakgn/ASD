@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using YKBAfife.Data;
+using YKBAfife.Helpers;
 using YKBAfife.Models.ViewModels;
 
 namespace YKBAfife.Controllers;
 
-public sealed class ManagementController : Controller
+public sealed class ManagementController(AfifeContext context) : Controller
 {
     [HttpGet("sanata-sozumuz")]
     public IActionResult ArtPromise() => Page(
@@ -20,6 +23,45 @@ public sealed class ManagementController : Controller
         "Oyunlar",
         "Oyun kayıtlarını ve oyun künyelerini yönetin.");
 
+    [HttpGet("oyunlar/{slug}")]
+    public async Task<IActionResult> PlayDetails(string slug, CancellationToken cancellationToken)
+    {
+        var play = await context.Plays
+            .AsNoTracking()
+            .SingleOrDefaultAsync(
+                item => item.IsPublished && item.Slug == slug,
+                cancellationToken);
+
+        if (play is null)
+        {
+            var sluglessPlays = await context.Plays
+                .AsNoTracking()
+                .Where(item => item.IsPublished && (item.Slug == null || item.Slug == string.Empty))
+                .OrderBy(item => item.Id)
+                .ToListAsync(cancellationToken);
+
+            play = sluglessPlays.FirstOrDefault(item =>
+                string.Equals(SlugHelper.Create(item.PlayName), slug, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (play is null)
+        {
+            return NotFound();
+        }
+
+        return View(new PlayDetailsViewModel
+        {
+            Id = play.Id,
+            PlayName = play.PlayName,
+            TheaterName = play.TheaterName,
+            ContactPersonName = play.ContactPersonName,
+            ContactPersonPhone = play.ContactPersonPhone,
+            Phone = play.Phone,
+            Email = play.Email,
+            Address = play.Address,
+            FromKunye = play.FromKunye
+        });
+    }
     [HttpGet("siralamalar")]
     public IActionResult Rankings() => Page(
         "Sıralamalar",

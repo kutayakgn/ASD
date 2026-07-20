@@ -11,4 +11,12 @@ public interface IPlayWatchReportService
     Task<PlayWatchExportViewModel> GetExportAsync(
         PlayWatchTableQuery query,
         CancellationToken cancellationToken = default);
+
+    Task<PlayViewerTableViewModel> GetViewersPageAsync(
+        PlayViewerTableQuery query,
+        CancellationToken cancellationToken = default);
+
+    Task<PlayViewerExportViewModel> GetViewersExportAsync(
+        Guid playId,
+        CancellationToken cancellationToken = default);
 }

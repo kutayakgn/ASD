@@ -48,6 +48,18 @@ public sealed class ExcelExporter : IExcelExporter
             .CreateTable(SanitizeTableName(document.TableName));
         table.Theme = XLTableTheme.TableStyleMedium2;
         worksheet.SheetView.FreezeRows(3);
+        for (var footerIndex = 0; footerIndex < document.FooterLines.Count; footerIndex++)
+        {
+            var footerRow = lastDataRow + 2 + footerIndex;
+            worksheet.Cell(footerRow, 1).Value = document.FooterLines[footerIndex];
+            if (columnCount > 1)
+            {
+                worksheet.Range(footerRow, 1, footerRow, columnCount).Merge();
+            }
+
+            worksheet.Cell(footerRow, 1).Style.Font.Bold = true;
+            worksheet.Cell(footerRow, 1).Style.Fill.BackgroundColor = XLColor.FromHtml("#F4F2ED");
+        }
 
         using var stream = new MemoryStream();
         workbook.SaveAs(stream);

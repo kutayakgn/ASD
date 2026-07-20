@@ -29,6 +29,7 @@ public sealed class PlayWatchRowViewModel
 {
     public Guid PlayId { get; init; }
     public string PlayName { get; init; } = string.Empty;
+    public string? Slug { get; init; }
     public int ViewCount { get; init; }
 }
 

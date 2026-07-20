@@ -157,3 +157,51 @@
         if (row.dataset.rowLink) window.location.href = row.dataset.rowLink;
     });
 })();
+(() => {
+    let modalRequest;
+
+    document.addEventListener("click", async (event) => {
+        const trigger = event.target.closest("[data-play-viewers-modal-url]");
+        if (!trigger) return;
+
+        event.preventDefault();
+        const host = document.querySelector("[data-play-viewers-modal-host]");
+        const url = trigger.dataset.playViewersModalUrl;
+        if (!host || !url) return;
+
+        modalRequest?.abort();
+        modalRequest = new AbortController();
+        trigger.setAttribute("aria-busy", "true");
+
+        try {
+            const response = await fetch(url, {
+                headers: { "X-Requested-With": "XMLHttpRequest" },
+                signal: modalRequest.signal
+            });
+
+            if (!response.ok) {
+                throw new Error(`Jüri listesi yüklenemedi (${response.status}).`);
+            }
+
+            host.innerHTML = await response.text();
+            const modalElement = host.querySelector(".play-viewers-modal");
+            if (!modalElement || !window.bootstrap?.Modal) {
+                throw new Error("Modal içeriği başlatılamadı.");
+            }
+
+            const modal = window.bootstrap.Modal.getOrCreateInstance(modalElement);
+            modalElement.addEventListener("hidden.bs.modal", () => {
+                modal.dispose();
+                host.replaceChildren();
+                trigger.focus({ preventScroll: true });
+            }, { once: true });
+            modal.show();
+        } catch (error) {
+            if (error.name !== "AbortError") {
+                console.error(error);
+            }
+        } finally {
+            trigger.removeAttribute("aria-busy");
+        }
+    });
+})();
