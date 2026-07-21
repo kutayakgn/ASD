@@ -30,6 +30,7 @@ public static class JuryComplexTableFactory
         var rows = report.Rows.Select(row => new ComplexTableRowViewModel
         {
             Id = $"jury-{row.UserId:N}",
+            Link = $"/juriler/{row.UserId:D}",
             Cells = isCurrent
                 ?
                 [

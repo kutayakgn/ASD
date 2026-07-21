@@ -6,6 +6,7 @@ namespace YKBAfife.Data;
 public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbContext(options)
 {
     public DbSet<User> Users => Set<User>();
+    public DbSet<UserLog> UserLogs => Set<UserLog>();
     public DbSet<Play> Plays => Set<Play>();
     public DbSet<PlayAwardCategory> PlayAwardCategories => Set<PlayAwardCategory>();
     public DbSet<JuryVote> JuryVotes => Set<JuryVote>();
@@ -39,6 +40,19 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
                 .OnDelete(DeleteBehavior.NoAction);
         });
 
+        modelBuilder.Entity<UserLog>(entity =>
+        {
+            entity.ToTable("UsersLog", "dbo");
+            entity.Property(x => x.Username).HasMaxLength(100);
+            entity.Property(x => x.EventType).HasMaxLength(50);
+            entity.Property(x => x.IpAddress).HasMaxLength(64);
+            entity.Property(x => x.UserAgent).HasMaxLength(1000);
+            entity.Property(x => x.Application).HasMaxLength(100);
+            entity.Property(x => x.Details).HasMaxLength(2000);
+            entity.Property(x => x.FailureReason).HasMaxLength(500);
+            entity.HasIndex(x => new { x.UserId, x.EventType, x.OccurredAt });
+            entity.HasIndex(x => new { x.Username, x.OccurredAt });
+        });
         modelBuilder.Entity<Play>(entity =>
         {
             entity.ToTable("Plays", "dbo");

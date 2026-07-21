@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using YKBAfife.Data;
 using YKBAfife.Services.Authentication;
+using YKBAfife.Services.Audit;
 using YKBAfife.Services.Exports;
 using YKBAfife.Services.Reports;
 
@@ -14,9 +15,12 @@ var connectionString = builder.Configuration.GetConnectionString("AfifeAdmin")
     ?? throw new InvalidOperationException("Connection string 'AfifeAdmin' was not found.");
 
 builder.Services.AddDbContext<AfifeContext>(options => options.UseSqlServer(connectionString));
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IUserActivityLogger, UserActivityLogger>();
 builder.Services.AddScoped<IAdminAuthenticationService, AdminAuthenticationService>();
 builder.Services.AddScoped<IPlayWatchReportService, PlayWatchReportService>();
 builder.Services.AddScoped<IJuryReportService, JuryReportService>();
+builder.Services.AddScoped<IJuryWatchedPlayReportService, JuryWatchedPlayReportService>();
 builder.Services.AddSingleton<IExcelExporter, ExcelExporter>();
 
 builder.Services

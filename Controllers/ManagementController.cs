@@ -8,10 +8,17 @@ using YKBAfife.Helpers;
 using YKBAfife.Models.Entities;
 using YKBAfife.Models.ViewModels;
 using YKBAfife.Services.Reports;
+using YKBAfife.Services.Audit;
+using YKBAfife.Services.Exports;
 
 namespace YKBAfife.Controllers;
 
-public sealed class ManagementController(AfifeContext context, IJuryReportService juryReportService) : Controller
+public sealed class ManagementController(
+    AfifeContext context,
+    IJuryReportService juryReportService,
+    IJuryWatchedPlayReportService juryWatchedPlayReportService,
+    IUserActivityLogger activityLogger,
+    IExcelExporter excelExporter) : Controller
 {
     [HttpGet("sanata-sozumuz")]
     public IActionResult ArtPromise() => Page(
@@ -36,6 +43,392 @@ public sealed class ManagementController(AfifeContext context, IJuryReportServic
         var report = await juryReportService.GetPageAsync(query, cancellationToken);
         var model = JuryComplexTableFactory.Create(report);
         return ViewComponent("ComplexTable", new { model });
+    }
+    [HttpGet("juriler/{id:guid}")]
+    public async Task<IActionResult> JuryDetails(Guid id, CancellationToken cancellationToken)
+    {
+        var jury = await context.Users
+            .AsNoTracking()
+            .Where(user => user.Id == id && user.IsPublished && user.RoleCode == 2)
+            .Select(user => new
+            {
+                user.Id,
+                user.Username,
+                user.Email,
+                user.FirstName,
+                user.LastName,
+                user.Phone,
+                user.PhotoImageId,
+                user.IsActive,
+                user.CreatedAt,
+                user.CreatedBy,
+                user.UpdatedAt,
+                user.UpdatedBy
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (jury is null)
+        {
+            return NotFound();
+        }
+
+        var metrics = await context.UserLogs
+            .AsNoTracking()
+            .Where(log => log.UserId == id && log.IsPublished)
+            .GroupBy(_ => 1)
+            .Select(logs => new
+            {
+                LastLoginAt = logs
+                    .Where(log => log.EventType == UserActivityTypes.LoginSucceeded && log.IsSuccessful)
+                    .Max(log => (DateTime?)log.OccurredAt),
+                LastPasswordChangeAt = logs
+                    .Where(log => log.EventType == UserActivityTypes.PasswordChanged && log.IsSuccessful)
+                    .Max(log => (DateTime?)log.OccurredAt),
+                SuccessfulLoginCount = logs.Count(log =>
+                    log.EventType == UserActivityTypes.LoginSucceeded && log.IsSuccessful),
+                FailedLoginCount = logs.Count(log =>
+                    log.EventType == UserActivityTypes.LoginFailed && !log.IsSuccessful)
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+
+        var auditUserIds = new[] { jury.CreatedBy, jury.UpdatedBy }
+            .Where(userId => userId.HasValue)
+            .Select(userId => userId!.Value)
+            .Distinct()
+            .ToArray();
+        var auditUsers = await context.Users
+            .AsNoTracking()
+            .Where(user => auditUserIds.Contains(user.Id))
+            .Select(user => new
+            {
+                user.Id,
+                FullName = (user.FirstName + " " + user.LastName).Trim()
+            })
+            .ToDictionaryAsync(user => user.Id, user => user.FullName, cancellationToken);
+
+        var watchedPlayReport = await juryWatchedPlayReportService.GetPageAsync(
+            new JuryWatchedPlayTableQuery { JuryId = id },
+            cancellationToken);
+        return View(new JuryDetailsViewModel
+        {
+            Id = jury.Id,
+            WatchedPlaysTable = JuryWatchedPlayComplexTableFactory.Create(watchedPlayReport),
+            Username = jury.Username,
+            Email = jury.Email,
+            FullName = (jury.FirstName + " " + jury.LastName).Trim(),
+            Phone = jury.Phone ?? "-",
+            HasPhoto = jury.PhotoImageId.HasValue,
+            IsActive = jury.IsActive,
+            LastLoginAt = metrics?.LastLoginAt,
+            LastPasswordChangeAt = metrics?.LastPasswordChangeAt,
+            SuccessfulLoginCount = metrics?.SuccessfulLoginCount ?? 0,
+            FailedLoginCount = metrics?.FailedLoginCount ?? 0,
+            CreatedAt = jury.CreatedAt,
+            CreatedByName = jury.CreatedBy.HasValue && auditUsers.TryGetValue(jury.CreatedBy.Value, out var creator)
+                ? creator
+                : null,
+            UpdatedAt = jury.UpdatedAt,
+            UpdatedByName = jury.UpdatedBy.HasValue && auditUsers.TryGetValue(jury.UpdatedBy.Value, out var updater)
+                ? updater
+                : null
+        });
+    }
+
+    [HttpPost("juriler/izlenen-oyunlar/tablo")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> JuryWatchedPlaysTable(
+        [FromForm] JuryWatchedPlayTableQuery query,
+        CancellationToken cancellationToken)
+    {
+        var report = await juryWatchedPlayReportService.GetPageAsync(query, cancellationToken);
+        if (string.IsNullOrWhiteSpace(report.JuryName))
+        {
+            return NotFound();
+        }
+
+        return ViewComponent("ComplexTable", new
+        {
+            model = JuryWatchedPlayComplexTableFactory.Create(report)
+        });
+    }
+
+    [HttpPost("juriler/izlenen-oyunlar/excel")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ExportJuryWatchedPlays(
+        [FromForm] JuryWatchedPlayTableQuery query,
+        CancellationToken cancellationToken)
+    {
+        var report = await juryWatchedPlayReportService.GetExportAsync(query, cancellationToken);
+        if (string.IsNullOrWhiteSpace(report.JuryName))
+        {
+            return NotFound();
+        }
+
+        var document = JuryWatchedPlayExcelExportFactory.Create(report);
+        var content = excelExporter.Export(document);
+        var fileName = $"juri-izlenmeleri-{DateTime.Now:yyyyMMdd-HHmm}.xlsx";
+        return File(
+            content,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            fileName);
+    }
+    [HttpGet("juriler/{id:guid}/fotograf")]
+    public async Task<IActionResult> JuryPhoto(Guid id, CancellationToken cancellationToken)
+    {
+        var photo = await (
+            from user in context.Users.AsNoTracking()
+            join image in context.Images.AsNoTracking()
+                on user.PhotoImageId equals (Guid?)image.Id
+            where user.Id == id && user.IsPublished && user.RoleCode == 2 && image.IsPublished
+            select new { image.ImageData, image.ContentType }).SingleOrDefaultAsync(cancellationToken);
+
+        return photo is null
+            ? NotFound()
+            : File(photo.ImageData, photo.ContentType);
+    }
+
+    [HttpPost("juriler/{id:guid}/sil")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteJury(Guid id, CancellationToken cancellationToken)
+    {
+        var jury = await context.Users.SingleOrDefaultAsync(
+            user => user.Id == id && user.IsPublished && user.RoleCode == 2,
+            cancellationToken);
+        if (jury is null)
+        {
+            return NotFound();
+        }
+
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId))
+        {
+            return Challenge();
+        }
+
+        jury.IsPublished = false;
+        jury.IsActive = false;
+        jury.UpdatedAt = DateTime.UtcNow;
+        jury.UpdatedBy = currentUserId;
+        await context.SaveChangesAsync(cancellationToken);
+        await activityLogger.LogAsync(
+            UserActivityTypes.UserSoftDeleted,
+            true,
+            jury.Id,
+            jury.Username,
+            currentUserId,
+            details: "J\u00fcri kayd\u0131 fiziksel olarak silinmeden yay\u0131ndan kald\u0131r\u0131ld\u0131.",
+            cancellationToken: cancellationToken);
+
+        TempData["GenericPopup.Type"] = "success";
+        TempData["GenericPopup.Message"] = "J\u00fcri ba\u015far\u0131yla silindi.";
+        return RedirectToAction(nameof(Juries));
+    }
+
+    [HttpGet("juriler/{id:guid}/duzenle")]
+    public async Task<IActionResult> EditJury(Guid id, CancellationToken cancellationToken)
+    {
+        var jury = await context.Users
+            .AsNoTracking()
+            .Where(user => user.Id == id && user.IsPublished && user.RoleCode == 2)
+            .Select(user => new EditJuryViewModel
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                FullName = (user.FirstName + " " + user.LastName).Trim(),
+                Phone = user.Phone ?? string.Empty,
+                IsActive = user.IsActive
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (jury is null)
+        {
+            return NotFound();
+        }
+
+        var photoId = await context.Users
+            .AsNoTracking()
+            .Where(user => user.Id == id)
+            .Select(user => user.PhotoImageId)
+            .SingleAsync(cancellationToken);
+        await PopulateEditJuryPhotoStateAsync(jury, photoId, cancellationToken);
+        return View(jury);
+    }
+
+    [HttpPost("juriler/{id:guid}/duzenle")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EditJury(
+        Guid id,
+        EditJuryViewModel model,
+        CancellationToken cancellationToken)
+    {
+        if (model.Id != Guid.Empty && model.Id != id)
+        {
+            return BadRequest();
+        }
+
+        var jury = await context.Users.SingleOrDefaultAsync(
+            user => user.Id == id && user.IsPublished && user.RoleCode == 2,
+            cancellationToken);
+        if (jury is null)
+        {
+            return NotFound();
+        }
+
+        model.Id = id;
+        model.Username = model.Username?.Trim() ?? string.Empty;
+        model.Email = model.Email?.Trim() ?? string.Empty;
+        model.Password = string.IsNullOrWhiteSpace(model.Password) ? null : model.Password;
+        model.FullName = string.Join(
+            ' ',
+            (model.FullName ?? string.Empty).Split(
+                (char[]?)null,
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        model.Phone = model.Phone?.Trim() ?? string.Empty;
+
+        ModelState.Clear();
+        TryValidateModel(model);
+
+        if (await context.Users.AsNoTracking().AnyAsync(
+                user => user.Id != id && user.Username == model.Username,
+                cancellationToken))
+        {
+            ModelState.AddModelError(nameof(model.Username), "Bu kullan\u0131c\u0131 ad\u0131 zaten kullan\u0131l\u0131yor.");
+        }
+
+        if (await context.Users.AsNoTracking().AnyAsync(
+                user => user.Id != id && user.Email == model.Email,
+                cancellationToken))
+        {
+            ModelState.AddModelError(nameof(model.Email), "Bu e-posta adresi zaten kullan\u0131l\u0131yor.");
+        }
+
+        byte[]? photoData = null;
+        string? photoContentType = null;
+        string? photoFileName = null;
+        if (model.Photo is not null)
+        {
+            const long maximumPhotoSize = 5 * 1024 * 1024;
+            if (model.Photo.Length == 0 || model.Photo.Length > maximumPhotoSize)
+            {
+                ModelState.AddModelError(nameof(model.Photo), "Foto\u011fraf boyutu 5 MB'dan k\u00fc\u00e7\u00fck olmal\u0131d\u0131r.");
+            }
+            else
+            {
+                await using var photoStream = new MemoryStream();
+                await model.Photo.CopyToAsync(photoStream, cancellationToken);
+                photoData = photoStream.ToArray();
+                photoContentType = model.Photo.ContentType.Trim().ToLowerInvariant();
+                photoFileName = Path.GetFileName(model.Photo.FileName);
+                if (!IsSupportedPhoto(photoData, photoContentType))
+                {
+                    ModelState.AddModelError(
+                        nameof(model.Photo),
+                        "Yaln\u0131zca JPEG, PNG veya WebP format\u0131nda foto\u011fraf y\u00fckleyebilirsiniz.");
+                }
+            }
+        }
+
+        if (!ModelState.IsValid)
+        {
+            await PopulateEditJuryPhotoStateAsync(model, jury.PhotoImageId, cancellationToken);
+            return View(model);
+        }
+
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId))
+        {
+            return Challenge();
+        }
+
+        var oldEmail = jury.Email;
+        var passwordChanged = model.Password is not null;
+        var fullNameParts = model.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        jury.FirstName = string.Join(' ', fullNameParts[..^1]);
+        jury.LastName = fullNameParts[^1];
+        jury.Username = model.Username;
+        jury.Email = model.Email;
+        jury.Phone = model.Phone;
+        jury.IsActive = model.IsActive!.Value;
+        jury.UpdatedAt = DateTime.UtcNow;
+        jury.UpdatedBy = currentUserId;
+        if (passwordChanged)
+        {
+            jury.PasswordHash = PasswordHashHelper.HashPassword(model.Password!);
+        }
+
+        var oldPhotoId = jury.PhotoImageId;
+        if (photoData is not null && photoContentType is not null && photoFileName is not null)
+        {
+            var newPhotoId = Guid.NewGuid();
+            context.Images.Add(new Image
+            {
+                Id = newPhotoId,
+                FileName = photoFileName,
+                ContentType = photoContentType,
+                ImageData = photoData,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = currentUserId,
+                IsPublished = true
+            });
+            jury.PhotoImageId = newPhotoId;
+        }
+        else if (model.RemovePhoto)
+        {
+            jury.PhotoImageId = null;
+        }
+
+        if (oldPhotoId.HasValue && oldPhotoId != jury.PhotoImageId)
+        {
+            var oldPhoto = await context.Images.SingleOrDefaultAsync(
+                image => image.Id == oldPhotoId.Value && image.IsPublished,
+                cancellationToken);
+            if (oldPhoto is not null)
+            {
+                oldPhoto.IsPublished = false;
+                oldPhoto.UpdatedAt = DateTime.UtcNow;
+                oldPhoto.UpdatedBy = currentUserId;
+            }
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
+        await activityLogger.LogAsync(
+            UserActivityTypes.UserUpdated,
+            true,
+            jury.Id,
+            jury.Username,
+            currentUserId,
+            details: "J\u00fcri kullan\u0131c\u0131 bilgileri g\u00fcncellendi.",
+            cancellationToken: cancellationToken);
+
+        if (!string.Equals(oldEmail, jury.Email, StringComparison.OrdinalIgnoreCase))
+        {
+            await activityLogger.LogAsync(
+                UserActivityTypes.EmailChanged,
+                true,
+                jury.Id,
+                jury.Username,
+                currentUserId,
+                details: "J\u00fcri e-posta adresi g\u00fcncellendi.",
+                oldValue: oldEmail,
+                newValue: jury.Email,
+                cancellationToken: cancellationToken);
+        }
+
+        if (passwordChanged)
+        {
+            await activityLogger.LogAsync(
+                UserActivityTypes.PasswordChanged,
+                true,
+                jury.Id,
+                jury.Username,
+                currentUserId,
+                details: "J\u00fcri \u015fifresi y\u00f6netici taraf\u0131ndan de\u011fi\u015ftirildi.",
+                cancellationToken: cancellationToken);
+        }
+
+        TempData["GenericPopup.Type"] = "success";
+        TempData["GenericPopup.Message"] = "J\u00fcri ba\u015far\u0131yla g\u00fcncellendi.";
+        TempData["GenericPopup.RedirectUrl"] = Url.Action(nameof(JuryDetails), new { id }) ?? $"/juriler/{id}";
+        return RedirectToAction(nameof(EditJury), new { id });
     }
     [HttpGet("juri-ekle")]
     public IActionResult AddJury() => View(new AddJuryViewModel());
@@ -136,9 +529,10 @@ public sealed class ManagementController(AfifeContext context, IJuryReportServic
             });
         }
 
+        var juryId = Guid.NewGuid();
         context.Users.Add(new Models.Entities.User
         {
-            Id = Guid.NewGuid(),
+            Id = juryId,
             FirstName = firstName,
             LastName = lastName,
             Phone = model.Phone,
@@ -154,6 +548,14 @@ public sealed class ManagementController(AfifeContext context, IJuryReportServic
         });
 
         await context.SaveChangesAsync(cancellationToken);
+        await activityLogger.LogAsync(
+            UserActivityTypes.UserCreated,
+            true,
+            juryId,
+            model.Username,
+            currentUserId,
+            details: "Yeni j\u00fcri kullan\u0131c\u0131s\u0131 olu\u015fturuldu.",
+            cancellationToken: cancellationToken);
 
         TempData["GenericPopup.Type"] = "success";
         TempData["GenericPopup.Message"] = "J\u00FCri ba\u015Far\u0131yla kaydedildi.";
@@ -161,6 +563,33 @@ public sealed class ManagementController(AfifeContext context, IJuryReportServic
         return RedirectToAction(nameof(AddJury));
     }
 
+    private async Task PopulateEditJuryPhotoStateAsync(
+        EditJuryViewModel model,
+        Guid? photoImageId,
+        CancellationToken cancellationToken)
+    {
+        model.HasExistingPhoto = false;
+        model.ExistingPhotoFileName = string.Empty;
+        model.ExistingPhotoUrl = string.Empty;
+        if (!photoImageId.HasValue || model.RemovePhoto)
+        {
+            return;
+        }
+
+        var fileName = await context.Images
+            .AsNoTracking()
+            .Where(image => image.Id == photoImageId.Value && image.IsPublished)
+            .Select(image => image.FileName)
+            .SingleOrDefaultAsync(cancellationToken);
+        if (fileName is null)
+        {
+            return;
+        }
+
+        model.HasExistingPhoto = true;
+        model.ExistingPhotoFileName = fileName;
+        model.ExistingPhotoUrl = Url.Action(nameof(JuryPhoto), new { id = model.Id }) ?? string.Empty;
+    }
     private static bool IsSupportedPhoto(byte[] data, string contentType)
     {
         if (contentType == "image/jpeg")

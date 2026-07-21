@@ -4,11 +4,14 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using YKBAfife.Models.ViewModels;
+using YKBAfife.Services.Audit;
 using YKBAfife.Services.Authentication;
 
 namespace YKBAfife.Controllers;
 
-public sealed class AccountController(IAdminAuthenticationService authenticationService) : Controller
+public sealed class AccountController(
+    IAdminAuthenticationService authenticationService,
+    IUserActivityLogger activityLogger) : Controller
 {
     [AllowAnonymous]
     [HttpGet("giris-yap")]
@@ -39,7 +42,7 @@ public sealed class AccountController(IAdminAuthenticationService authentication
 
         if (admin is null)
         {
-            ModelState.AddModelError(string.Empty, "Kullanıcı adı veya şifre hatalı.");
+            ModelState.AddModelError(string.Empty, "Kullan\u0131c\u0131 ad\u0131 veya \u015fifre hatal\u0131.");
             return View(model);
         }
 
@@ -73,10 +76,7 @@ public sealed class AccountController(IAdminAuthenticationService authentication
 
     [Authorize]
     [HttpGet("sifre-degistir")]
-    public IActionResult ChangePassword()
-    {
-        return View(new ChangePasswordViewModel());
-    }
+    public IActionResult ChangePassword() => View(new ChangePasswordViewModel());
 
     [Authorize]
     [HttpPost("sifre-degistir")]
@@ -105,7 +105,7 @@ public sealed class AccountController(IAdminAuthenticationService authentication
 
         if (result == ChangePasswordResult.CurrentPasswordIncorrect)
         {
-            ModelState.AddModelError(nameof(model.CurrentPassword), "Mevcut şifreniz hatalı.");
+            ModelState.AddModelError(nameof(model.CurrentPassword), "Mevcut \u015fifreniz hatal\u0131.");
             return View(model);
         }
 
@@ -115,15 +115,26 @@ public sealed class AccountController(IAdminAuthenticationService authentication
             return RedirectToAction(nameof(Login));
         }
 
-        TempData["PasswordChanged"] = "Şifreniz başarıyla güncellendi.";
+        TempData["PasswordChanged"] = "\u015eifreniz ba\u015far\u0131yla g\u00fcncellendi.";
         return RedirectToAction(nameof(ChangePassword));
     }
 
     [Authorize]
     [HttpPost("cikis-yap")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Logout()
+    public async Task<IActionResult> Logout(CancellationToken cancellationToken)
     {
+        var userId = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var parsedUserId)
+            ? parsedUserId
+            : (Guid?)null;
+        await activityLogger.LogAsync(
+            UserActivityTypes.Logout,
+            true,
+            userId,
+            User.FindFirstValue("username"),
+            userId,
+            details: "Kullan\u0131c\u0131 y\u00f6netim panelinden \u00e7\u0131k\u0131\u015f yapt\u0131.",
+            cancellationToken: cancellationToken);
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         return RedirectToAction(nameof(Login));
     }

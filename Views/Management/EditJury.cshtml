@@ -1,0 +1,138 @@
+@model YKBAfife.Models.ViewModels.EditJuryViewModel
+@{
+    ViewData["Title"] = "Jüriyi Düzenle";
+}
+
+<section class="play-details-page add-jury-page">
+    <a asp-controller="Management" asp-action="JuryDetails" asp-route-id="@Model.Id" class="play-details-back">
+        <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
+        <span>Jüri Detayına Dön</span>
+    </a>
+
+    <header class="play-details-toolbar">
+        <h1>Jüriyi Düzenle</h1>
+    </header>
+
+    <form asp-controller="Management"
+          asp-action="EditJury"
+          asp-route-id="@Model.Id"
+          method="post"
+          enctype="multipart/form-data"
+          class="add-jury-form"
+          data-generic-confirm
+          data-confirm-message="Değişiklikleri kaydetmek istediğinize emin misiniz?"
+          data-confirm-text="Evet"
+          data-cancel-text="İptal">
+        @Html.AntiForgeryToken()
+        <input asp-for="Id" type="hidden" />
+        <input asp-for="RemovePhoto" type="hidden" data-jury-remove-photo />
+        <div asp-validation-summary="ModelOnly" class="add-jury-validation-summary" role="alert"></div>
+
+        <div class="add-jury-grid">
+            <div class="add-jury-field">
+                <label asp-for="Username"></label>
+                <input asp-for="Username" autocomplete="username" required />
+                <span asp-validation-for="Username"></span>
+            </div>
+
+            <div class="add-jury-field">
+                <label asp-for="Email"></label>
+                <input asp-for="Email" autocomplete="email" required />
+                <span asp-validation-for="Email"></span>
+            </div>
+
+            <div class="add-jury-field">
+                <label asp-for="Password"></label>
+                <input asp-for="Password"
+                       type="text"
+                       autocomplete="new-password"
+                       placeholder="Değiştirmek istemiyorsanız boş bırakın" />
+                <span asp-validation-for="Password"></span>
+            </div>
+
+            <div class="add-jury-field">
+                <label asp-for="FullName"></label>
+                <input asp-for="FullName" autocomplete="name" required />
+                <span asp-validation-for="FullName"></span>
+            </div>
+
+            <div class="add-jury-field">
+                <label asp-for="Phone"></label>
+                <input asp-for="Phone" autocomplete="tel" required />
+                <span asp-validation-for="Phone"></span>
+            </div>
+
+            <fieldset class="add-jury-status">
+                <legend>Statü</legend>
+                <div class="add-jury-status-options">
+                    <label class="add-jury-option">
+                        <input type="radio" asp-for="IsActive" value="true" required />
+                        <span>Güncel Jüri</span>
+                    </label>
+                    <label class="add-jury-option">
+                        <input type="radio" asp-for="IsActive" value="false" required />
+                        <span>Geçmiş Jüri</span>
+                    </label>
+                </div>
+                <span asp-validation-for="IsActive"></span>
+            </fieldset>
+
+            <div class="add-jury-field add-jury-photo-field">
+                <label asp-for="Photo"></label>
+                <div class="add-jury-upload" data-jury-upload-control>
+                    <button type="button"
+                            class="add-jury-upload-picker"
+                            aria-label="Fotoğraf dosyası seç"
+                            data-jury-photo-picker>
+                        <span data-jury-file-name>@(Model.HasExistingPhoto ? Model.ExistingPhotoFileName : "Dosya Ekle")</span>
+                    </button>
+                    <button type="button"
+                            class="add-jury-upload-icon"
+                            aria-label="Dosya ekle"
+                            data-jury-photo-primary>
+                        <img src="~/icons/upload.svg" alt="" aria-hidden="true" data-jury-photo-primary-icon />
+                    </button>
+                </div>
+                <input id="jury-photo-input"
+                       asp-for="Photo"
+                       type="file"
+                       class="visually-hidden"
+                       accept="image/jpeg,image/png,image/webp"
+                       data-jury-photo-input
+                       data-existing-photo-url="@Model.ExistingPhotoUrl"
+                       data-existing-photo-name="@Model.ExistingPhotoFileName" />
+                <div class="add-jury-photo-actions" data-jury-photo-actions hidden>
+                    <button type="button" class="add-jury-photo-action" data-jury-photo-view>
+                        <img src="~/icons/eye.svg" alt="" aria-hidden="true" />
+                        <span>Fotoğrafı Görüntüle</span>
+                    </button>
+                    <button type="button" class="add-jury-photo-action" data-jury-photo-replace>
+                        <img src="~/icons/upload.svg" alt="" aria-hidden="true" />
+                        <span>Farklı Fotoğraf Ekle</span>
+                    </button>
+                </div>
+                <span asp-validation-for="Photo"></span>
+            </div>
+        </div>
+
+        <div class="add-jury-actions">
+            <a asp-controller="Management"
+               asp-action="JuryDetails"
+               asp-route-id="@Model.Id"
+               class="add-jury-cancel"
+               data-history-back>İptal</a>
+            <button type="submit" class="add-jury-submit">Kaydet</button>
+        </div>
+    </form>
+
+    <div class="add-jury-photo-modal" data-jury-photo-modal hidden>
+        <div class="add-jury-photo-dialog" role="dialog" aria-modal="true" aria-label="Fotoğraf önizleme">
+            <img src="" alt="Jüri fotoğrafı önizlemesi" data-jury-photo-preview />
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/add-jury.js" asp-append-version="true"></script>
+}

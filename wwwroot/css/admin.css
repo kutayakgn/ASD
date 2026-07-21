@@ -809,3 +809,70 @@ body.has-photo-preview {
 .add-jury-photo-field {
     grid-column: auto;
 }
+/* Jury detail */
+.jury-details-layout {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) minmax(0, 3fr);
+    gap: clamp(32px, 6vw, 88px);
+    margin-top: 24px;
+    align-items: start;
+}
+
+.jury-details-photo-panel {
+    width: 100%;
+}
+
+.jury-details-photo,
+.jury-details-photo-placeholder {
+    display: grid;
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    place-items: center;
+    object-fit: cover;
+    background: linear-gradient(145deg, #ece8dc, #d8cfb5);
+}
+
+.jury-details-photo-placeholder span {
+    color: #918150;
+    font-family: LimeLight;
+    font-size: clamp(64px, 9vw, 120px);
+}
+
+.jury-details-content {
+    margin: 0;
+    padding: 0;
+}
+
+.jury-status-value {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.jury-status-dot {
+    width: 10px;
+    height: 10px;
+    flex: 0 0 10px;
+    border-radius: 50%;
+}
+
+.jury-status-dot.is-active { background: #1f9f55; }
+.jury-status-dot.is-inactive { background: #b31d1d; }
+.jury-delete-action { color: #b31d1d; border-color: #b31d1d; }
+
+@media (max-width: 800px) {
+    .jury-details-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .jury-details-photo-panel {
+        max-width: 280px;
+    }
+}
+
+@media (max-width: 600px) {
+    .jury-details-photo-panel {
+        max-width: 100%;
+    }
+}
+.jury-watched-plays { margin-bottom: 24px; }

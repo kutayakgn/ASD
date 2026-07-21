@@ -7,9 +7,14 @@
     const photoActions = document.querySelector("[data-jury-photo-actions]");
     const viewButton = document.querySelector("[data-jury-photo-view]");
     const replaceButton = document.querySelector("[data-jury-photo-replace]");
+    const removePhotoInput = document.querySelector("[data-jury-remove-photo]");
     const modal = document.querySelector("[data-jury-photo-modal]");
     const preview = document.querySelector("[data-jury-photo-preview]");
-    let previewUrl = "";
+    const existingPhotoUrl = input?.dataset.existingPhotoUrl || "";
+    const existingPhotoName = input?.dataset.existingPhotoName || "";
+    let previewUrl = existingPhotoUrl;
+    let previewIsObjectUrl = false;
+    let hasPhoto = Boolean(existingPhotoUrl);
 
     const closePreview = () => {
         if (!modal || modal.hidden) return;
@@ -19,9 +24,21 @@
     };
 
     const revokePreviewUrl = () => {
-        if (!previewUrl) return;
-        URL.revokeObjectURL(previewUrl);
+        if (previewUrl && previewIsObjectUrl) URL.revokeObjectURL(previewUrl);
         previewUrl = "";
+        previewIsObjectUrl = false;
+    };
+
+    const renderPhotoState = (name) => {
+        if (fileName) fileName.textContent = name || "Dosya Ekle";
+        if (pickerButton) pickerButton.disabled = hasPhoto;
+        if (primaryIcon) primaryIcon.src = hasPhoto ? "/icons/trash.svg" : "/icons/upload.svg";
+        if (primaryButton) {
+            primaryButton.setAttribute(
+                "aria-label",
+                hasPhoto ? "Y\u00fcklenen foto\u011fraf\u0131 kald\u0131r" : "Dosya ekle");
+        }
+        if (photoActions) photoActions.hidden = !hasPhoto;
     };
 
     const resetPhoto = () => {
@@ -29,36 +46,32 @@
         input.value = "";
         revokePreviewUrl();
         closePreview();
+        hasPhoto = false;
         if (preview) preview.removeAttribute("src");
-        if (fileName) fileName.textContent = "Dosya Ekle";
-        if (pickerButton) pickerButton.disabled = false;
-        if (primaryIcon) primaryIcon.src = "/icons/upload.svg";
-        if (primaryButton) primaryButton.setAttribute("aria-label", "Dosya ekle");
-        if (photoActions) photoActions.hidden = true;
+        if (removePhotoInput) removePhotoInput.value = "true";
+        renderPhotoState("");
     };
 
     const applyPhoto = (file) => {
         revokePreviewUrl();
         previewUrl = URL.createObjectURL(file);
-        if (fileName) fileName.textContent = file.name;
-        if (pickerButton) pickerButton.disabled = true;
-        if (primaryIcon) primaryIcon.src = "/icons/trash.svg";
-        if (primaryButton) primaryButton.setAttribute("aria-label", "Y\u00FCklenen foto\u011Fraf\u0131 kald\u0131r");
-        if (photoActions) photoActions.hidden = false;
+        previewIsObjectUrl = true;
+        hasPhoto = true;
+        if (removePhotoInput) removePhotoInput.value = "false";
+        renderPhotoState(file.name);
     };
 
     input?.addEventListener("change", () => {
         const file = input.files?.[0];
         if (file) applyPhoto(file);
-        else resetPhoto();
     });
 
     pickerButton?.addEventListener("click", () => {
-        if (!input?.files?.length) input?.click();
+        if (!hasPhoto) input?.click();
     });
 
     primaryButton?.addEventListener("click", () => {
-        if (input?.files?.length) resetPhoto();
+        if (hasPhoto) resetPhoto();
         else input?.click();
     });
 
@@ -82,10 +95,10 @@
     document.addEventListener("click", (event) => {
         const cancel = event.target.closest("[data-history-back]");
         if (!cancel || window.history.length <= 1) return;
-
         event.preventDefault();
         window.history.back();
     });
 
+    if (hasPhoto) renderPhotoState(existingPhotoName);
     window.addEventListener("pagehide", revokePreviewUrl, { once: true });
 })();

@@ -1,0 +1,114 @@
+@model YKBAfife.Models.ViewModels.JuryDetailsViewModel
+@{
+    ViewData["Title"] = Model.FullName;
+
+    string DisplayValue(string? value) => string.IsNullOrWhiteSpace(value) ? "-" : value;
+    string DateValue(DateTime? value) => value.HasValue
+        ? value.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
+        : "-";
+    string AuditValue(string? userName, DateTime? date) => date.HasValue
+        ? $"{date.Value.ToLocalTime():dd.MM.yyyy HH:mm} / {DisplayValue(userName)}"
+        : DisplayValue(userName);
+}
+
+<section class="play-details-page jury-details-page">
+    <a asp-controller="Management" asp-action="Juries" class="play-details-back">
+        <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
+        <span>Jürilere Dön</span>
+    </a>
+
+    <header class="play-details-toolbar">
+        <h1>Jüri Detay</h1>
+        <div class="play-details-actions">
+            <form asp-controller="Management"
+                  asp-action="DeleteJury"
+                  asp-route-id="@Model.Id"
+                  method="post"
+                  data-generic-confirm
+                  data-confirm-message="Jüriyi silmek istediğinize emin misiniz?"
+                  data-confirm-text="Evet"
+                  data-cancel-text="İptal">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="play-detail-action play-detail-action-secondary jury-delete-action">
+                    Jüriyi Sil
+                </button>
+            </form>
+            <a asp-controller="Management"
+               asp-action="EditJury"
+               asp-route-id="@Model.Id"
+               class="play-detail-action play-detail-action-primary">Jüriyi Düzenle</a>
+        </div>
+    </header>
+
+    <div class="jury-details-layout">
+        <aside class="jury-details-photo-panel">
+            @if (Model.HasPhoto)
+            {
+                <img src="@Url.Action("JuryPhoto", "Management", new { id = Model.Id })"
+                     alt="@Model.FullName jüri fotoğrafı"
+                     class="jury-details-photo" />
+            }
+            else
+            {
+                <div class="jury-details-photo-placeholder" aria-label="Jüri fotoğrafı bulunmuyor">
+                    <span>@(string.IsNullOrWhiteSpace(Model.FullName) ? "?" : Model.FullName[..1].ToUpperInvariant())</span>
+                </div>
+            }
+        </aside>
+
+        <dl class="play-details-content jury-details-content">
+            <div class="play-detail-field">
+                <dt>Kullanıcı Adı</dt>
+                <dd>@DisplayValue(Model.Username)</dd>
+            </div>
+            <div class="play-detail-field">
+                <dt>E-posta</dt>
+                <dd>@DisplayValue(Model.Email)</dd>
+            </div>
+            <div class="play-detail-field">
+                <dt>Adı Soyadı</dt>
+                <dd>@DisplayValue(Model.FullName)</dd>
+            </div>
+            <div class="play-detail-field">
+                <dt>Telefon</dt>
+                <dd>@DisplayValue(Model.Phone)</dd>
+            </div>
+            <div class="play-detail-field">
+                <dt>Son Login Tarihi</dt>
+                <dd>@DateValue(Model.LastLoginAt)</dd>
+            </div>
+            <div class="play-detail-field">
+                <dt>Son Şifre Değiştirme Tarihi</dt>
+                <dd>@DateValue(Model.LastPasswordChangeAt)</dd>
+            </div>
+            <div class="play-detail-field">
+                <dt>Başarılı Giriş Sayısı</dt>
+                <dd>@Model.SuccessfulLoginCount</dd>
+            </div>
+            <div class="play-detail-field">
+                <dt>Başarısız Giriş Sayısı</dt>
+                <dd>@Model.FailedLoginCount</dd>
+            </div>
+            <div class="play-detail-field">
+                <dt>Ekleyen</dt>
+                <dd>@AuditValue(Model.CreatedByName, Model.CreatedAt)</dd>
+            </div>
+            <div class="play-detail-field">
+                <dt>Düzenleyen</dt>
+                <dd>@AuditValue(Model.UpdatedByName, Model.UpdatedAt)</dd>
+            </div>
+            <div class="play-detail-field">
+                <dt>Statü</dt>
+                <dd class="jury-status-value">
+                    <span class="jury-status-dot @(Model.IsActive ? "is-active" : "is-inactive")" aria-hidden="true"></span>
+                    <span>@(Model.IsActive ? "Güncel Jüri" : "Geçmiş Jüri")</span>
+                </dd>
+            </div>
+        </dl>
+    </div>
+    <div class="play-details-divider" role="separator"></div>
+
+    <section class="jury-watched-plays" aria-label="JÃ¼rinin izlediÄŸi oyunlar">
+        @await Component.InvokeAsync("ComplexTable", new { model = Model.WatchedPlaysTable })
+    </section>
+</section>
