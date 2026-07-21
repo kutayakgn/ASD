@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="~/css/admin.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/header.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/complex-table.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/generic-popup.css" asp-append-version="true" />
 </head>
 <body>
     @await Component.InvokeAsync("Header")
@@ -17,10 +18,13 @@
         @RenderBody()
     </main>
 
+    @await Component.InvokeAsync("GenericPopup")
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/complex-table.js" asp-append-version="true"></script>
+    <script src="~/js/generic-popup.js" asp-append-version="true"></script>
     <script src="~/js/add-candidate.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>

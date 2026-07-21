@@ -154,7 +154,11 @@ public sealed class ManagementController(AfifeContext context, IJuryReportServic
         });
 
         await context.SaveChangesAsync(cancellationToken);
-        return RedirectToAction(nameof(Juries));
+
+        TempData["GenericPopup.Type"] = "success";
+        TempData["GenericPopup.Message"] = "J\u00FCri ba\u015Far\u0131yla kaydedildi.";
+        TempData["GenericPopup.RedirectUrl"] = Url.Action(nameof(Juries)) ?? "/juriler";
+        return RedirectToAction(nameof(AddJury));
     }
 
     private static bool IsSupportedPhoto(byte[] data, string contentType)

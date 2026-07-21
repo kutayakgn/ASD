@@ -1,0 +1,17 @@
+@model YKBAfife.Models.Components.GenericPopupViewModel
+
+<div class="generic-popup"
+     data-generic-popup
+     data-initial-type="@Model.InitialType"
+     data-initial-message="@Model.InitialMessage"
+     data-initial-redirect-url="@Model.InitialRedirectUrl"
+     hidden>
+    <div class="generic-popup-dialog" role="alertdialog" aria-modal="true" aria-describedby="generic-popup-message">
+        <img class="generic-popup-icon" src="" alt="" aria-hidden="true" data-generic-popup-icon />
+        <p id="generic-popup-message" class="generic-popup-message" data-generic-popup-message></p>
+        <div class="generic-popup-actions">
+            <button type="button" class="generic-popup-button generic-popup-cancel" data-generic-popup-cancel>İptal</button>
+            <button type="button" class="generic-popup-button generic-popup-confirm" data-generic-popup-confirm>Tamam</button>
+        </div>
+    </div>
+</div>

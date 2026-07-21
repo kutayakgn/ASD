@@ -474,14 +474,14 @@ body {
 .add-jury-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 28px clamp(40px, 8vw, 112px);
+    gap: 24px;
 }
 
 .add-jury-field {
     display: flex;
     min-width: 0;
     flex-direction: column;
-    gap: 8px;
+
 }
 
 .add-jury-field > label:first-child,
@@ -489,8 +489,12 @@ body {
     margin: 0;
     color: #777064;
     font-size: 13px;
+    margin-bottom: 6px;
     font-weight: 500;
     line-height: 18px;
+}
+.field-validation-error {
+   margin-top:4px;
 }
 
 .add-jury-field input:not([type="file"]) {
@@ -650,4 +654,158 @@ body {
     .add-jury-submit {
         width: 100%;
     }
+}
+.add-jury-upload {
+    cursor: default;
+}
+
+.add-jury-upload-icon {
+    display: inline-grid;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+    padding: 6px;
+    place-items: center;
+    color: #171717;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+}
+
+.add-jury-upload-icon:hover,
+.add-jury-upload-icon:focus-visible {
+    background: #f4f2ed;
+    outline: none;
+}
+
+.add-jury-upload-icon img,
+.add-jury-photo-action img {
+    width: 18px;
+    height: 18px;
+}
+
+.add-jury-photo-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.add-jury-photo-action {
+    display: inline-flex;
+    min-height: 38px;
+    padding: 8px 12px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #171717;
+    background: #fff;
+    border: 1px solid #bdbdbd;
+    font-family: Outfit;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.add-jury-photo-action:hover,
+.add-jury-photo-action:focus-visible {
+    color: #fff;
+    background: #918150;
+    border-color: #918150;
+    outline: none;
+}
+
+.add-jury-photo-action:hover img,
+.add-jury-photo-action:focus-visible img {
+    filter: brightness(0) invert(1);
+}
+
+.add-jury-photo-modal {
+    position: fixed;
+    z-index: 1200;
+    inset: 0;
+    display: grid;
+    padding: 32px;
+    place-items: center;
+    background: rgba(0, 0, 0, .68);
+    backdrop-filter: blur(2px);
+}
+
+.add-jury-photo-modal[hidden] {
+    display: none;
+}
+
+.add-jury-photo-dialog {
+    display: grid;
+    max-width: min(900px, 92vw);
+    max-height: 88vh;
+    padding: 12px;
+    place-items: center;
+    background: #fff;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, .32);
+}
+
+.add-jury-photo-dialog img {
+    display: block;
+    max-width: 100%;
+    max-height: calc(88vh - 24px);
+    object-fit: contain;
+}
+
+body.has-photo-preview {
+    overflow: hidden;
+}
+
+@media (max-width: 600px) {
+    .add-jury-photo-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .add-jury-photo-action {
+        width: 100%;
+    }
+
+    .add-jury-photo-modal {
+        padding: 16px;
+    }
+}
+.add-jury-photo-actions[hidden] {
+    display: none;
+}
+
+.add-jury-upload {
+    padding: 0 6px 0 0;
+    gap: 0;
+}
+
+.add-jury-upload-picker {
+    display: flex;
+    min-width: 0;
+    min-height: 42px;
+    flex: 1 1 auto;
+    padding: 10px 12px;
+    align-items: center;
+    color: #777064;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    font: inherit;
+    text-align: left;
+}
+
+.add-jury-upload-picker:not(:disabled):hover,
+.add-jury-upload-picker:not(:disabled):focus-visible {
+    background: #faf9f6;
+    outline: none;
+}
+
+.add-jury-upload-picker:disabled {
+    color: #171717;
+    cursor: default;
+    opacity: 1;
+}
+
+/* Keep the optional photo field aligned with the two-column form grid. */
+.add-jury-photo-field {
+    grid-column: auto;
 }

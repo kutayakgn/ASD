@@ -17,7 +17,11 @@
           asp-action="AddJury"
           method="post"
           enctype="multipart/form-data"
-          class="add-jury-form"> 
+          class="add-jury-form"
+          data-generic-confirm
+          data-confirm-message="Kaydetmek istedi&#287;inize emin misiniz?"
+          data-confirm-text="Evet"
+          data-cancel-text="&#304;ptal">
         @Html.AntiForgeryToken()
         <div asp-validation-summary="ModelOnly" class="add-jury-validation-summary" role="alert"></div>
 
@@ -69,16 +73,36 @@
 
             <div class="add-jury-field add-jury-photo-field">
                 <label asp-for="Photo"></label>
-                <label class="add-jury-upload" for="jury-photo-input">
-                    <span data-jury-file-name>Dosya Ekle</span>
-                    <img src="~/icons/upload.svg" alt="" aria-hidden="true" />
-                </label>
+                <div class="add-jury-upload" data-jury-upload-control>
+                    <button type="button"
+                            class="add-jury-upload-picker"
+                            aria-label="Foto&#287;raf dosyas&#305; se&#231;"
+                            data-jury-photo-picker>
+                        <span data-jury-file-name>Dosya Ekle</span>
+                    </button>
+                    <button type="button"
+                            class="add-jury-upload-icon"
+                            aria-label="Dosya ekle"
+                            data-jury-photo-primary>
+                        <img src="~/icons/upload.svg" alt="" aria-hidden="true" data-jury-photo-primary-icon />
+                    </button>
+                </div>
                 <input id="jury-photo-input"
                        asp-for="Photo"
                        type="file"
                        class="visually-hidden"
                        accept="image/jpeg,image/png,image/webp"
                        data-jury-photo-input />
+                <div class="add-jury-photo-actions" data-jury-photo-actions hidden>
+                    <button type="button" class="add-jury-photo-action" data-jury-photo-view>
+                        <img src="~/icons/eye.svg" alt="" aria-hidden="true" />
+                        <span>Foto&#287;raf&#305; G&#246;r&#252;nt&#252;le</span>
+                    </button>
+                    <button type="button" class="add-jury-photo-action" data-jury-photo-replace>
+                        <img src="~/icons/upload.svg" alt="" aria-hidden="true" />
+                        <span>Farkl&#305; Foto&#287;raf Ekle</span>
+                    </button>
+                </div>
                 <span asp-validation-for="Photo"></span>
             </div>
         </div>
@@ -91,6 +115,11 @@
             <button type="submit" class="add-jury-submit">Kaydet</button>
         </div>
     </form>
+    <div class="add-jury-photo-modal" data-jury-photo-modal hidden>
+        <div class="add-jury-photo-dialog" role="dialog" aria-modal="true" aria-label="Foto&#287;raf &#246;nizleme">
+            <img src="" alt="Y&#252;klenen foto&#287;raf &#246;nizlemesi" data-jury-photo-preview />
+        </div>
+    </div>
 </section>
 
 @section Scripts {
