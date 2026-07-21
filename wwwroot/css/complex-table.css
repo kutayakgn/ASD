@@ -453,3 +453,63 @@ tr {
         align-items: stretch;
     }
 }
+
+.complex-table-heading-tools {
+    display: flex;
+    width: min(100%, 620px);
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.complex-table-heading-tools .jury-voting-table-search-form {
+    flex: 1 1 360px;
+}
+
+.complex-table-header-action {
+    display: inline-flex;
+    min-height: 44px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 18px;
+    color: #fff;
+    background: #171717;
+    border: 1px solid #171717;
+    font-family: Outfit;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    text-decoration: none;
+    transition: color .15s ease-in-out, background-color .15s ease-in-out, border-color .15s ease-in-out;
+}
+
+.complex-table-header-action:hover,
+.complex-table-header-action:focus-visible {
+    color: #fff;
+    background: #918150;
+    border-color: #918150;
+    outline: none;
+}
+
+@media (max-width: 760px) {
+    .complex-table-heading {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .complex-table-heading-tools {
+        width: 100%;
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .complex-table-heading-tools .jury-voting-table-search-form {
+        width: 100%;
+        flex-basis: auto;
+    }
+
+    .complex-table-header-action {
+        width: 100%;
+    }
+}

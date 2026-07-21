@@ -64,8 +64,8 @@
                     <button type="button" class="admin-mobile-nav-close" aria-label="Menüyü kapat" data-mobile-nav-dismiss>×</button>
                 </div>
                 <ul class="navbar-nav ms-auto align-items-xl-center admin-menu">
-                    <li class="nav-item"><a class="nav-link@(ActiveClass("ArtPromise"))" asp-controller="Management" asp-action="ArtPromise">Sanata Sözümüz</a></li>
-                    <li class="nav-item"><a class="nav-link@(ActiveClass("Juries"))" asp-controller="Management" asp-action="Juries">Jüriler</a></li>
+                    <li class="nav-item"><a class="nav-link@(string.Equals(currentController, "Home", StringComparison.OrdinalIgnoreCase) && string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase) ? " active" : string.Empty)" asp-controller="Home" asp-action="Index">Anasayfa</a></li>
+                    <li class="nav-item"><a class="nav-link@(ActiveClass("Juries", "AddJury"))" asp-controller="Management" asp-action="Juries">Jüriler</a></li>
                     <li class="nav-item"><a class="nav-link@(ActiveClass("Plays", "PlayDetails"))" asp-controller="Management" asp-action="Plays">Oyunlar</a></li>
                     <li class="nav-item"><a class="nav-link@(ActiveClass("Rankings"))" asp-controller="Management" asp-action="Rankings">Sıralamalar</a></li>
                     <li class="nav-item dropdown admin-other-menu">

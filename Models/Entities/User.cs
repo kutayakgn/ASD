@@ -20,6 +20,7 @@ public class User
     public DateTime? UpdatedAt { get; set; }
     public Guid? UpdatedBy { get; set; }
     public bool IsPublished { get; set; }
+    public bool IsActive { get; set; }
     public int RoleCode { get; set; }
     public int? GroupCode { get; set; }
 

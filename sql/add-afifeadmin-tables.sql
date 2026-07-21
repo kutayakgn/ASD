@@ -293,6 +293,7 @@ BEGIN
         [UpdatedAt] [datetime2](7) NULL,
         [UpdatedBy] [uniqueidentifier] NULL,
         [IsPublished] [bit] NOT NULL,
+        [IsActive] [bit] NOT NULL CONSTRAINT [DF_Users_IsActive] DEFAULT (1),
         [RoleCode] [int] NOT NULL,
         [GroupCode] [int] NULL,
         CONSTRAINT [PK_Users] PRIMARY KEY CLUSTERED ([Id])

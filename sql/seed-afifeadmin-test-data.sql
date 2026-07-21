@@ -86,7 +86,7 @@ BEGIN TRY
 
     INSERT INTO [dbo].[Users]
         ([Id], [FirstName], [LastName], [Phone], [PhotoImageId], [Username], [PasswordHash], [Email],
-         [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy], [IsPublished], [RoleCode], [GroupCode])
+         [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy], [IsPublished], [IsActive], [RoleCode], [GroupCode])
     SELECT
         s.UserId,
         CASE WHEN s.N = 1 THEN N'Test Coordinator' ELSE CONCAT(N'Test Jury ', s.N - 1) END,
@@ -101,6 +101,7 @@ BEGIN TRY
         NULL,
         NULL,
         1,
+        CASE WHEN s.N = 1 OR s.N % 3 <> 0 THEN 1 ELSE 0 END,
         CASE WHEN s.N = 1 THEN 1 ELSE 2 END,
         s.N
     FROM @Seed AS s

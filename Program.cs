@@ -16,6 +16,7 @@ var connectionString = builder.Configuration.GetConnectionString("AfifeAdmin")
 builder.Services.AddDbContext<AfifeContext>(options => options.UseSqlServer(connectionString));
 builder.Services.AddScoped<IAdminAuthenticationService, AdminAuthenticationService>();
 builder.Services.AddScoped<IPlayWatchReportService, PlayWatchReportService>();
+builder.Services.AddScoped<IJuryReportService, JuryReportService>();
 builder.Services.AddSingleton<IExcelExporter, ExcelExporter>();
 
 builder.Services

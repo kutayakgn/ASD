@@ -6,20 +6,42 @@ using YKBAfife.Data;
 using YKBAfife.Helpers;
 using YKBAfife.Models.Entities;
 using YKBAfife.Models.ViewModels;
+using YKBAfife.Services.Reports;
 
 namespace YKBAfife.Controllers;
 
-public sealed class ManagementController(AfifeContext context) : Controller
+public sealed class ManagementController(AfifeContext context, IJuryReportService juryReportService) : Controller
 {
     [HttpGet("sanata-sozumuz")]
     public IActionResult ArtPromise() => Page(
         "Sanata Sözümüz",
         "Afife'nin sanata verdiği sözü ve içeriklerini bu alandan yönetin.");
-
     [HttpGet("juriler")]
-    public IActionResult Juries() => Page(
-        "Jüriler",
-        "Jüri üyelerini, gruplarını ve atamalarını yönetin.");
+    public async Task<IActionResult> Juries(CancellationToken cancellationToken)
+    {
+        var report = await juryReportService.GetPageAsync(new JuryTableQuery(), cancellationToken);
+        return View(new JuryDashboardViewModel
+        {
+            JuryTable = JuryComplexTableFactory.Create(report)
+        });
+    }
+
+    [HttpPost("juriler/tablo")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> JuryTable(
+        [FromForm] JuryTableQuery query,
+        CancellationToken cancellationToken)
+    {
+        var report = await juryReportService.GetPageAsync(query, cancellationToken);
+        var model = JuryComplexTableFactory.Create(report);
+        return ViewComponent("ComplexTable", new { model });
+    }
+
+    [HttpGet("juri-ekle")]
+    public IActionResult AddJury() => Page(
+        "J\u00FCri Ekle",
+        "Yeni j\u00FCri kullan\u0131c\u0131s\u0131n\u0131 bu alandan ekleyin.");
+
 
     [HttpGet("oyunlar")]
     public IActionResult Plays() => Page(

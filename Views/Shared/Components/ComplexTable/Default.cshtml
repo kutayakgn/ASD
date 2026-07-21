@@ -51,31 +51,37 @@
                     }
                 </div>
             }
-            @if (Model.ShowHeading || Model.ShowSearch)
+            @if (Model.ShowHeading || Model.ShowSearch || activeTab.HeaderActions.Count > 0)
             {
                 <div class="complex-table-heading">
                     @if (Model.ShowHeading)
                     {
                         <h2 id="@(Model.Id)-title">@activeTab.Title</h2>
                     }
-                    @if (Model.ShowSearch)
-                    {
-                        <div class="jury-voting-table-search-form">
-                            <label class="visually-hidden" for="@(Model.Id)-search">@Model.SearchPlaceholder</label>
-                            <input id="@(Model.Id)-search"
-                                   type="search"
-                                   name="search"
-                                   value="@activeTab.Search"
-                                   class="jury-voting-table-search-input"
-                                   placeholder="@Model.SearchPlaceholder"
-                                   autocomplete="off"
-                                   data-complex-table-search />
-                            <button type="button"
-                                    class="complex-table-search-clear"
-                                    aria-label="Aramayı temizle"
-                                    data-complex-table-clear>×</button>
-                        </div>
-                    }
+                    <div class="complex-table-heading-tools">
+                        @if (Model.ShowSearch)
+                        {
+                            <div class="jury-voting-table-search-form">
+                                <label class="visually-hidden" for="@(Model.Id)-search">@Model.SearchPlaceholder</label>
+                                <input id="@(Model.Id)-search"
+                                       type="search"
+                                       name="search"
+                                       value="@activeTab.Search"
+                                       class="jury-voting-table-search-input"
+                                       placeholder="@Model.SearchPlaceholder"
+                                       autocomplete="off"
+                                       data-complex-table-search />
+                                <button type="button"
+                                        class="complex-table-search-clear"
+                                        aria-label="Aramay&#305; temizle"
+                                        data-complex-table-clear>&times;</button>
+                            </div>
+                        }
+                        @foreach (var action in activeTab.HeaderActions)
+                        {
+                            <a href="@action.Link" class="complex-table-header-action @action.CssClass">@action.Text</a>
+                        }
+                    </div>
                 </div>
             }
             </form>

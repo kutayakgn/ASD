@@ -1,0 +1,6 @@
+@model YKBAfife.Models.ViewModels.JuryDashboardViewModel
+@{
+    ViewData["Title"] = "Jüriler";
+}
+
+@await Component.InvokeAsync("ComplexTable", new { model = Model.JuryTable })

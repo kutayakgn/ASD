@@ -35,6 +35,7 @@ public sealed class ComplexTableTabViewModel
     public string EmptyMessage { get; init; } = "Kayıt bulunamadı.";
     public IReadOnlyList<ComplexTableColumnViewModel> Columns { get; init; } = [];
     public IReadOnlyList<ComplexTableRowViewModel> Rows { get; init; } = [];
+    public IReadOnlyList<ComplexTableHeaderActionViewModel> HeaderActions { get; init; } = [];
 
     public int TotalPages => Math.Max(1, (int)Math.Ceiling(TotalCount / (double)Math.Max(1, PageSize)));
 }
@@ -69,5 +70,11 @@ public sealed class ComplexTableSummarySegmentViewModel
 {
     public string Text { get; init; } = string.Empty;
     public bool IsEmphasized { get; init; }
+    public string CssClass { get; init; } = string.Empty;
+}
+public sealed class ComplexTableHeaderActionViewModel
+{
+    public string Text { get; init; } = string.Empty;
+    public string Link { get; init; } = string.Empty;
     public string CssClass { get; init; } = string.Empty;
 }
