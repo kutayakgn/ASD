@@ -1,0 +1,99 @@
+@model YKBAfife.Models.ViewModels.AddJuryViewModel
+@{
+    ViewData["Title"] = "Jüri Ekle";
+}
+
+<section class="play-details-page add-jury-page">
+    <a asp-controller="Management" asp-action="Juries" class="play-details-back">
+        <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
+        <span>Jürilere Dön</span>
+    </a>
+
+    <header class="play-details-toolbar">
+        <h1>Jüri Ekle</h1>
+    </header>
+
+    <form asp-controller="Management"
+          asp-action="AddJury"
+          method="post"
+          enctype="multipart/form-data"
+          class="add-jury-form"> 
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="add-jury-validation-summary" role="alert"></div>
+
+        <div class="add-jury-grid">
+            <div class="add-jury-field">
+                <label asp-for="Username"></label>
+                <input asp-for="Username" autocomplete="username" required />
+                <span asp-validation-for="Username"></span>
+            </div>
+
+            <div class="add-jury-field">
+                <label asp-for="Email"></label>
+                <input asp-for="Email" autocomplete="email" required />
+                <span asp-validation-for="Email"></span>
+            </div>
+
+            <div class="add-jury-field">
+                <label asp-for="Password"></label>
+                <input asp-for="Password" autocomplete="new-password" required />
+                <span asp-validation-for="Password"></span>
+            </div>
+
+            <div class="add-jury-field">
+                <label asp-for="FullName"></label>
+                <input asp-for="FullName" autocomplete="name" required />
+                <span asp-validation-for="FullName"></span>
+            </div>
+
+            <div class="add-jury-field">
+                <label asp-for="Phone"></label>
+                <input asp-for="Phone" autocomplete="tel" required />
+                <span asp-validation-for="Phone"></span>
+            </div>
+
+            <fieldset class="add-jury-status">
+                <legend>Statü</legend>
+                <div class="add-jury-status-options">
+                    <label class="add-jury-option">
+                        <input type="radio" asp-for="IsActive" value="true" required />
+                        <span>Güncel Jüri</span>
+                    </label>
+                    <label class="add-jury-option">
+                        <input type="radio" asp-for="IsActive" value="false" required />
+                        <span>Geçmiş Jüri</span>
+                    </label>
+                </div>
+                <span asp-validation-for="IsActive"></span>
+            </fieldset>
+
+            <div class="add-jury-field add-jury-photo-field">
+                <label asp-for="Photo"></label>
+                <label class="add-jury-upload" for="jury-photo-input">
+                    <span data-jury-file-name>Dosya Ekle</span>
+                    <img src="~/icons/upload.svg" alt="" aria-hidden="true" />
+                </label>
+                <input id="jury-photo-input"
+                       asp-for="Photo"
+                       type="file"
+                       class="visually-hidden"
+                       accept="image/jpeg,image/png,image/webp"
+                       data-jury-photo-input />
+                <span asp-validation-for="Photo"></span>
+            </div>
+        </div>
+
+        <div class="add-jury-actions">
+            <a asp-controller="Management"
+               asp-action="Juries"
+               class="add-jury-cancel"
+               data-history-back>İptal</a>
+            <button type="submit" class="add-jury-submit">Kaydet</button>
+        </div>
+    </form>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/add-jury.js" asp-append-version="true"></script>
+}

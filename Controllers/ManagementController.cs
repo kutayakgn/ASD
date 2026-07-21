@@ -2,6 +2,7 @@ using System.Data;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using YKBAfife.Business.Helpers;
 using YKBAfife.Data;
 using YKBAfife.Helpers;
 using YKBAfife.Models.Entities;
@@ -36,11 +37,145 @@ public sealed class ManagementController(AfifeContext context, IJuryReportServic
         var model = JuryComplexTableFactory.Create(report);
         return ViewComponent("ComplexTable", new { model });
     }
-
     [HttpGet("juri-ekle")]
-    public IActionResult AddJury() => Page(
-        "J\u00FCri Ekle",
-        "Yeni j\u00FCri kullan\u0131c\u0131s\u0131n\u0131 bu alandan ekleyin.");
+    public IActionResult AddJury() => View(new AddJuryViewModel());
+
+    [HttpPost("juri-ekle")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AddJury(
+        AddJuryViewModel model,
+        CancellationToken cancellationToken)
+    {
+        model.Username = model.Username?.Trim() ?? string.Empty;
+        model.Email = model.Email?.Trim() ?? string.Empty;
+        model.FullName = string.Join(
+            ' ',
+            (model.FullName ?? string.Empty).Split(
+                (char[]?)null,
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        model.Phone = model.Phone?.Trim() ?? string.Empty;
+
+        ModelState.Clear();
+        TryValidateModel(model);
+
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        if (await context.Users.AsNoTracking().AnyAsync(
+                user => user.Username == model.Username,
+                cancellationToken))
+        {
+            ModelState.AddModelError(nameof(model.Username), "Bu kullan\u0131c\u0131 ad\u0131 zaten kullan\u0131l\u0131yor.");
+        }
+
+        if (await context.Users.AsNoTracking().AnyAsync(
+                user => user.Email == model.Email,
+                cancellationToken))
+        {
+            ModelState.AddModelError(nameof(model.Email), "Bu e-posta adresi zaten kullan\u0131l\u0131yor.");
+        }
+
+        byte[]? photoData = null;
+        string? photoContentType = null;
+        string? photoFileName = null;
+
+        if (model.Photo is not null)
+        {
+            const long maximumPhotoSize = 5 * 1024 * 1024;
+            if (model.Photo.Length == 0 || model.Photo.Length > maximumPhotoSize)
+            {
+                ModelState.AddModelError(nameof(model.Photo), "Foto\u011Fraf boyutu 5 MB'dan k\u00FC\u00E7\u00FCk olmal\u0131d\u0131r.");
+            }
+            else
+            {
+                await using var photoStream = new MemoryStream();
+                await model.Photo.CopyToAsync(photoStream, cancellationToken);
+                photoData = photoStream.ToArray();
+                photoContentType = model.Photo.ContentType.Trim().ToLowerInvariant();
+                photoFileName = Path.GetFileName(model.Photo.FileName);
+
+                if (!IsSupportedPhoto(photoData, photoContentType))
+                {
+                    ModelState.AddModelError(
+                        nameof(model.Photo),
+                        "Yaln\u0131zca JPEG, PNG veya WebP format\u0131nda foto\u011Fraf y\u00FCkleyebilirsiniz.");
+                }
+            }
+        }
+
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId))
+        {
+            return Challenge();
+        }
+
+        var fullNameParts = model.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var lastName = fullNameParts[^1];
+        var firstName = string.Join(' ', fullNameParts[..^1]);
+        var now = DateTime.UtcNow;
+        Guid? photoId = null;
+
+        if (photoData is not null && photoContentType is not null && photoFileName is not null)
+        {
+            photoId = Guid.NewGuid();
+            context.Images.Add(new Image
+            {
+                Id = photoId.Value,
+                FileName = photoFileName,
+                ContentType = photoContentType,
+                ImageData = photoData,
+                CreatedAt = now,
+                CreatedBy = currentUserId,
+                IsPublished = true
+            });
+        }
+
+        context.Users.Add(new Models.Entities.User
+        {
+            Id = Guid.NewGuid(),
+            FirstName = firstName,
+            LastName = lastName,
+            Phone = model.Phone,
+            PhotoImageId = photoId,
+            Username = model.Username,
+            PasswordHash = PasswordHashHelper.HashPassword(model.Password),
+            Email = model.Email,
+            CreatedAt = now,
+            CreatedBy = currentUserId,
+            IsPublished = true,
+            IsActive = model.IsActive!.Value,
+            RoleCode = 2
+        });
+
+        await context.SaveChangesAsync(cancellationToken);
+        return RedirectToAction(nameof(Juries));
+    }
+
+    private static bool IsSupportedPhoto(byte[] data, string contentType)
+    {
+        if (contentType == "image/jpeg")
+        {
+            return data.Length >= 3 && data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF;
+        }
+
+        if (contentType == "image/png")
+        {
+            byte[] signature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+            return data.Length >= signature.Length && data.AsSpan(0, signature.Length).SequenceEqual(signature);
+        }
+
+        return contentType == "image/webp" &&
+               data.Length >= 12 &&
+               data.AsSpan(0, 4).SequenceEqual("RIFF"u8) &&
+               data.AsSpan(8, 4).SequenceEqual("WEBP"u8);
+    }
+
 
 
     [HttpGet("oyunlar")]
