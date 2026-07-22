@@ -1,0 +1,41 @@
+@model YKBAfife.Models.ViewModels.VotingHistoryViewModel
+@{
+    ViewData["Title"] = "Oylama Geçmişi";
+}
+
+<section class="voting-history-page" aria-labelledby="voting-history-title" data-voting-history>
+    <h1 id="voting-history-title">Oylama Geçmişi</h1>
+
+    <div class="voting-history-filters">
+        <partial name="_LazySearchSelect" model="@(new YKBAfife.Models.Components.LazySearchSelectViewModel
+        {
+            Id = "voting-history-play",
+            InputName = nameof(Model.PlayId),
+            Label = "Oyun",
+            Placeholder = "Oyun Seçin",
+            SearchPlaceholder = "Oyun Ara",
+            Endpoint = Url.Action("PlayOptions", "Management") ?? "/secenekler/oyunlar"
+        })" />
+        <partial name="_LazySearchSelect" model="@(new YKBAfife.Models.Components.LazySearchSelectViewModel
+        {
+            Id = "voting-history-jury",
+            InputName = nameof(Model.JuryId),
+            Label = "Jüri",
+            Placeholder = "Jüri Seçin",
+            SearchPlaceholder = "Jüri Ara",
+            Endpoint = Url.Action("JuryOptions", "Management") ?? "/secenekler/juriler"
+        })" />
+    </div>
+
+    <form hidden data-voting-history-token>
+        @Html.AntiForgeryToken()
+    </form>
+    <div class="voting-history-results" aria-live="polite" data-voting-history-results>
+        <p class="voting-history-empty">Kategorileri görüntülemek için oyun ve jüri seçin.</p>
+    </div>
+</section>
+
+@section Scripts {
+    <script src="~/js/lazy-search-select.js" asp-append-version="true"></script>
+    <script src="~/js/voting-history.js" asp-append-version="true"></script>
+}

@@ -745,7 +745,7 @@ public sealed class ManagementController(
 
         if (input.Candidate.Length is < 2 or > 250 ||
             input.Role?.Length > 200 ||
-            !input.IsActive.HasValue)
+            !input.IsPublished.HasValue)
         {
             TempData["CandidateError"] = "Ad\u0131 soyad\u0131 en az 2 karakter olmal\u0131 ve stat\u00FC se\u00E7ilmelidir.";
             return RedirectToCandidateSection(slug);
@@ -794,13 +794,12 @@ public sealed class ManagementController(
             PlayId = play.Id,
             CreatedAt = DateTime.UtcNow,
             CreatedBy = currentUserId,
-            IsPublished = true,
+            IsPublished = input.IsPublished.Value,
             Candidate = input.Candidate,
             AwardCategoryCode = input.AwardCategoryCode.Value,
             IsCurrent = true,
             Role = input.Role,
             RoleCode = roleCode,
-            IsActive = input.IsActive.Value
         });
 
         await context.SaveChangesAsync(cancellationToken);
@@ -840,8 +839,166 @@ public sealed class ManagementController(
     [HttpGet("editorler")]
     public IActionResult Editors() => Page("Editörler", "Editör hesaplarını yönetin.");
 
+    [HttpGet("secenekler/oyunlar")]
+    public async Task<IActionResult> PlayOptions(CancellationToken cancellationToken)
+    {
+        var options = await context.Plays
+            .AsNoTracking()
+            .Where(play => play.IsPublished && !play.RecordType)
+            .OrderBy(play => play.PlayName)
+            .Select(play => new { value = play.Id, text = play.PlayName })
+            .ToArrayAsync(cancellationToken);
+        return Json(options);
+    }
+
+    [HttpGet("secenekler/juriler")]
+    public async Task<IActionResult> JuryOptions(CancellationToken cancellationToken)
+    {
+        var options = await context.Users
+            .AsNoTracking()
+            .Where(user => user.IsPublished && user.IsActive && user.RoleCode == 2)
+            .OrderBy(user => user.FirstName)
+            .ThenBy(user => user.LastName)
+            .Select(user => new
+            {
+                value = user.Id,
+                text = (user.FirstName + " " + user.LastName).Trim()
+            })
+            .ToArrayAsync(cancellationToken);
+        return Json(options);
+    }
+
     [HttpGet("oylama-gecmisi")]
-    public IActionResult VotingHistory() => Page("Oylama Geçmişi", "Geçmiş jüri oylarını inceleyin.");
+    public IActionResult VotingHistory() => View(new VotingHistoryViewModel());
+
+    [HttpGet("oylama-gecmisi/kategoriler")]
+    public async Task<IActionResult> VotingHistoryCategories(
+        Guid playId,
+        Guid juryId,
+        CancellationToken cancellationToken)
+    {
+        var playExists = await context.Plays.AsNoTracking().AnyAsync(
+            play => play.Id == playId && play.IsPublished && !play.RecordType,
+            cancellationToken);
+        var juryExists = await context.Users.AsNoTracking().AnyAsync(
+            user => user.Id == juryId && user.IsPublished && user.IsActive && user.RoleCode == 2,
+            cancellationToken);
+        if (!playExists || !juryExists) return BadRequest();
+
+        var candidates = await (
+            from candidate in context.PlayAwardCategories.AsNoTracking()
+            join category in context.AwardCategories.AsNoTracking()
+                on candidate.AwardCategoryCode equals category.CategoryCode
+            where candidate.PlayId == playId && candidate.IsPublished && category.IsPublished
+            select new
+            {
+                candidate.Id,
+                candidate.AwardCategoryCode,
+                candidate.RoleCode,
+                category.CategoryName,
+                candidate.Candidate,
+                candidate.Role,
+                candidate.IsCurrent,
+                HasVote = context.JuryVotes.AsNoTracking().Any(vote =>
+                    vote.JuryId == juryId &&
+                    vote.PlayAwardCategoryId == candidate.Id &&
+                    vote.IsPublished)
+            })
+            .ToArrayAsync(cancellationToken);
+
+        var categories = candidates
+            .GroupBy(candidate => new
+            {
+                candidate.AwardCategoryCode,
+                candidate.RoleCode,
+                candidate.CategoryName
+            })
+            .OrderBy(group => group.Key.AwardCategoryCode)
+            .ThenBy(group => group.Key.RoleCode)
+            .Select(group =>
+            {
+                var ordered = group
+                    .OrderByDescending(candidate => candidate.IsCurrent)
+                    .ThenBy(candidate => candidate.Candidate)
+                    .ToArray();
+                var hasMultipleCandidates = ordered.Length > 1;
+                var options = ordered.Select(candidate => new VotingHistoryCandidateViewModel
+                {
+                    Id = candidate.Id,
+                    IsCurrent = candidate.IsCurrent,
+                    HasVote = candidate.HasVote,
+                    DisplayName = FormatCandidateName(
+                        candidate.Candidate,
+                        candidate.Role,
+                        hasMultipleCandidates,
+                        candidate.IsCurrent)
+                }).ToArray();
+                var selected = options
+                    .OrderByDescending(candidate => candidate.HasVote)
+                    .ThenByDescending(candidate => candidate.IsCurrent)
+                    .First();
+
+                return new VotingHistoryCategoryViewModel
+                {
+                    AwardCategoryCode = group.Key.AwardCategoryCode,
+                    RoleCode = group.Key.RoleCode,
+                    CategoryName = group.Key.CategoryName,
+                    PlaceholderImageUrl = $"/images/awardCategoryPlaceholder/{group.Key.AwardCategoryCode}.svg",
+                    SelectedCandidateId = selected.Id,
+                    Candidates = options
+                };
+            })
+            .ToArray();
+
+        return PartialView("_VotingHistoryCards", new VotingHistoryCardsViewModel
+        {
+            PlayId = playId,
+            JuryId = juryId,
+            Categories = categories
+        });
+    }
+
+    [HttpPost("oylama-gecmisi/oylamayi-sifirla")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ResetJuryVote(
+        Guid playId,
+        Guid juryId,
+        Guid playAwardCategoryId,
+        CancellationToken cancellationToken)
+    {
+        var vote = await context.JuryVotes
+            .SingleOrDefaultAsync(item =>
+                item.JuryId == juryId &&
+                item.PlayAwardCategoryId == playAwardCategoryId &&
+                item.IsPublished &&
+                context.PlayAwardCategories.Any(candidate =>
+                    candidate.Id == item.PlayAwardCategoryId &&
+                    candidate.PlayId == playId &&
+                    candidate.IsPublished),
+                cancellationToken);
+        if (vote is null)
+        {
+            return BadRequest(new { success = false, message = "S\u0131f\u0131rlanabilecek aktif bir oy bulunamad\u0131." });
+        }
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId))
+        {
+            return Unauthorized(new { success = false, message = "Oturum bilgisi do\u011frulanamad\u0131." });
+        }
+
+        vote.IsPublished = false;
+        vote.UpdatedAt = DateTime.UtcNow;
+        vote.UpdatedBy = currentUserId;
+        await context.SaveChangesAsync(cancellationToken);
+        await activityLogger.LogAsync(
+            UserActivityTypes.JuryVoteReset,
+            true,
+            juryId,
+            actorUserId: currentUserId,
+            details: $"J\u00fcri oyu s\u0131f\u0131rland\u0131. PlayId: {playId}, PlayAwardCategoryId: {playAwardCategoryId}",
+            cancellationToken: cancellationToken);
+
+        return Json(new { success = true, message = "Oylama ba\u015far\u0131yla s\u0131f\u0131rland\u0131." });
+    }
 
     [HttpGet("bilet-satislari")]
     public async Task<IActionResult> TicketSales(CancellationToken cancellationToken)
@@ -959,7 +1116,7 @@ public sealed class ManagementController(
             JuryId = Guid.TryParse(TempData["Blacklist.JuryId"]?.ToString(), out var juryId) ? juryId : null,
             PlayId = Guid.TryParse(TempData["Blacklist.PlayId"]?.ToString(), out var playId) ? playId : null
         };
-        await PopulateBlacklistOptionsAsync(model, cancellationToken);
+        await PopulateBlacklistSelectionAsync(model, cancellationToken);
         return View(model);
     }
 
@@ -994,7 +1151,7 @@ public sealed class ManagementController(
 
         if (!ModelState.IsValid)
         {
-            await PopulateBlacklistOptionsAsync(model, cancellationToken);
+            await PopulateBlacklistSelectionAsync(model, cancellationToken);
             return View(model);
         }
 
@@ -1074,31 +1231,36 @@ public sealed class ManagementController(
             model = ArchiveComparisonComplexTableFactory.Create(report)
         });
     }
-    private async Task PopulateBlacklistOptionsAsync(AddBlacklistViewModel model, CancellationToken cancellationToken)
+    private async Task PopulateBlacklistSelectionAsync(AddBlacklistViewModel model, CancellationToken cancellationToken)
     {
-        model.Juries = await context.Users
-            .AsNoTracking()
-            .Where(user => user.IsPublished && user.IsActive && user.RoleCode == 2)
-            .OrderBy(user => user.FirstName)
-            .ThenBy(user => user.LastName)
-            .Select(user => new SelectListItem
-            {
-                Value = user.Id.ToString(),
-                Text = (user.FirstName + " " + user.LastName).Trim()
-            })
-            .ToArrayAsync(cancellationToken);
-        model.Plays = await context.Plays
-            .AsNoTracking()
-            .Where(play => play.IsPublished && !play.RecordType)
-            .OrderBy(play => play.PlayName)
-            .Select(play => new SelectListItem
-            {
-                Value = play.Id.ToString(),
-                Text = play.PlayName
-            })
-            .ToArrayAsync(cancellationToken);
+        if (model.JuryId.HasValue)
+        {
+            model.JuryName = await context.Users
+                .AsNoTracking()
+                .Where(user => user.Id == model.JuryId.Value)
+                .Select(user => (user.FirstName + " " + user.LastName).Trim())
+                .SingleOrDefaultAsync(cancellationToken) ?? string.Empty;
+        }
+        if (model.PlayId.HasValue)
+        {
+            model.PlayName = await context.Plays
+                .AsNoTracking()
+                .Where(play => play.Id == model.PlayId.Value)
+                .Select(play => play.PlayName)
+                .SingleOrDefaultAsync(cancellationToken) ?? string.Empty;
+        }
     }
 
+    private static string FormatCandidateName(
+        string candidate,
+        string? role,
+        bool includeCurrentState,
+        bool isCurrent)
+    {
+        var roleText = string.IsNullOrWhiteSpace(role) ? string.Empty : $" ({role.Trim()})";
+        var stateText = includeCurrentState ? (isCurrent ? " / Aktif Oyuncu" : " / Eski Oyuncu") : string.Empty;
+        return $"{candidate.Trim()}{roleText}{stateText}";
+    }
     private ViewResult Page(string title, string description) =>
         View("Page", new ManagementPageViewModel(title, description));
 }

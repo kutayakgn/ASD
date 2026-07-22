@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace YKBAfife.Models.ViewModels;
 
@@ -46,8 +45,8 @@ public sealed class AddBlacklistViewModel
     [Display(Name = "Oyun")]
     public Guid? PlayId { get; set; }
 
-    public IReadOnlyList<SelectListItem> Juries { get; set; } = [];
-    public IReadOnlyList<SelectListItem> Plays { get; set; } = [];
+    public string JuryName { get; set; } = string.Empty;
+    public string PlayName { get; set; } = string.Empty;
 }
 
 public static class BlacklistSortColumns

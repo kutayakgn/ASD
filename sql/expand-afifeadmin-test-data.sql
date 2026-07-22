@@ -51,7 +51,7 @@ BEGIN TRY
     -- Add 30 historical candidates without creating a second current record.
     INSERT INTO [dbo].[PlayAwardCategories]
         ([Id], [PlayId], [PhotoImageId], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy],
-         [IsPublished], [Candidate], [AwardCategoryCode], [IsCurrent], [Role], [RoleCode], [IsActive])
+         [IsPublished], [Candidate], [AwardCategoryCode], [IsCurrent], [Role], [RoleCode])
     SELECT
         r.PlayAwardCategoryId,
         r.PlayId,
@@ -65,8 +65,7 @@ BEGIN TRY
         r.PlayNo,
         0,
         CASE WHEN r.N % 2 = 0 THEN N'Yardımcı Rol' ELSE N'Başrol' END,
-        CASE WHEN r.N % 2 = 0 THEN 2 ELSE 1 END,
-        0
+        CASE WHEN r.N % 2 = 0 THEN 2 ELSE 1 END
     FROM @Rows AS r
     INNER JOIN [dbo].[Plays] AS p ON p.[Id] = r.PlayId
     INNER JOIN [dbo].[AwardCategories] AS ac ON ac.[CategoryCode] = r.PlayNo

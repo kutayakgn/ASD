@@ -1,0 +1,49 @@
+@model YKBAfife.Models.ViewModels.VotingHistoryCardsViewModel
+
+@if (Model.Categories.Count == 0)
+{
+    <p class="voting-history-empty">Bu oyun için yayınlanmış ödül kategorisi bulunamadı.</p>
+}
+else
+{
+    <div class="voting-history-grid">
+        @foreach (var category in Model.Categories)
+        {
+            var selected = category.Candidates.First(candidate => candidate.Id == category.SelectedCandidateId);
+            <article class="voting-history-card" data-vote-card>
+                <div class="voting-history-card-icon" aria-hidden="true">
+                    <img src="@category.PlaceholderImageUrl" alt="" />
+                </div>
+                <div class="voting-history-card-content">
+                    <h2>@category.CategoryName</h2>
+                    @if (category.Candidates.Count > 1)
+                    {
+                        <div class="voting-history-candidate-select">
+                            <select aria-label="@($"{category.CategoryName} adayı")" data-vote-candidate>
+                                @foreach (var candidate in category.Candidates)
+                                {
+                                    <option value="@candidate.Id"
+                                            data-has-vote="@candidate.HasVote.ToString().ToLowerInvariant()"
+                                            selected="@(candidate.Id == category.SelectedCandidateId)">@candidate.DisplayName</option>
+                                }
+                            </select>
+                            <img src="~/icons/angle-down.svg" alt="" aria-hidden="true" />
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="voting-history-candidate-value">@selected.DisplayName</div>
+                        <input type="hidden"
+                               value="@selected.Id"
+                               data-has-vote="@selected.HasVote.ToString().ToLowerInvariant()"
+                               data-vote-candidate />
+                    }
+                </div>
+                <button type="button"
+                        class="voting-history-reset"
+                        data-reset-vote
+                        disabled="@(!selected.HasVote)">Oylamayı Sıfırla</button>
+            </article>
+        }
+    </div>
+}

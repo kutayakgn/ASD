@@ -133,7 +133,7 @@ BEGIN TRY
 
     INSERT INTO [dbo].[PlayAwardCategories]
         ([Id], [PlayId], [PhotoImageId], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy], [IsPublished],
-         [Candidate], [AwardCategoryCode], [IsCurrent], [Role], [RoleCode], [IsActive])
+         [Candidate], [AwardCategoryCode], [IsCurrent], [Role], [RoleCode])
     SELECT
         s.PlayAwardCategoryId,
         s.PlayId,
@@ -147,8 +147,7 @@ BEGIN TRY
         s.N,
         1,
         CASE WHEN s.N % 2 = 0 THEN N'Supporting Role' ELSE N'Lead Role' END,
-        CASE WHEN s.N % 2 = 0 THEN 2 ELSE 1 END,
-        0
+        CASE WHEN s.N % 2 = 0 THEN 2 ELSE 1 END
     FROM @Seed AS s
     WHERE NOT EXISTS (SELECT 1 FROM [dbo].[PlayAwardCategories] AS pac WHERE pac.[Id] = s.PlayAwardCategoryId);
 

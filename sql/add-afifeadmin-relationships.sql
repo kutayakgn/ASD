@@ -63,7 +63,9 @@ BEGIN TRY
         ALTER TABLE [dbo].[JuryVotes] WITH CHECK
             ADD CONSTRAINT [FK_JuryVotes_PlayAwardCategories]
             FOREIGN KEY ([PlayAwardCategoryId])
-            REFERENCES [dbo].[PlayAwardCategories] ([Id]);
+            REFERENCES [dbo].[PlayAwardCategories] ([Id])
+            ON UPDATE CASCADE
+            ON DELETE CASCADE;
 
     IF OBJECT_ID(N'[dbo].[FK_JuryVotes_Users]', N'F') IS NULL
         ALTER TABLE [dbo].[JuryVotes] WITH CHECK

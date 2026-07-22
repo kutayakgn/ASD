@@ -80,7 +80,7 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
             entity.HasMany(x => x.JuryVotes)
                 .WithOne(x => x.PlayAwardCategory)
                 .HasForeignKey(x => x.PlayAwardCategoryId)
-                .OnDelete(DeleteBehavior.NoAction);
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Announcement>(entity =>

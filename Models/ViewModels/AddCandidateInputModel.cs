@@ -21,5 +21,5 @@ public sealed class AddCandidateInputModel
     public string? Role { get; set; }
 
     [Required(ErrorMessage = "Stat\u00FC se\u00E7imi zorunludur.")]
-    public bool? IsActive { get; set; } = true;
+    public bool? IsPublished { get; set; } = true;
 }

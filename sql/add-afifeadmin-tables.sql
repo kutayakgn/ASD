@@ -212,7 +212,6 @@ BEGIN
         [IsCurrent] [bit] NOT NULL,
         [Role] [nvarchar](200) NULL,
         [RoleCode] [int] NOT NULL,
-        [IsActive] [bit] NOT NULL CONSTRAINT [DF_PlayAwardCategories_IsActive] DEFAULT (1),
         CONSTRAINT [PK_PlayAwardCategories] PRIMARY KEY CLUSTERED ([Id])
     );
 END;

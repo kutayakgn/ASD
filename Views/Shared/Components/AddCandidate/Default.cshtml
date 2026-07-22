@@ -41,8 +41,8 @@
                 </div>
                 <fieldset class="add-candidate-status">
                     <legend>Statü</legend>
-                    <label><input type="radio" asp-for="Input.IsActive" value="true" checked required /><span>Aktif</span></label>
-                    <label><input type="radio" asp-for="Input.IsActive" value="false" required /><span>Aktif değil</span></label>
+                    <label><input type="radio" asp-for="Input.IsPublished" value="true" checked required /><span>Aktif</span></label>
+                    <label><input type="radio" asp-for="Input.IsPublished" value="false" required /><span>Aktif değil</span></label>
                 </fieldset>
             </div>
             <div asp-validation-summary="ModelOnly" class="add-candidate-validation"></div>

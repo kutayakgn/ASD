@@ -29,4 +29,5 @@ public static class UserActivityTypes
     public const string TicketFeeChanged = "TicketFeeChanged";
     public const string BlacklistCreated = "BlacklistCreated";
     public const string BlacklistSoftDeleted = "BlacklistSoftDeleted";
+    public const string JuryVoteReset = "JuryVoteReset";
 }

@@ -23,23 +23,33 @@
 
         <div class="add-jury-grid">
             <div class="add-jury-field">
-                <label asp-for="PlayId"></label>
-                <div class="add-jury-select" data-rotating-select>
-                    <select asp-for="PlayId" asp-items="Model.Plays" required>
-                        <option value="" disabled hidden selected="@(!Model.PlayId.HasValue)">Oyun se&#231;iniz</option>
-                    </select>
-                    <img src="~/icons/angle-down.svg" alt="" aria-hidden="true" />
-                </div>
+                <partial name="_LazySearchSelect" model="@(new YKBAfife.Models.Components.LazySearchSelectViewModel
+                {
+                    Id = "blacklist-play",
+                    InputName = nameof(Model.PlayId),
+                    Label = "Oyun",
+                    Placeholder = "Oyun Se\u00e7in",
+                    SearchPlaceholder = "Oyun Ara",
+                    Endpoint = Url.Action("PlayOptions", "Management") ?? "/secenekler/oyunlar",
+                    SelectedValue = Model.PlayId,
+                    SelectedText = Model.PlayName,
+                    IsRequired = true
+                })" />
                 <span asp-validation-for="PlayId"></span>
             </div>
             <div class="add-jury-field">
-                <label asp-for="JuryId"></label>
-                <div class="add-jury-select" data-rotating-select>
-                    <select asp-for="JuryId" asp-items="Model.Juries" required>
-                        <option value="" disabled hidden selected="@(!Model.JuryId.HasValue)">J&#252;ri se&#231;iniz</option>
-                    </select>
-                    <img src="~/icons/angle-down.svg" alt="" aria-hidden="true" />
-                </div>
+                <partial name="_LazySearchSelect" model="@(new YKBAfife.Models.Components.LazySearchSelectViewModel
+                {
+                    Id = "blacklist-jury",
+                    InputName = nameof(Model.JuryId),
+                    Label = "J\u00fcri",
+                    Placeholder = "J\u00fcri Se\u00e7in",
+                    SearchPlaceholder = "J\u00fcri Ara",
+                    Endpoint = Url.Action("JuryOptions", "Management") ?? "/secenekler/juriler",
+                    SelectedValue = Model.JuryId,
+                    SelectedText = Model.JuryName,
+                    IsRequired = true
+                })" />
                 <span asp-validation-for="JuryId"></span>
             </div>
         </div>
@@ -53,5 +63,5 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    <script src="~/js/blacklist-select.js" asp-append-version="true"></script>
+    <script src="~/js/lazy-search-select.js" asp-append-version="true"></script>
 }
