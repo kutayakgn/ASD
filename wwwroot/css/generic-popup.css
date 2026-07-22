@@ -15,11 +15,11 @@
 
 .generic-popup-dialog {
     display: flex;
-    width: min(100%, 420px);
-    padding: 36px 32px 28px;
+    width: min(100%, 640px);
+    padding: 16px 24px;
     align-items: center;
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
     background: #fff;
     box-shadow: 0 24px 80px rgba(0, 0, 0, .28);
     font-family: Outfit;
@@ -34,15 +34,15 @@
 .generic-popup-message {
     margin: 0;
     color: #171717;
-    font-size: 18px;
-    font-weight: 600;
-    line-height: 26px;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 20px;
 }
 
 .generic-popup-actions {
     display: flex;
     width: 100%;
-    margin-top: 4px;
+    margin-top: 16px;
     align-items: center;
     justify-content: center;
     gap: 12px;
@@ -51,13 +51,15 @@
 .generic-popup-button {
     display: inline-flex;
     min-width: 112px;
-    min-height: 42px;
-    padding: 10px 18px;
+    min-height: 40px;
+    width:100%;
+    padding: 10px 16px;
     align-items: center;
     justify-content: center;
     border: 1px solid #171717;
     font-family: Outfit;
     font-size: 14px;
+    line-height:20px;
     font-weight: 600;
 }
 

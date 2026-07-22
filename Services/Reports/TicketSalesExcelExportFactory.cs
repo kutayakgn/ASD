@@ -1,0 +1,29 @@
+using YKBAfife.Models.Exports;
+using YKBAfife.Models.ViewModels;
+
+namespace YKBAfife.Services.Reports;
+
+public static class TicketSalesExcelExportFactory
+{
+    public static ExcelExportDocument Create(IReadOnlyList<TicketSaleRowViewModel> rows) => new()
+    {
+        WorksheetName = "Bilet Satışları",
+        Title = "Bilet Satışları",
+        TableName = "BiletSatislari",
+        Columns =
+        [
+            new() { Header = "Jüri", Width = 28 },
+            new() { Header = "Oyun", Width = 36 },
+            new() { Header = "Tarih", Width = 16 },
+            new() { Header = "Bilet Fiyatı", Width = 16, Alignment = ExcelExportAlignment.Right }
+        ],
+        Rows = rows.Select(row => (IReadOnlyList<ExcelExportCell>)
+        [
+            new() { Value = row.JuryName },
+            new() { Value = row.PlayName },
+            new() { Value = row.Date },
+            new() { Value = row.TicketFee }
+        ]).ToArray(),
+        FooterLines = [$"Toplam kayıt sayısı: {rows.Count}"]
+    };
+}

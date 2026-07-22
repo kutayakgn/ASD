@@ -1,3 +1,4 @@
+@using System.Globalization
 @model YKBAfife.Models.Components.ComplexTableViewModel
 @{
     var activeTab = Model.Tabs.FirstOrDefault(x => x.Key == Model.CurrentTabKey)
@@ -13,6 +14,17 @@
     var startPage = activeTab is null ? 1 : Math.Max(1, activeTab.CurrentPage - 2);
     var endPage = activeTab is null ? 1 : Math.Min(activeTab.TotalPages, activeTab.CurrentPage + 2);
     var dataUrl = Url.Action(Model.DataActionName, Model.ControllerName);
+
+    string ColumnWidth(int percentage)
+    {
+        if (!Model.IsEditableRows)
+        {
+            return $"{percentage}%";
+        }
+
+        var reservedWidth = Model.EditColumnWidth * percentage / 100m;
+        return $"calc({percentage}% - {reservedWidth.ToString("0.##", CultureInfo.InvariantCulture)}px)";
+    }
 }
 
 @if (activeTab is not null)
@@ -87,11 +99,15 @@
             </form>
 
         <div class="jury-voting-table-wrapper">
-            <table class="jury-voting-table" style="--complex-table-min-width: @(Model.MinimumTableWidth)px;">
+            <table class="jury-voting-table" style="--complex-table-min-width: @(Model.MinimumTableWidth)px; --complex-table-edit-width: @(Model.EditColumnWidth)px;">
                 <colgroup>
                     @foreach (var column in activeTab.Columns)
                     {
-                        <col style="width: @(column.ColWidth)%;" />
+                        <col style="width: @ColumnWidth(column.ColWidth);" />
+                    }
+                    @if (Model.IsEditableRows)
+                    {
+                        <col class="complex-table-edit-col" />
                     }
                 </colgroup>
                 @if (Model.ShowColumnHeaders)
@@ -118,6 +134,10 @@
                                     }
                                 </th>
                             }
+                        @if (Model.IsEditableRows)
+                            {
+                                <th scope="col" class="complex-table-edit-column">@* <span class="visually-hidden">Düzenle</span> *@</th>
+                            }
                         </tr>
                     </thead>
                 }
@@ -126,10 +146,12 @@
                     {
                         foreach (var row in activeTab.Rows)
                         {
-                            <tr id="@row.Id" class="@(!string.IsNullOrWhiteSpace(row.Link) ? "complex-table-linked-row" : string.Empty)"
+                            var isInteractiveRow = !string.IsNullOrWhiteSpace(row.Link) || !string.IsNullOrWhiteSpace(row.ModalUrl);
+                            <tr id="@row.Id" class="@(isInteractiveRow ? "complex-table-linked-row" : string.Empty)"
                                 data-row-link="@row.Link"
-                                tabindex="@(!string.IsNullOrWhiteSpace(row.Link) ? "0" : null)"
-                                role="@(!string.IsNullOrWhiteSpace(row.Link) ? "link" : null)">
+                                data-row-modal-url="@row.ModalUrl"
+                                tabindex="@(isInteractiveRow ? "0" : null)"
+                                role="@(!string.IsNullOrWhiteSpace(row.ModalUrl) ? "button" : !string.IsNullOrWhiteSpace(row.Link) ? "link" : null)">
                                 @for (var index = 0; index < activeTab.Columns.Count; index++)
                                 {
                                     var cell = index < row.Cells.Count ? row.Cells[index] : null;
@@ -162,12 +184,25 @@
                                         }
                                     </td>
                                 }
+                                @if (Model.IsEditableRows)
+                                {
+                                    <td class="complex-table-edit-column">
+                                        @if (!string.IsNullOrWhiteSpace(row.EditModalUrl))
+                                        {
+                                            <button type="button" class="complex-table-edit-button"
+                                                    data-complex-table-modal-url="@row.EditModalUrl"
+                                                    aria-label="@row.EditAccessibleLabel">
+                                                <img src="~/icons/edit.svg" alt="" aria-hidden="true" />
+                                            </button>
+                                        }
+                                    </td>
+                                }
                             </tr>
                         }
                     }
                     else
                     {
-                        <tr><td colspan="@activeTab.Columns.Count" class="complex-table-empty">@activeTab.EmptyMessage</td></tr>
+                        <tr><td colspan="@(activeTab.Columns.Count + (Model.IsEditableRows ? 1 : 0))" class="complex-table-empty">@activeTab.EmptyMessage</td></tr>
                     }
                 </tbody>
             </table>

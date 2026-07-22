@@ -17,6 +17,7 @@ public sealed class ManagementController(
     AfifeContext context,
     IJuryReportService juryReportService,
     IArchiveComparisonReportService archiveComparisonReportService,
+    ITicketSalesReportService ticketSalesReportService,
     IJuryWatchedPlayReportService juryWatchedPlayReportService,
     IUserActivityLogger activityLogger,
     IExcelExporter excelExporter) : Controller
@@ -842,7 +843,71 @@ public sealed class ManagementController(
     public IActionResult VotingHistory() => Page("Oylama Geçmişi", "Geçmiş jüri oylarını inceleyin.");
 
     [HttpGet("bilet-satislari")]
-    public IActionResult TicketSales() => Page("Bilet Satışları", "Oyun ve jüri bazlı bilet kayıtlarını yönetin.");
+    public async Task<IActionResult> TicketSales(CancellationToken cancellationToken)
+    {
+        var report = await ticketSalesReportService.GetPageAsync(new TicketSalesTableQuery(), cancellationToken);
+        return View(new TicketSalesViewModel { Table = TicketSalesComplexTableFactory.Create(report) });
+    }
+
+    [HttpPost("bilet-satislari/tablo")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> TicketSalesTable([FromForm] TicketSalesTableQuery query, CancellationToken cancellationToken)
+    {
+        var report = await ticketSalesReportService.GetPageAsync(query, cancellationToken);
+        return ViewComponent("ComplexTable", new { model = TicketSalesComplexTableFactory.Create(report) });
+    }
+
+    [HttpPost("bilet-satislari/excel")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ExportTicketSales([FromForm] TicketSalesTableQuery query, CancellationToken cancellationToken)
+    {
+        var rows = await ticketSalesReportService.GetExportRowsAsync(query, cancellationToken);
+        var content = excelExporter.Export(TicketSalesExcelExportFactory.Create(rows));
+        return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"bilet-satislari-{DateTime.Today:yyyy-MM-dd}.xlsx");
+    }
+
+    [HttpGet("bilet-satislari/{id:guid}/duzenle")]
+    public async Task<IActionResult> EditTicketFee(Guid id, CancellationToken cancellationToken)
+    {
+        var model = await ticketSalesReportService.GetEditModelAsync(id, cancellationToken);
+        return model is null ? NotFound() : PartialView("_EditTicketFeeModal", model);
+    }
+
+    [HttpPost("bilet-satislari/{id:guid}/duzenle")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateTicketFee(Guid id, [Bind("Id,TicketFee")] EditTicketFeeViewModel model, CancellationToken cancellationToken)
+    {
+        if (id != model.Id || !ModelState.IsValid || model.TicketFee <= 0)
+        {
+            TempData["GenericPopup.Type"] = "fail";
+            TempData["GenericPopup.Message"] = "Geçerli bir bilet ücreti giriniz.";
+            return RedirectToAction(nameof(TicketSales));
+        }
+
+        var ticket = await context.JuryGameTicketFees.SingleOrDefaultAsync(item => item.Id == id && item.IsPublished, cancellationToken);
+        if (ticket is null) return NotFound();
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId)) return Challenge();
+
+        var oldValue = ticket.TicketFee;
+        ticket.TicketFee = model.TicketFee;
+        ticket.UpdatedAt = DateTime.UtcNow;
+        ticket.UpdatedBy = currentUserId;
+        await context.SaveChangesAsync(cancellationToken);
+
+        await activityLogger.LogAsync(
+            UserActivityTypes.TicketFeeChanged,
+            true,
+            ticket.UserId,
+            actorUserId: currentUserId,
+            details: "Jüri oyun bilet ücreti güncellendi.",
+            oldValue: oldValue.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            newValue: ticket.TicketFee.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            cancellationToken: cancellationToken);
+
+        TempData["GenericPopup.Type"] = "success";
+        TempData["GenericPopup.Message"] = "Bilet ücreti başarıyla güncellendi.";
+        return RedirectToAction(nameof(TicketSales));
+    }
 
     [HttpGet("oyun-tarihleri")]
     public IActionResult PlayDates() => Page("Oyun Tarihleri", "Oyun gösterim tarihlerini yönetin.");

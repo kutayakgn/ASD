@@ -1,0 +1,85 @@
+html,
+body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
+}
+
+.admin-header,
+.admin-navbar,
+.header-white-bar,
+.admin-nav-container,
+.admin-main,
+.jury-voting-complex-table-section,
+.complex-table-state,
+.complex-table-heading,
+.complex-table-heading-tools,
+.complex-table-summary-wrapper,
+.jury-voting-pagination {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.admin-header,
+.admin-navbar,
+.admin-main {
+    width: 100%;
+}
+
+.admin-main {
+    margin-right: auto;
+    margin-left: auto;
+    overflow-x: clip;
+}
+
+.admin-navigation {
+    max-width: 100%;
+}
+
+.jury-voting-table-wrapper {
+    width: 100%;
+    max-width: 100%;
+    overscroll-behavior-x: contain;
+}
+
+@media (max-width: 575.98px) {
+    .header-white-bar,
+    .admin-nav-container {
+        padding-right: 12px;
+        padding-left: 12px;
+    }
+
+    .header-white-bar > img {
+        max-width: min(42vw, 180px);
+        object-fit: contain;
+    }
+
+    .admin-user-dropdown {
+        min-width: 0;
+        max-width: 55vw;
+    }
+
+    .admin-user-toggle {
+        max-width: 100%;
+    }
+
+    .admin-user-toggle span {
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .complex-table-heading,
+    .complex-table-summary-wrapper,
+    .jury-voting-table-wrapper {
+        padding-right: 12px;
+        padding-left: 12px;
+    }
+
+    .jury-voting-pagination {
+        padding-right: 12px;
+        padding-left: 12px;
+    }
+}

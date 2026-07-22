@@ -1,0 +1,39 @@
+@model YKBAfife.Models.ViewModels.EditTicketFeeViewModel
+
+<div class="modal fade ticket-fee-modal" tabindex="-1" aria-labelledby="ticket-fee-modal-title" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-centered">
+		<div class="modal-content">
+			@*   <div class="modal-header ticket-fee-modal-header">
+                <h2 class="modal-title" id="ticket-fee-modal-title">Bilet Ücreti Düzenle</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div> *@
+			<form asp-action="UpdateTicketFee" asp-controller="Management" asp-route-id="@Model.Id" method="post"
+				  data-ticket-fee-form
+				  data-generic-confirm data-confirm-message="Bilet ücretini değiştirmek istediğinize emin misiniz?">
+				<div class="modal-body ticket-fee-modal-body">
+					<div class="ticket-fee-context">
+						<div><span>Jüri</span>@Model.JuryName</div>
+						<div><span>Oyun</span>@Model.PlayName</div>
+					</div>
+					<hr />
+					<input asp-for="Id" type="hidden" />
+					<div class="ticket-fee-input-row">
+						<span class="ticket-fee-icon" aria-hidden="true"><img src="~/icons/ticket-fee.svg" alt="" /></span>
+						<div class="ticket-fee-field">
+							<label asp-for="TicketFee"></label>
+							<div class="ticket-fee-input-wrap">
+								<input asp-for="TicketFee" type="number" min="0.01" step="0.01" inputmode="decimal"
+									   required data-ticket-fee-input />
+								<span>TL</span>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="modal-footer ticket-fee-modal-footer">
+					<button type="submit" class="ticket-fee-save-button">Kaydet</button>
+					<button type="button" class="ticket-fee-cancel-button" data-bs-dismiss="modal">İptal</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>

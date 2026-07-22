@@ -1,0 +1,6 @@
+@model YKBAfife.Models.ViewModels.TicketSalesViewModel
+@{
+    ViewData["Title"] = "Bilet Satışları";
+}
+
+@await Component.InvokeAsync("ComplexTable", new { model = Model.Table })

@@ -1,0 +1,137 @@
+/* Responsive behavior layered over the ticket fee modal's page-specific styling. */
+.ticket-fee-modal {
+    padding: 0 !important;
+    overflow-x: hidden;
+}
+
+.ticket-fee-modal .modal-dialog {
+    width: auto;
+    max-width: min(640px, calc(100% - 32px));
+    min-height: calc(100% - 32px);
+    margin: 16px auto;
+}
+
+.ticket-fee-modal .modal-content {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    max-height: calc(100dvh - 32px);
+    overflow: hidden;
+}
+
+.ticket-fee-modal form {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    max-height: calc(100dvh - 32px);
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.ticket-fee-modal-body {
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.ticket-fee-context,
+.ticket-fee-context > div,
+.ticket-fee-input-row,
+.ticket-fee-field,
+.ticket-fee-input-wrap,
+.ticket-fee-input-wrap input {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.ticket-fee-context > div {
+    overflow-wrap: anywhere;
+}
+
+.ticket-fee-input-wrap input {
+    font-size: 16px;
+}
+
+.ticket-fee-modal-footer {
+    width: 100%;
+    min-width: 0;
+    flex: 0 0 auto;
+}
+
+@media (max-width: 767.98px) {
+    .ticket-fee-modal .modal-dialog {
+        max-width: calc(100% - 24px);
+        min-height: calc(100% - 24px);
+        margin: 12px auto;
+    }
+
+    .ticket-fee-modal .modal-content,
+    .ticket-fee-modal form {
+        max-height: calc(100dvh - 24px);
+    }
+
+    .ticket-fee-context {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .ticket-fee-input-row {
+        grid-template-columns: 47px minmax(0, 1fr);
+        gap: 12px;
+    }
+
+    .ticket-fee-cancel-button,
+    .ticket-fee-save-button {
+        min-height: 44px;
+    }
+}
+
+@media (max-width: 479.98px) {
+    .ticket-fee-modal .modal-dialog {
+        max-width: calc(100% - 16px);
+        min-height: calc(100% - 16px);
+        margin: 8px auto;
+    }
+
+    .ticket-fee-modal .modal-content,
+    .ticket-fee-modal form {
+        max-height: calc(100dvh - 16px);
+    }
+
+    .ticket-fee-modal-body {
+        padding: 12px;
+    }
+
+    .ticket-fee-modal-footer {
+        gap: 8px;
+        padding: 0 12px 12px;
+    }
+
+    .ticket-fee-input-row {
+        grid-template-columns: 40px minmax(0, 1fr);
+        gap: 8px;
+    }
+
+    .ticket-fee-icon,
+    .ticket-fee-icon img {
+        width: 40px;
+        height: 56px;
+    }
+}
+
+@media (max-height: 460px) {
+    .ticket-fee-modal .modal-dialog {
+        min-height: calc(100% - 16px);
+        margin-top: 8px;
+        margin-bottom: 8px;
+    }
+
+    .ticket-fee-modal .modal-content,
+    .ticket-fee-modal form {
+        max-height: calc(100dvh - 16px);
+    }
+}
