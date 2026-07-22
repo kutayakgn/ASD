@@ -954,7 +954,11 @@ public sealed class ManagementController(
     [HttpGet("blacklists/ekle")]
     public async Task<IActionResult> AddBlacklist(CancellationToken cancellationToken)
     {
-        var model = new AddBlacklistViewModel();
+        var model = new AddBlacklistViewModel
+        {
+            JuryId = Guid.TryParse(TempData["Blacklist.JuryId"]?.ToString(), out var juryId) ? juryId : null,
+            PlayId = Guid.TryParse(TempData["Blacklist.PlayId"]?.ToString(), out var playId) ? playId : null
+        };
         await PopulateBlacklistOptionsAsync(model, cancellationToken);
         return View(model);
     }
@@ -981,7 +985,11 @@ public sealed class ManagementController(
                 item => item.JuryId == model.JuryId.Value && item.PlayId == model.PlayId.Value && item.IsPublished,
                 cancellationToken))
         {
-            ModelState.AddModelError(string.Empty, "Bu jüri ve oyun için aktif bir blacklist kaydı zaten bulunuyor.");
+            TempData["GenericPopup.Type"] = "fail";
+            TempData["GenericPopup.Message"] = "Bu jüri ve oyun için aktif bir blacklist kaydı zaten bulunuyor.";
+            TempData["Blacklist.JuryId"] = model.JuryId.Value.ToString();
+            TempData["Blacklist.PlayId"] = model.PlayId.Value.ToString();
+            return RedirectToAction(nameof(AddBlacklist));
         }
 
         if (!ModelState.IsValid)

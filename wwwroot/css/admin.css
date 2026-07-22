@@ -277,7 +277,7 @@ body {
 
 .play-details-back {
     display: inline-flex;
-    margin-bottom: 20px;
+  
     align-items: center;
     gap: 6px;
     color: #171717;
@@ -466,7 +466,7 @@ body {
 
 
 .add-jury-form {
-    padding-top: 32px;
+   
     font-family: Outfit;
 }
 
@@ -511,6 +511,39 @@ body {
 .add-jury-field input:focus,
 .add-jury-field select:focus {
     border-color: #171717;
+}
+
+.add-jury-select {
+    position: relative;
+}
+
+.add-jury-select select {
+    padding-right: 40px;
+    appearance: none;
+    cursor: pointer;
+}
+
+.add-jury-select select:required:invalid {
+    color: rgba(23, 23, 23, .5);
+}
+
+.add-jury-select select option {
+    color: #171717;
+}
+
+.add-jury-select > img {
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    width: 16px;
+    height: 16px;
+    pointer-events: none;
+    transform: translateY(-50%);
+    transition: transform .15s ease-in-out;
+}
+
+.add-jury-select.is-open > img {
+    transform: translateY(-50%) rotate(180deg);
 }
 
 .add-jury-field > span,
@@ -588,7 +621,7 @@ body {
 
 .add-jury-actions {
     display: flex;
-    margin-top: 40px;
+    margin-top: 16px;
     align-items: center;
     justify-content: flex-end;
     gap: 12px;
@@ -633,6 +666,7 @@ body {
 @media (max-width: 700px) {
     .add-jury-grid {
         grid-template-columns: 1fr;
+        gap: 16px;
     }
 
     .add-jury-photo-field {

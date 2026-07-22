@@ -24,16 +24,22 @@
         <div class="add-jury-grid">
             <div class="add-jury-field">
                 <label asp-for="PlayId"></label>
-                <select asp-for="PlayId" asp-items="Model.Plays" required>
-                    <option value="">Oyun se&#231;iniz</option>
-                </select>
+                <div class="add-jury-select" data-rotating-select>
+                    <select asp-for="PlayId" asp-items="Model.Plays" required>
+                        <option value="" disabled hidden selected="@(!Model.PlayId.HasValue)">Oyun se&#231;iniz</option>
+                    </select>
+                    <img src="~/icons/angle-down.svg" alt="" aria-hidden="true" />
+                </div>
                 <span asp-validation-for="PlayId"></span>
             </div>
             <div class="add-jury-field">
                 <label asp-for="JuryId"></label>
-                <select asp-for="JuryId" asp-items="Model.Juries" required>
-                    <option value="">J&#252;ri se&#231;iniz</option>
-                </select>
+                <div class="add-jury-select" data-rotating-select>
+                    <select asp-for="JuryId" asp-items="Model.Juries" required>
+                        <option value="" disabled hidden selected="@(!Model.JuryId.HasValue)">J&#252;ri se&#231;iniz</option>
+                    </select>
+                    <img src="~/icons/angle-down.svg" alt="" aria-hidden="true" />
+                </div>
                 <span asp-validation-for="JuryId"></span>
             </div>
         </div>
@@ -47,4 +53,5 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/blacklist-select.js" asp-append-version="true"></script>
 }
