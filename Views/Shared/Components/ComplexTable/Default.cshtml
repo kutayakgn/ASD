@@ -177,7 +177,8 @@
 
         @if (Model.SummaryContent.Count > 0 || !string.IsNullOrWhiteSpace(Model.ExportActionName))
         {
-            <footer class="complex-table-summary">
+            <div class="complex-table-summary-wrapper">
+                <footer class="complex-table-summary">
                 @if (Model.SummaryContent.Count > 0)
                 {
                     <p class="complex-table-summary-content">
@@ -215,7 +216,8 @@
                         </button>
                     </form>
                 }
-            </footer>
+            </footer></div>
+            
         }
         @if (activeTab.TotalPages > 1)
         {

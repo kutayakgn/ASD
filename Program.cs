@@ -20,6 +20,7 @@ builder.Services.AddScoped<IUserActivityLogger, UserActivityLogger>();
 builder.Services.AddScoped<IAdminAuthenticationService, AdminAuthenticationService>();
 builder.Services.AddScoped<IPlayWatchReportService, PlayWatchReportService>();
 builder.Services.AddScoped<IJuryReportService, JuryReportService>();
+builder.Services.AddScoped<IArchiveComparisonReportService, ArchiveComparisonReportService>();
 builder.Services.AddScoped<IJuryWatchedPlayReportService, JuryWatchedPlayReportService>();
 builder.Services.AddSingleton<IExcelExporter, ExcelExporter>();
 

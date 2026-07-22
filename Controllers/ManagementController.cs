@@ -16,6 +16,7 @@ namespace YKBAfife.Controllers;
 public sealed class ManagementController(
     AfifeContext context,
     IJuryReportService juryReportService,
+    IArchiveComparisonReportService archiveComparisonReportService,
     IJuryWatchedPlayReportService juryWatchedPlayReportService,
     IUserActivityLogger activityLogger,
     IExcelExporter excelExporter) : Controller
@@ -853,8 +854,29 @@ public sealed class ManagementController(
     public IActionResult VotingSettings() => Page("Oylama Ayarları", "Oylama dönemi ve puanlama ayarlarını yönetin.");
 
     [HttpGet("arsiv-karsilastirma")]
-    public IActionResult ArchiveComparison() => Page("Arşiv Karşılaştırma", "Sezonlar arasındaki sonuçları karşılaştırın.");
+    public async Task<IActionResult> ArchiveComparison(CancellationToken cancellationToken)
+    {
+        var report = await archiveComparisonReportService.GetPageAsync(
+            new ArchiveComparisonTableQuery(),
+            cancellationToken);
+        return View(new ArchiveComparisonViewModel
+        {
+            Table = ArchiveComparisonComplexTableFactory.Create(report)
+        });
+    }
 
+    [HttpPost("arsiv-karsilastirma/tablo")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ArchiveComparisonTable(
+        [FromForm] ArchiveComparisonTableQuery query,
+        CancellationToken cancellationToken)
+    {
+        var report = await archiveComparisonReportService.GetPageAsync(query, cancellationToken);
+        return ViewComponent("ComplexTable", new
+        {
+            model = ArchiveComparisonComplexTableFactory.Create(report)
+        });
+    }
     private ViewResult Page(string title, string description) =>
         View("Page", new ManagementPageViewModel(title, description));
 }

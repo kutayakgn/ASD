@@ -1,0 +1,6 @@
+@model YKBAfife.Models.ViewModels.ArchiveComparisonViewModel
+@{
+    ViewData["Title"] = "Arşiv Karşılaştırma";
+}
+
+@await Component.InvokeAsync("ComplexTable", new { model = Model.Table })

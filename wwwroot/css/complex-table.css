@@ -5,10 +5,12 @@
     font-weight: 400;
     font-display: swap;
 }
+
 p {
     padding: 0px;
     margin: 0px;
 }
+
 .jury-voting-complex-table-section {
     display: flex;
     flex-direction: column;
@@ -144,6 +146,7 @@ p {
 
 .jury-voting-table-wrapper {
     overflow-x: auto;
+    padding: 0px 16px;
 }
 
 tr {
@@ -264,6 +267,11 @@ tr {
 .jury-voting-pagination-link.disabled {
     opacity: .35;
     pointer-events: none;
+}
+
+.complex-table-summary-wrapper {
+    width: 100%;
+    padding: 0px 16px;
 }
 
 .complex-table-summary {
@@ -391,7 +399,6 @@ tr {
     overflow: hidden;
     border: 0;
     border-radius: 0;
-
 }
 
 .play-viewers-modal-header {
@@ -462,9 +469,9 @@ tr {
     gap: 12px;
 }
 
-.complex-table-heading-tools .jury-voting-table-search-form {
-    flex: 1 1 360px;
-}
+    .complex-table-heading-tools .jury-voting-table-search-form {
+        flex: 1 1 360px;
+    }
 
 .complex-table-header-action {
     display: inline-flex;
@@ -484,13 +491,13 @@ tr {
     transition: color .15s ease-in-out, background-color .15s ease-in-out, border-color .15s ease-in-out;
 }
 
-.complex-table-header-action:hover,
-.complex-table-header-action:focus-visible {
-    color: #fff;
-    background: #918150;
-    border-color: #918150;
-    outline: none;
-}
+    .complex-table-header-action:hover,
+    .complex-table-header-action:focus-visible {
+        color: #fff;
+        background: #918150;
+        border-color: #918150;
+        outline: none;
+    }
 
 @media (max-width: 760px) {
     .complex-table-heading {
@@ -504,10 +511,10 @@ tr {
         flex-direction: column;
     }
 
-    .complex-table-heading-tools .jury-voting-table-search-form {
-        width: 100%;
-        flex-basis: auto;
-    }
+        .complex-table-heading-tools .jury-voting-table-search-form {
+            width: 100%;
+            flex-basis: auto;
+        }
 
     .complex-table-header-action {
         width: 100%;
