@@ -1,0 +1,22 @@
+@model YKBAfife.Models.ViewModels.AdminDetailsViewModel
+@{
+    ViewData["Title"] = "Admin Detay";
+    string Display(string? value) => string.IsNullOrWhiteSpace(value) ? "-" : value;
+}
+
+<section class="play-details-page">
+    <a asp-action="Index" class="play-details-back">
+        <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
+        <span>Admin Yönetimine Dön</span>
+    </a>
+    <header class="play-details-toolbar"><h1>Admin Detay</h1></header>
+    <dl class="play-details-content">
+        <div class="play-detail-field"><dt>Kullan&#305;c&#305; Ad&#305;</dt><dd>@Model.Username</dd></div>
+        <div class="play-detail-field"><dt>E-posta</dt><dd>@Model.Email</dd></div>
+        <div class="play-detail-field"><dt>Ad&#305; Soyad&#305;</dt><dd>@Model.FullName</dd></div>
+        <div class="play-detail-field"><dt>Stat&#252;</dt><dd>@(Model.IsActive ? "Aktif" : "Aktif Değil")</dd></div>
+        <div class="play-detail-field"><dt>Eklenme Tarihi</dt><dd>@(Model.CreatedAt?.ToString("dd.MM.yyyy") ?? "-")</dd></div>
+        <div class="play-detail-field"><dt>Ekleyen</dt><dd>@Display(Model.CreatedByName)</dd></div>
+    </dl>
+    <div class="play-details-divider" role="separator"></div>
+</section>

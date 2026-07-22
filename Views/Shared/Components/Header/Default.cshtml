@@ -3,6 +3,7 @@
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
     var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
     var isManagementPage = string.Equals(currentController, "Management", StringComparison.OrdinalIgnoreCase);
+    var isAdminManagementPage = string.Equals(currentController, "AdminManagement", StringComparison.OrdinalIgnoreCase);
     var otherActions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         "Editors",
@@ -19,7 +20,8 @@
             ? " active"
             : string.Empty;
 
-    var isOtherActive = isManagementPage && currentAction is not null && otherActions.Contains(currentAction);
+    var isOtherActive = isAdminManagementPage ||
+        (isManagementPage && currentAction is not null && otherActions.Contains(currentAction));
 }
 
 <header class="admin-header">
@@ -74,7 +76,7 @@
                             <img class="admin-dropdown-angle" src="~/icons/angle-down-solid-full-white.svg" alt="" aria-hidden="true" />
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end admin-dropdown-menu">
-                            <li><a class="dropdown-item@(ActiveClass("Editors"))" asp-controller="Management" asp-action="Editors">Editörler</a></li>
+                            <li><a class="dropdown-item@(isAdminManagementPage ? " active" : string.Empty)" asp-controller="AdminManagement" asp-action="Index">Admin Y&#246;netimi</a></li>
                             <li><a class="dropdown-item@(ActiveClass("VotingHistory"))" asp-controller="Management" asp-action="VotingHistory">Oylama Geçmişi</a></li>
                             <li><a class="dropdown-item@(ActiveClass("TicketSales"))" asp-controller="Management" asp-action="TicketSales">Bilet Satışları</a></li>
                             <li><a class="dropdown-item@(ActiveClass("PlayDates"))" asp-controller="Management" asp-action="PlayDates">Oyun Tarihleri</a></li>

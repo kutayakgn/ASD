@@ -18,7 +18,8 @@
     string ColumnWidth(int percentage)
     {
         var actionColumnsWidth = (Model.IsEditableRows ? Model.EditColumnWidth : 0) +
-            (Model.IsDeleteColActive ? Model.DeleteColumnWidth : 0);
+            (Model.IsDeleteColActive ? Model.DeleteColumnWidth : 0) +
+            (Model.IsNavigationColActive ? Model.NavigationColumnWidth : 0);
         if (actionColumnsWidth == 0)
         {
             return $"{percentage}%";
@@ -101,7 +102,7 @@
             </form>
 
         <div class="jury-voting-table-wrapper">
-            <table class="jury-voting-table" style="--complex-table-min-width: @(Model.MinimumTableWidth)px; --complex-table-edit-width: @(Model.EditColumnWidth)px; --complex-table-delete-width: @(Model.DeleteColumnWidth)px;">
+            <table class="jury-voting-table" style="--complex-table-min-width: @(Model.MinimumTableWidth)px; --complex-table-edit-width: @(Model.EditColumnWidth)px; --complex-table-delete-width: @(Model.DeleteColumnWidth)px; --complex-table-navigation-width: @(Model.NavigationColumnWidth)px;">
                 <colgroup>
                     @foreach (var column in activeTab.Columns)
                     {
@@ -115,6 +116,10 @@
                     {
                         <col class="complex-table-delete-col" />
                     }
+                    @if (Model.IsNavigationColActive)
+                    {
+                        <col class="complex-table-navigation-col" />
+                    }
                 </colgroup>
                 @if (Model.ShowColumnHeaders)
                 {
@@ -122,7 +127,7 @@
                         <tr>
                             @foreach (var column in activeTab.Columns)
                             {
-                                <th scope="col" class="@column.CssClass">
+                                <th scope="col" class="@column.CssClass" style="width: @ColumnWidth(column.ColWidth);">
                                     @if (column.IsSortable)
                                     {
                                         <button type="button"
@@ -142,11 +147,15 @@
                             }
                         @if (Model.IsEditableRows)
                             {
-                                <th scope="col" class="complex-table-edit-column"><span class="visually-hidden">Düzenle</span></th>
+                                <th scope="col" class="complex-table-edit-column"></th>
                             }
                         @if (Model.IsDeleteColActive)
                             {
-                                <th scope="col" class="complex-table-delete-column"><span class="visually-hidden">Sil</span></th>
+                                <th scope="col" class="complex-table-delete-column"></th>
+                            }
+                        @if (Model.IsNavigationColActive)
+                            {
+                                <th scope="col" class="complex-table-navigation-column"></th>
                             }
                         </tr>
                     </thead>
@@ -167,11 +176,20 @@
                                 @for (var index = 0; index < activeTab.Columns.Count; index++)
                                 {
                                     var cell = index < row.Cells.Count ? row.Cells[index] : null;
-                                    <td class="@activeTab.Columns[index].CssClass @((cell is not null && (!string.IsNullOrWhiteSpace(cell.Link) || !string.IsNullOrWhiteSpace(cell.ModalUrl))) ? "complex-table-action-cell" : string.Empty)">
+                                    <td class="@activeTab.Columns[index].CssClass @((cell is not null && (!string.IsNullOrWhiteSpace(cell.Link) || !string.IsNullOrWhiteSpace(cell.ModalUrl))) ? "complex-table-action-cell" : string.Empty)" style="width: @ColumnWidth(activeTab.Columns[index].ColWidth);">
                                         @if (cell is not null)
                                         {
                                             <div class="complex-table-cell-content @cell.CssClass">
-                                                @if (!string.IsNullOrWhiteSpace(cell.Link))
+                                                @if (!string.IsNullOrWhiteSpace(cell.ToggleUrl))
+                                                {
+                                                    <button type="button"
+                                                            class="complex-table-toggle @(cell.ToggleChecked ? "is-active" : string.Empty)"
+                                                            role="switch"
+                                                            aria-checked="@(cell.ToggleChecked ? "true" : "false")"
+                                                            aria-label="@cell.AccessibleLabel"
+                                                            data-complex-table-toggle-url="@cell.ToggleUrl"></button>
+                                                }
+                                                else if (!string.IsNullOrWhiteSpace(cell.Link))
                                                 {
                                                     <a href="@cell.Link"
                                                        class="complex-table-cell-action"
@@ -223,12 +241,23 @@
                                         }
                                     </td>
                                 }
+                                @if (Model.IsNavigationColActive)
+                                {
+                                    <td class="complex-table-navigation-column">
+                                        @if (!string.IsNullOrWhiteSpace(row.NavigationUrl))
+                                        {
+                                            <a href="@row.NavigationUrl" class="complex-table-navigation-link" aria-label="@row.NavigationAccessibleLabel">
+                                                <img src="~/icons/angle-right-solid-full.svg" alt="" aria-hidden="true" />
+                                            </a>
+                                        }
+                                    </td>
+                                }
                             </tr>
                         }
                     }
                     else
                     {
-                        <tr><td colspan="@(activeTab.Columns.Count + (Model.IsEditableRows ? 1 : 0) + (Model.IsDeleteColActive ? 1 : 0))" class="complex-table-empty">@activeTab.EmptyMessage</td></tr>
+                        <tr><td colspan="@(activeTab.Columns.Count + (Model.IsEditableRows ? 1 : 0) + (Model.IsDeleteColActive ? 1 : 0) + (Model.IsNavigationColActive ? 1 : 0))" class="complex-table-empty">@activeTab.EmptyMessage</td></tr>
                     }
                 </tbody>
             </table>

@@ -1,0 +1,6 @@
+@model YKBAfife.Models.ViewModels.AdminManagementViewModel
+@{
+    ViewData["Title"] = "Admin Y\u00f6netimi";
+}
+
+@await Component.InvokeAsync("ComplexTable", new { model = Model.Table })

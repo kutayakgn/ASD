@@ -1,0 +1,114 @@
+.complex-table-navigation-col,
+.complex-table-navigation-column {
+    width: var(--complex-table-navigation-width, 48px);
+}
+
+.jury-voting-table th.complex-table-navigation-column,
+.jury-voting-table td.complex-table-navigation-column {
+    padding: 0;
+    text-align: center;
+}
+
+.complex-table-navigation-link {
+    display: grid;
+    width: 100%;
+    min-height: 36px;
+    place-items: center;
+}
+
+.complex-table-navigation-link img {
+    width: 24px;
+    height: 24px;
+    transition: transform .15s ease-in-out;
+}
+
+.complex-table-navigation-link:hover img,
+.complex-table-navigation-link:focus-visible img {
+    transform: translateX(3px);
+}
+
+.complex-table-toggle {
+    position: relative;
+    display: inline-flex;
+    width: 38px;
+    height: 22px;
+    padding: 2px;
+    align-items: center;
+    background: #bdbdbd;
+    border: 0;
+    border-radius: 999px;
+    transition: background-color .15s ease-in-out;
+}
+
+.complex-table-toggle::after {
+    width: 18px;
+    height: 18px;
+    content: "";
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .18);
+    transition: transform .15s ease-in-out;
+}
+
+.complex-table-toggle.is-active {
+    background: #27ae60;
+}
+
+.complex-table-toggle.is-active::after {
+    transform: translateX(16px);
+}
+
+.complex-table-toggle:focus-visible {
+    outline: 2px solid #171717;
+    outline-offset: 2px;
+}
+
+.complex-table-toggle:disabled {
+    cursor: wait;
+    opacity: .65;
+}
+
+.admin-status-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.admin-form-page .add-jury-grid {
+    align-items: start;
+}
+
+.admin-status-field {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 700px) {
+    .admin-status-field {
+        grid-column: auto;
+    }
+}
+
+#admin-management-table .jury-voting-table col:nth-child(1),
+#admin-management-table .jury-voting-table th:nth-child(1),
+#admin-management-table .jury-voting-table td:nth-child(1),
+#admin-management-table .jury-voting-table col:nth-child(2),
+#admin-management-table .jury-voting-table th:nth-child(2),
+#admin-management-table .jury-voting-table td:nth-child(2) {
+    width: calc(50% - 104px) !important;
+}
+
+#admin-management-table .jury-voting-table col:nth-child(3),
+#admin-management-table .jury-voting-table th:nth-child(3),
+#admin-management-table .jury-voting-table td:nth-child(3) {
+    width: 160px !important;
+    min-width: 160px;
+    max-width: 160px;
+}
+
+#admin-management-table .jury-voting-table col:nth-child(4),
+#admin-management-table .jury-voting-table th:nth-child(4),
+#admin-management-table .jury-voting-table td:nth-child(4) {
+    width: 48px !important;
+    min-width: 48px;
+    max-width: 48px;
+}

@@ -67,7 +67,7 @@ public static class BlacklistComplexTableFactory
             [
                 Cell(row.JuryName),
                 Cell(row.PlayName),
-                Cell(row.CreatedOn.ToLocalTime().ToString("dd.MM.yyyy HH:mm", CultureInfo.CurrentCulture)),
+                Cell(row.CreatedOn.ToLocalTime().ToString("dd.MM.yyyy", CultureInfo.CurrentCulture)),
                 Cell(row.CreatedByName)
             ]
         };
