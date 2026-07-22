@@ -270,14 +270,13 @@ body {
 }
 
 .play-details-page {
-    width: min(100%, 1180px);
+    width: min(100%, 1440px);
     margin: 0 auto;
-    padding: 32px 16px 64px;
+    padding: 16px 16px 64px;
 }
 
 .play-details-back {
     display: inline-flex;
-    min-height: 40px;
     margin-bottom: 20px;
     align-items: center;
     gap: 6px;
@@ -497,7 +496,8 @@ body {
    margin-top:4px;
 }
 
-.add-jury-field input:not([type="file"]) {
+.add-jury-field input:not([type="file"]),
+.add-jury-field select {
     width: 100%;
     min-height: 44px;
     padding: 10px 12px;
@@ -508,7 +508,8 @@ body {
     outline: none;
 }
 
-.add-jury-field input:focus {
+.add-jury-field input:focus,
+.add-jury-field select:focus {
     border-color: #171717;
 }
 

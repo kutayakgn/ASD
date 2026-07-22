@@ -687,7 +687,6 @@ public sealed class ManagementController(
             PlayName = play.PlayName,
             TheaterName = play.TheaterName,
             JuriOylamaStatus = play.JuriOylamaStatus,
-            FromKunye = play.FromKunye,
             JuryGroupInfo = groupNames.Count == 0 ? "-" : string.Join(", ", groupNames),
             PlayStatus = playStatus?.StatusName ?? "-",
             PlayStatusColor = NormalizeStatusColor(playStatus?.StatusColor),
@@ -965,14 +964,14 @@ public sealed class ManagementController(
     public async Task<IActionResult> AddBlacklist(AddBlacklistViewModel model, CancellationToken cancellationToken)
     {
         if (!model.JuryId.HasValue || !await context.Users.AsNoTracking().AnyAsync(
-                user => user.Id == model.JuryId.Value && user.IsPublished && user.RoleCode == 2,
+                user => user.Id == model.JuryId.Value && user.IsPublished && user.IsActive && user.RoleCode == 2,
                 cancellationToken))
         {
             ModelState.AddModelError(nameof(model.JuryId), "Geçerli bir jüri seçiniz.");
         }
 
         if (!model.PlayId.HasValue || !await context.Plays.AsNoTracking().AnyAsync(
-                play => play.Id == model.PlayId.Value && play.IsPublished,
+                play => play.Id == model.PlayId.Value && play.IsPublished && !play.RecordType,
                 cancellationToken))
         {
             ModelState.AddModelError(nameof(model.PlayId), "Geçerli bir oyun seçiniz.");
@@ -1071,7 +1070,7 @@ public sealed class ManagementController(
     {
         model.Juries = await context.Users
             .AsNoTracking()
-            .Where(user => user.IsPublished && user.RoleCode == 2)
+            .Where(user => user.IsPublished && user.IsActive && user.RoleCode == 2)
             .OrderBy(user => user.FirstName)
             .ThenBy(user => user.LastName)
             .Select(user => new SelectListItem
@@ -1082,7 +1081,7 @@ public sealed class ManagementController(
             .ToArrayAsync(cancellationToken);
         model.Plays = await context.Plays
             .AsNoTracking()
-            .Where(play => play.IsPublished)
+            .Where(play => play.IsPublished && !play.RecordType)
             .OrderBy(play => play.PlayName)
             .Select(play => new SelectListItem
             {

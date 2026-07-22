@@ -110,7 +110,7 @@ BEGIN TRY
     INSERT INTO [dbo].[Plays]
         ([Id], [PlayName], [StatusCode], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy],
          [IsPublished], [Slug], [TheaterName], [Phone], [ContactPersonName], [ContactPersonPhone],
-         [Address], [Email], [FromKunye])
+         [Address], [Email], [RecordType])
     SELECT
         s.PlayId,
         CONCAT(N'Test Play ', s.N),
@@ -127,7 +127,7 @@ BEGIN TRY
         CONCAT('0532000', RIGHT('0000' + CONVERT(varchar(4), s.N), 4)),
         CONCAT('Test Address ', s.N),
         CONCAT('play', s.N, '@afife.local'),
-        CASE WHEN s.N % 2 = 0 THEN 1 ELSE 0 END
+        CASE WHEN s.N % 2 = 0 THEN 0 ELSE 1 END
     FROM @Seed AS s
     WHERE NOT EXISTS (SELECT 1 FROM [dbo].[Plays] AS p WHERE p.[Id] = s.PlayId);
 

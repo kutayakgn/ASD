@@ -236,7 +236,6 @@ BEGIN
         [ContactPersonPhone] [varchar](255) NULL,
         [Address] [varchar](255) NULL,
         [Email] [varchar](255) NULL,
-        [FromKunye] [bit] NOT NULL CONSTRAINT [DF_Plays_FromKunye] DEFAULT (0),
         [JuriOylamaStatus] [bit] NOT NULL CONSTRAINT [DF_Plays_JuriOylamaStatus] DEFAULT (0),
         [RecordType] [bit] NOT NULL CONSTRAINT [DF_Plays_RecordType] DEFAULT (0),
         CONSTRAINT [PK_Plays] PRIMARY KEY CLUSTERED ([Id])

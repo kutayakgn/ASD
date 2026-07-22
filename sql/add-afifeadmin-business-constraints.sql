@@ -80,43 +80,13 @@ BEGIN TRY
                ([PlayId], [AwardCategoryCode], [RoleCode], [IsCurrent])
             WHERE [IsCurrent] = 1;
 
-    -- Existing rows receive false when the column is introduced.
-    IF COL_LENGTH(N'[dbo].[Plays]', N'FromKunye') IS NULL
+    -- RecordType 0 represents Kunye giris, 1 represents Admin giris.
+    IF COL_LENGTH(N'[dbo].[Plays]', N'RecordType') IS NULL
     BEGIN
         ALTER TABLE [dbo].[Plays]
-            ADD [FromKunye] [bit] NOT NULL
-                CONSTRAINT [DF_Plays_FromKunye] DEFAULT (0) WITH VALUES;
-    END
-    ELSE
-    BEGIN
-        UPDATE [dbo].[Plays]
-        SET [FromKunye] = 0
-        WHERE [FromKunye] IS NULL;
-
-        IF EXISTS (
-            SELECT 1
-            FROM sys.columns
-            WHERE [object_id] = OBJECT_ID(N'[dbo].[Plays]')
-              AND [name] = N'FromKunye'
-              AND [is_nullable] = 1
-        )
-            ALTER TABLE [dbo].[Plays]
-                ALTER COLUMN [FromKunye] [bit] NOT NULL;
-
-        IF NOT EXISTS (
-            SELECT 1
-            FROM sys.default_constraints AS dc
-            INNER JOIN sys.columns AS c
-                ON c.[object_id] = dc.[parent_object_id]
-               AND c.[column_id] = dc.[parent_column_id]
-            WHERE dc.[parent_object_id] = OBJECT_ID(N'[dbo].[Plays]')
-              AND c.[name] = N'FromKunye'
-        )
-            ALTER TABLE [dbo].[Plays]
-                ADD CONSTRAINT [DF_Plays_FromKunye]
-                DEFAULT (0) FOR [FromKunye];
+            ADD [RecordType] [bit] NOT NULL
+                CONSTRAINT [DF_Plays_RecordType] DEFAULT (0) WITH VALUES;
     END;
-
     COMMIT TRANSACTION;
 END TRY
 BEGIN CATCH

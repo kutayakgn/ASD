@@ -129,7 +129,7 @@ BEGIN TRY
     INSERT INTO [dbo].[Plays]
         ([Id], [PlayName], [StatusCode], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy],
          [IsPublished], [Slug], [TheaterName], [Phone], [ContactPersonName], [ContactPersonPhone],
-         [Address], [Email], [FromKunye])
+         [Address], [Email], [RecordType])
     SELECT
         p.PlayId,
         p.PlayName,
@@ -146,7 +146,7 @@ BEGIN TRY
         '05329100000',
         'Istanbul',
         CONCAT('rapor-oyun-', RIGHT('00' + CONVERT(varchar(2), p.PlayNo), 2), '@afife.local'),
-        0
+        1
     FROM @Plays AS p
     WHERE NOT EXISTS
     (
