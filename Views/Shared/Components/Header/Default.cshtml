@@ -38,8 +38,6 @@
                         </svg>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end admin-user-menu">
-                        <li><a class="dropdown-item" asp-controller="Account" asp-action="ChangePassword">Şifre Değiştir</a></li>
-                        <li><hr class="dropdown-divider" /></li>
                         <li>
                             <form asp-controller="Account" asp-action="Logout" method="post">
                                 @Html.AntiForgeryToken()
@@ -50,10 +48,12 @@
                 </div>
             }
         </div>
-        <div class="container-fluid admin-nav-container">
+        <div class="container-fluid admin-nav-container@(Model.ShowNavigation ? string.Empty : " navigation-hidden")">
             <a class="navbar-brand admin-logo" asp-controller="Home" asp-action="Index" aria-label="Afife Anasayfa">
                 <img src="~/icons/afife-icon.svg" alt="Afife" />
             </a>
+            @if (Model.ShowNavigation)
+            {
             <button class="navbar-toggler admin-menu-toggle" type="button"
                     aria-controls="adminNavigation" aria-expanded="false" aria-label="Menüyü aç"
                     data-mobile-nav-toggle>
@@ -87,6 +87,7 @@
                     </li>
                 </ul>
             </div>
+            }
         </div>
     </nav>
 </header>

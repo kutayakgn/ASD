@@ -13,8 +13,6 @@ public sealed class LoginViewModel
     [Display(Name = "Şifre")]
     public string Password { get; set; } = string.Empty;
 
-    [Display(Name = "Oturumumu açık tut")]
-    public bool RememberMe { get; set; }
 
     public string? ReturnUrl { get; set; }
 }

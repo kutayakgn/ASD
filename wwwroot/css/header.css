@@ -27,6 +27,10 @@
     border-radius: 0;
 }
 
+.admin-nav-container.navigation-hidden {
+    justify-content: flex-start;
+}
+
 .admin-logo {
     padding: 0;
 }

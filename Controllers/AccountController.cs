@@ -57,7 +57,7 @@ public sealed class AccountController(
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         var properties = new AuthenticationProperties
         {
-            IsPersistent = model.RememberMe,
+            IsPersistent = false,
             AllowRefresh = true
         };
 
@@ -72,51 +72,6 @@ public sealed class AccountController(
         }
 
         return RedirectToAction("Index", "Home");
-    }
-
-    [Authorize]
-    [HttpGet("sifre-degistir")]
-    public IActionResult ChangePassword() => View(new ChangePasswordViewModel());
-
-    [Authorize]
-    [HttpPost("sifre-degistir")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> ChangePassword(
-        ChangePasswordViewModel model,
-        CancellationToken cancellationToken)
-    {
-        if (!ModelState.IsValid)
-        {
-            return View(model);
-        }
-
-        var userIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (!Guid.TryParse(userIdValue, out var userId))
-        {
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            return RedirectToAction(nameof(Login));
-        }
-
-        var result = await authenticationService.ChangePasswordAsync(
-            userId,
-            model.CurrentPassword,
-            model.NewPassword,
-            cancellationToken);
-
-        if (result == ChangePasswordResult.CurrentPasswordIncorrect)
-        {
-            ModelState.AddModelError(nameof(model.CurrentPassword), "Mevcut \u015fifreniz hatal\u0131.");
-            return View(model);
-        }
-
-        if (result == ChangePasswordResult.UserNotFound)
-        {
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            return RedirectToAction(nameof(Login));
-        }
-
-        TempData["PasswordChanged"] = "\u015eifreniz ba\u015far\u0131yla g\u00fcncellendi.";
-        return RedirectToAction(nameof(ChangePassword));
     }
 
     [Authorize]

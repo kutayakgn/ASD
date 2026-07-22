@@ -1,7 +1,7 @@
 @model YKBAfife.Models.ViewModels.LoginViewModel
 @{
     Layout = null;
-    ViewData["Title"] = "Yönetim Paneli Girişi";
+    ViewData["Title"] = "Afife Login";
 }
 
 <!DOCTYPE html>
@@ -9,70 +9,68 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>@ViewData["Title"] | Afife</title>
+    <title>@ViewData["Title"]</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/admin.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/header.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/auth.css" asp-append-version="true" />
 </head>
 <body class="auth-page">
+    @await Component.InvokeAsync("Header", new { showNavigation = false })
+
     <main class="auth-shell">
-        <section class="auth-story" aria-label="Afife Yönetim Paneli">
-            <div class="auth-brand">
-                <span class="auth-brand-mark">A</span>
-                <span>AFİFE</span>
-            </div>
+        <section class="auth-card" aria-labelledby="login-title">
+            <h1 id="login-title">
+                <span>Afife Tiyatro &#214;d&#252;lleri</span>
+                <span>Admin Oylama Paneli'ne</span>
+                <span>Ho&#351; Geldiniz</span>
+            </h1>
 
-            <div class="auth-story-copy">
-                <p class="auth-kicker">Yönetim Paneli</p>
-                <h1>Sahnenin belleği,<br />tek bir merkezde.</h1>
-                <p>Başvuruları, oyunları ve ödül süreçlerini güvenli yönetim alanından takip edin.</p>
-            </div>
+            <form asp-controller="Account" asp-action="Login" method="post" class="auth-form">
+                @Html.AntiForgeryToken()
+                <input asp-for="ReturnUrl" type="hidden" />
 
-            <p class="auth-edition">2026 · Afife Tiyatro Ödülleri</p>
-        </section>
+                <div asp-validation-summary="ModelOnly" class="validation-summary" role="alert"></div>
 
-        <section class="auth-panel">
-            <div class="auth-form-wrap">
-                <header>
-                    <p class="auth-kicker">Tekrar hoş geldiniz</p>
-                    <h2>Hesabınıza giriş yapın</h2>
-                    <p>Devam etmek için koordinatör bilgilerinizi kullanın.</p>
-                </header>
+                <div class="auth-field">
+                    <label asp-for="Username">Kullan&#305;c&#305; Ad&#305;</label>
+                    <input asp-for="Username"
+                           autocomplete="username"
+                           placeholder="Kullan&#305;c&#305; Ad&#305;n&#305;z&#305; Yaz&#305;n"
+                           autofocus />
+                    <span asp-validation-for="Username"></span>
+                </div>
 
-                <form asp-controller="Account" asp-action="Login" method="post" class="auth-form">
-                    @Html.AntiForgeryToken()
-                    <input asp-for="ReturnUrl" type="hidden" />
-
-                    <div asp-validation-summary="ModelOnly" class="validation-summary" role="alert"></div>
-
-                    <div class="field-group">
-                        <label asp-for="Username"></label>
-                        <input asp-for="Username" autocomplete="username" placeholder="kullanici.adi" autofocus />
-                        <span asp-validation-for="Username"></span>
+                <div class="auth-field">
+                    <label asp-for="Password">&#350;ifre</label>
+                    <div class="auth-password">
+                        <input asp-for="Password"
+                               autocomplete="current-password"
+                               placeholder="&#350;ifrenizi Yaz&#305;n"
+                               data-password-input />
+                        <button type="button"
+                                class="auth-password-toggle"
+                                aria-label="&#350;ifreyi g&#246;ster"
+                                aria-pressed="false"
+                                data-password-toggle>
+                            <img src="~/icons/eye.svg" alt="" aria-hidden="true" />
+                        </button>
                     </div>
+                    <span asp-validation-for="Password"></span>
+                </div>
 
-                    <div class="field-group">
-                        <label asp-for="Password"></label>
-                        <input asp-for="Password" autocomplete="current-password" placeholder="Şifrenizi girin" />
-                        <span asp-validation-for="Password"></span>
-                    </div>
-
-                    <label class="remember-row">
-                        <input asp-for="RememberMe" />
-                        <span>Oturumumu açık tut</span>
-                    </label>
-
-                    <button type="submit" class="auth-submit">
-                        <span>Giriş yap</span>
-                        <span aria-hidden="true">→</span>
-                    </button>
-                </form>
-
-                <p class="auth-help">Giriş sorunu yaşıyorsanız sistem yöneticinizle iletişime geçin.</p>
-            </div>
+                <button type="submit" class="auth-submit">Giri&#351; Yap</button>
+            </form>
         </section>
     </main>
 
+    <footer class="auth-footer" aria-hidden="true"></footer>
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
     <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+    <script src="~/js/login.js" asp-append-version="true"></script>
 </body>
 </html>

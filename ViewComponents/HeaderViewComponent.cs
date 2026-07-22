@@ -5,11 +5,12 @@ namespace YKBAfife.ViewComponents;
 
 public sealed class HeaderViewComponent : ViewComponent
 {
-    public IViewComponentResult Invoke()
+    public IViewComponentResult Invoke(bool showNavigation = true)
     {
         return View(new HeaderViewModel
         {
-            UserFullName = User.Identity?.Name ?? "Yönetici"
+            UserFullName = User.Identity?.Name ?? "Yönetici",
+            ShowNavigation = showNavigation
         });
     }
 }
