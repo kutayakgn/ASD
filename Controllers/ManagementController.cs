@@ -1,6 +1,7 @@
 using System.Data;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using YKBAfife.Business.Helpers;
 using YKBAfife.Data;
@@ -18,6 +19,7 @@ public sealed class ManagementController(
     IJuryReportService juryReportService,
     IArchiveComparisonReportService archiveComparisonReportService,
     ITicketSalesReportService ticketSalesReportService,
+    IBlacklistReportService blacklistReportService,
     IJuryWatchedPlayReportService juryWatchedPlayReportService,
     IUserActivityLogger activityLogger,
     IExcelExporter excelExporter) : Controller
@@ -877,10 +879,17 @@ public sealed class ManagementController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UpdateTicketFee(Guid id, [Bind("Id,TicketFee")] EditTicketFeeViewModel model, CancellationToken cancellationToken)
     {
-        if (id != model.Id || !ModelState.IsValid || model.TicketFee <= 0)
+        if (id != model.Id || !ModelState.IsValid)
         {
             TempData["GenericPopup.Type"] = "fail";
             TempData["GenericPopup.Message"] = "Geçerli bir bilet ücreti giriniz.";
+            return RedirectToAction(nameof(TicketSales));
+        }
+
+        if (model.TicketFee < 1)
+        {
+            TempData["GenericPopup.Type"] = "fail";
+            TempData["GenericPopup.Message"] = "Bilet ücreti 1'den az olamaz.";
             return RedirectToAction(nameof(TicketSales));
         }
 
@@ -889,6 +898,13 @@ public sealed class ManagementController(
         if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId)) return Challenge();
 
         var oldValue = ticket.TicketFee;
+        if (oldValue == model.TicketFee)
+        {
+            TempData["GenericPopup.Type"] = "fail";
+            TempData["GenericPopup.Message"] = "Bilet ücreti mevcut değerle aynı olamaz.";
+            return RedirectToAction(nameof(TicketSales));
+        }
+
         ticket.TicketFee = model.TicketFee;
         ticket.UpdatedAt = DateTime.UtcNow;
         ticket.UpdatedBy = currentUserId;
@@ -913,7 +929,116 @@ public sealed class ManagementController(
     public IActionResult PlayDates() => Page("Oyun Tarihleri", "Oyun gösterim tarihlerini yönetin.");
 
     [HttpGet("blacklists")]
-    public IActionResult Blacklists() => Page("Blacklists", "Engellenen kayıtları ve nedenlerini yönetin.");
+    public async Task<IActionResult> Blacklists(CancellationToken cancellationToken)
+    {
+        var report = await blacklistReportService.GetPageAsync(new BlacklistTableQuery(), cancellationToken);
+        return View(new BlacklistViewModel { Table = BlacklistComplexTableFactory.Create(report) });
+    }
+
+    [HttpPost("blacklists/tablo")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> BlacklistTable([FromForm] BlacklistTableQuery query, CancellationToken cancellationToken)
+    {
+        var report = await blacklistReportService.GetPageAsync(query, cancellationToken);
+        return ViewComponent("ComplexTable", new { model = BlacklistComplexTableFactory.Create(report) });
+    }
+
+    [HttpPost("blacklists/excel")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ExportBlacklists([FromForm] BlacklistTableQuery query, CancellationToken cancellationToken)
+    {
+        var rows = await blacklistReportService.GetExportRowsAsync(query, cancellationToken);
+        var content = excelExporter.Export(BlacklistExcelExportFactory.Create(rows));
+        return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"blacklists-{DateTime.Today:yyyy-MM-dd}.xlsx");
+    }
+
+    [HttpGet("blacklists/ekle")]
+    public async Task<IActionResult> AddBlacklist(CancellationToken cancellationToken)
+    {
+        var model = new AddBlacklistViewModel();
+        await PopulateBlacklistOptionsAsync(model, cancellationToken);
+        return View(model);
+    }
+
+    [HttpPost("blacklists/ekle")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AddBlacklist(AddBlacklistViewModel model, CancellationToken cancellationToken)
+    {
+        if (!model.JuryId.HasValue || !await context.Users.AsNoTracking().AnyAsync(
+                user => user.Id == model.JuryId.Value && user.IsPublished && user.RoleCode == 2,
+                cancellationToken))
+        {
+            ModelState.AddModelError(nameof(model.JuryId), "Geçerli bir jüri seçiniz.");
+        }
+
+        if (!model.PlayId.HasValue || !await context.Plays.AsNoTracking().AnyAsync(
+                play => play.Id == model.PlayId.Value && play.IsPublished,
+                cancellationToken))
+        {
+            ModelState.AddModelError(nameof(model.PlayId), "Geçerli bir oyun seçiniz.");
+        }
+
+        if (model.JuryId.HasValue && model.PlayId.HasValue && await context.Blacklists.AsNoTracking().AnyAsync(
+                item => item.JuryId == model.JuryId.Value && item.PlayId == model.PlayId.Value && item.IsPublished,
+                cancellationToken))
+        {
+            ModelState.AddModelError(string.Empty, "Bu jüri ve oyun için aktif bir blacklist kaydı zaten bulunuyor.");
+        }
+
+        if (!ModelState.IsValid)
+        {
+            await PopulateBlacklistOptionsAsync(model, cancellationToken);
+            return View(model);
+        }
+
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId)) return Challenge();
+        var id = Guid.NewGuid();
+        context.Blacklists.Add(new Models.Entities.Blacklist
+        {
+            Id = id,
+            JuryId = model.JuryId!.Value,
+            PlayId = model.PlayId!.Value,
+            CreatedBy = currentUserId,
+            CreatedOn = DateTime.UtcNow,
+            IsPublished = true
+        });
+        await context.SaveChangesAsync(cancellationToken);
+        await activityLogger.LogAsync(
+            UserActivityTypes.BlacklistCreated,
+            true,
+            model.JuryId,
+            actorUserId: currentUserId,
+            details: $"Blacklist kaydı oluşturuldu. PlayId: {model.PlayId}",
+            cancellationToken: cancellationToken);
+
+        TempData["GenericPopup.Type"] = "success";
+        TempData["GenericPopup.Message"] = "Blacklist kaydı başarıyla eklendi.";
+        TempData["GenericPopup.RedirectUrl"] = Url.Action(nameof(Blacklists)) ?? "/blacklists";
+        return RedirectToAction(nameof(AddBlacklist));
+    }
+
+    [HttpPost("blacklists/{id:guid}/sil")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteBlacklist(Guid id, CancellationToken cancellationToken)
+    {
+        var blacklist = await context.Blacklists.SingleOrDefaultAsync(item => item.Id == id && item.IsPublished, cancellationToken);
+        if (blacklist is null) return NotFound();
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId)) return Challenge();
+
+        blacklist.IsPublished = false;
+        await context.SaveChangesAsync(cancellationToken);
+        await activityLogger.LogAsync(
+            UserActivityTypes.BlacklistSoftDeleted,
+            true,
+            blacklist.JuryId,
+            actorUserId: currentUserId,
+            details: $"Blacklist kaydı yayından kaldırıldı. PlayId: {blacklist.PlayId}",
+            cancellationToken: cancellationToken);
+
+        TempData["GenericPopup.Type"] = "success";
+        TempData["GenericPopup.Message"] = "Blacklist kaydı başarıyla silindi.";
+        return RedirectToAction(nameof(Blacklists));
+    }
 
     [HttpGet("oylama-ayarlari")]
     public IActionResult VotingSettings() => Page("Oylama Ayarları", "Oylama dönemi ve puanlama ayarlarını yönetin.");
@@ -942,6 +1067,31 @@ public sealed class ManagementController(
             model = ArchiveComparisonComplexTableFactory.Create(report)
         });
     }
+    private async Task PopulateBlacklistOptionsAsync(AddBlacklistViewModel model, CancellationToken cancellationToken)
+    {
+        model.Juries = await context.Users
+            .AsNoTracking()
+            .Where(user => user.IsPublished && user.RoleCode == 2)
+            .OrderBy(user => user.FirstName)
+            .ThenBy(user => user.LastName)
+            .Select(user => new SelectListItem
+            {
+                Value = user.Id.ToString(),
+                Text = (user.FirstName + " " + user.LastName).Trim()
+            })
+            .ToArrayAsync(cancellationToken);
+        model.Plays = await context.Plays
+            .AsNoTracking()
+            .Where(play => play.IsPublished)
+            .OrderBy(play => play.PlayName)
+            .Select(play => new SelectListItem
+            {
+                Value = play.Id.ToString(),
+                Text = play.PlayName
+            })
+            .ToArrayAsync(cancellationToken);
+    }
+
     private ViewResult Page(string title, string description) =>
         View("Page", new ManagementPageViewModel(title, description));
 }

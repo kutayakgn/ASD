@@ -16,7 +16,9 @@ public sealed class ComplexTableViewModel
     public bool ShowSearch { get; init; } = true;
     public bool ShowColumnHeaders { get; init; } = true;
     public bool IsEditableRows { get; init; }
+    public bool IsDeleteColActive { get; init; }
     public int EditColumnWidth { get; init; } = 48;
+    public int DeleteColumnWidth { get; init; } = 48;
     public int MinimumTableWidth { get; init; } = 720;
     public IReadOnlyDictionary<string, string?> AdditionalRouteValues { get; init; } =
         new Dictionary<string, string?>();
@@ -58,6 +60,9 @@ public sealed class ComplexTableRowViewModel
     public string ModalUrl { get; init; } = string.Empty;
     public string EditModalUrl { get; init; } = string.Empty;
     public string EditAccessibleLabel { get; init; } = string.Empty;
+    public string DeleteUrl { get; init; } = string.Empty;
+    public string DeleteConfirmMessage { get; init; } = string.Empty;
+    public string DeleteAccessibleLabel { get; init; } = string.Empty;
     public IReadOnlyList<ComplexTableCellViewModel> Cells { get; init; } = [];
 }
 

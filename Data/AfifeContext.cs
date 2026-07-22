@@ -18,6 +18,7 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
     public DbSet<PlayStatus> PlayStatuses => Set<PlayStatus>();
     public DbSet<JuryAssignedPlay> JuryAssignedPlays => Set<JuryAssignedPlay>();
     public DbSet<AwardCategory> AwardCategories => Set<AwardCategory>();
+    public DbSet<Blacklist> Blacklists => Set<Blacklist>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -135,6 +136,26 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
             entity.ToTable("JuryGameTicketFees", "dbo");
             entity.Ignore(x => x.User);
             entity.Property(x => x.TicketFee).HasPrecision(10, 2);
+        });
+
+        modelBuilder.Entity<Blacklist>(entity =>
+        {
+            entity.ToTable("Blacklist", "dbo");
+            entity.HasIndex(x => new { x.JuryId, x.PlayId })
+                .IsUnique()
+                .HasFilter("[IsPublished] = 1");
+            entity.HasOne(x => x.Jury)
+                .WithMany()
+                .HasForeignKey(x => x.JuryId)
+                .OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(x => x.Play)
+                .WithMany()
+                .HasForeignKey(x => x.PlayId)
+                .OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(x => x.Creator)
+                .WithMany()
+                .HasForeignKey(x => x.CreatedBy)
+                .OnDelete(DeleteBehavior.NoAction);
         });
     }
 }

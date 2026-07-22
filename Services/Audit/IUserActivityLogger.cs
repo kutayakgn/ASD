@@ -27,4 +27,6 @@ public static class UserActivityTypes
     public const string UserUpdated = "UserUpdated";
     public const string UserSoftDeleted = "UserSoftDeleted";
     public const string TicketFeeChanged = "TicketFeeChanged";
+    public const string BlacklistCreated = "BlacklistCreated";
+    public const string BlacklistSoftDeleted = "BlacklistSoftDeleted";
 }

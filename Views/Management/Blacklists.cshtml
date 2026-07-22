@@ -1,0 +1,6 @@
+@model YKBAfife.Models.ViewModels.BlacklistViewModel
+@{
+    ViewData["Title"] = "Blacklists";
+}
+
+@await Component.InvokeAsync("ComplexTable", new { model = Model.Table })

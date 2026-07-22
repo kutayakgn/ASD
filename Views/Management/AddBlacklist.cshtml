@@ -1,0 +1,44 @@
+@model YKBAfife.Models.ViewModels.AddBlacklistViewModel
+@{
+    ViewData["Title"] = "Blacklist Ekle";
+}
+
+<section class="play-details-page blacklist-form-page" aria-labelledby="blacklist-form-title">
+    <a asp-action="Blacklists" class="play-details-back">
+        <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
+        Blacklistlere Dön
+    </a>
+
+    <header class="play-details-toolbar">
+        <h1 id="blacklist-form-title">Blacklist Ekle</h1>
+    </header>
+
+    <form asp-action="AddBlacklist" method="post" class="blacklist-form"
+          data-generic-confirm data-confirm-message="Blacklist kaydını eklemek istediğinize emin misiniz?">
+        <div asp-validation-summary="ModelOnly" class="add-jury-validation-summary"></div>
+        <div class="blacklist-form-grid">
+            <div class="blacklist-form-field">
+                <label asp-for="JuryId"></label>
+                <select asp-for="JuryId" asp-items="Model.Juries">
+                    <option value="">Jüri seçiniz</option>
+                </select>
+                <span asp-validation-for="JuryId"></span>
+            </div>
+            <div class="blacklist-form-field">
+                <label asp-for="PlayId"></label>
+                <select asp-for="PlayId" asp-items="Model.Plays">
+                    <option value="">Oyun seçiniz</option>
+                </select>
+                <span asp-validation-for="PlayId"></span>
+            </div>
+        </div>
+        <div class="blacklist-form-actions">
+            <a asp-action="Blacklists" class="blacklist-cancel">İptal</a>
+            <button type="submit" class="blacklist-save">Kaydet</button>
+        </div>
+    </form>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

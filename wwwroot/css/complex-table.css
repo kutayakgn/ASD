@@ -717,3 +717,14 @@ tr {
         height: 70px;
     }
 }
+
+.complex-table-delete-col,
+.complex-table-delete-column {
+    width: var(--complex-table-delete-width, 48px);
+}
+
+.jury-voting-table th.complex-table-delete-column,
+.jury-voting-table td.complex-table-delete-column {
+    padding: 6px;
+    text-align: center;
+}
