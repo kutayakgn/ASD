@@ -1,0 +1,41 @@
+@model YKBAfife.Models.Components.LazySearchSelectViewModel
+
+<div class="lazy-search-select"
+     data-lazy-search-select
+     data-endpoint="@Model.Endpoint"
+     data-placeholder="@Model.Placeholder">
+    <label id="@($"{Model.Id}-label")" for="@($"{Model.Id}-trigger")">@Model.Label</label>
+    <input type="hidden"
+           id="@Model.Id"
+           name="@Model.InputName"
+           value="@Model.SelectedValue"
+           data-lazy-select-value />
+    <button type="button"
+            id="@($"{Model.Id}-trigger")"
+            class="lazy-search-select-trigger@(Model.SelectedValue.HasValue ? string.Empty : " is-placeholder")"
+            aria-labelledby="@($"{Model.Id}-label") @($"{Model.Id}-display")"
+            aria-haspopup="listbox"
+            aria-expanded="false"
+            data-lazy-select-trigger>
+        <span id="@($"{Model.Id}-display")" data-lazy-select-display>
+            @(Model.SelectedValue.HasValue && !string.IsNullOrWhiteSpace(Model.SelectedText) ? Model.SelectedText : Model.Placeholder)
+        </span>
+        <img src="~/icons/angle-down.svg" alt="" aria-hidden="true" />
+    </button>
+    <div class="lazy-search-select-panel" data-lazy-select-panel hidden>
+        <div class="lazy-search-select-search-wrap">
+            <input type="search"
+                   class="lazy-search-select-search"
+                   placeholder="@Model.SearchPlaceholder"
+                   aria-label="@($"{Model.Label} seçeneklerinde ara")"
+                   autocomplete="off"
+                   data-lazy-select-search />
+            <img src="~/icons/magnifier-icon.svg" alt="" aria-hidden="true" />
+        </div>
+        <div class="lazy-search-select-status" role="status" data-lazy-select-status>Seçenekler yükleniyor...</div>
+        <div class="lazy-search-select-options"
+             role="listbox"
+             aria-labelledby="@($"{Model.Id}-label")"
+             data-lazy-select-options></div>
+    </div>
+</div>
