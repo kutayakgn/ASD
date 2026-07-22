@@ -35,7 +35,7 @@ public static class BlacklistComplexTableFactory
                 EmptyMessage = "Blacklist kaydı bulunamadı.",
                 HeaderActions =
                 [
-                    new ComplexTableHeaderActionViewModel { Text = "Blacklist Ekle", Link = "/blacklists/ekle" }
+                    new ComplexTableHeaderActionViewModel {Icon= "/icons/plus.svg", Text = "Blacklist Ekle", Link = "/blacklists/ekle" }
                 ],
                 Columns =
                 [

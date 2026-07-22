@@ -64,7 +64,7 @@ public static class JuryComplexTableFactory
             Columns = key == JuryTabs.Current ? CurrentColumns : HistoricalColumns,
             Rows = key == report.CurrentTab ? rows : [],
             HeaderActions = key == JuryTabs.Current
-                ? [new ComplexTableHeaderActionViewModel { Text = "Jüri Ekle", Link = "/juri-ekle" }]
+                ? [new ComplexTableHeaderActionViewModel { Icon = "/icons/plus.svg", Text = "Jüri Ekle", Link = "/juri-ekle" }]
                 : []
         };
 

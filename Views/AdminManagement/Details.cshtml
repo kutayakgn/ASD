@@ -9,7 +9,30 @@
         <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
         <span>Admin Yönetimine Dön</span>
     </a>
-    <header class="play-details-toolbar"><h1>Admin Detay</h1></header>
+        <header class="play-details-toolbar">
+        <h1>Admin Detay</h1>
+        <div class="play-details-actions">
+            @if (Model.CanDelete)
+
+            {
+<form asp-action="Delete"
+                  asp-route-id="@Model.Id"
+                  method="post"
+                  class="admin-delete-form"
+                  data-generic-confirm
+                  data-confirm-message="Admini silmek istedi&#287;inize emin misiniz?"
+                  data-confirm-text="Evet"
+                  data-cancel-text="&#304;ptal">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="play-detail-action play-detail-action-secondary">Admini Sil</button>
+            </form>
+
+            }
+            <a asp-action="Edit"
+               asp-route-id="@Model.Id"
+               class="play-detail-action play-detail-action-primary">Admini D&#252;zenle</a>
+        </div>
+    </header>
     <dl class="play-details-content">
         <div class="play-detail-field"><dt>Kullan&#305;c&#305; Ad&#305;</dt><dd>@Model.Username</dd></div>
         <div class="play-detail-field"><dt>E-posta</dt><dd>@Model.Email</dd></div>

@@ -18,8 +18,12 @@ public sealed class AdminManagementController(
     [HttpGet("admin-yonetimi")]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
-        var report = await adminReportService.GetPageAsync(new AdminTableQuery(), cancellationToken);
-        return View(new AdminManagementViewModel { Table = AdminComplexTableFactory.Create(report) });
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId)) return Challenge();
+        var report = await adminReportService.GetPageAsync(new AdminTableQuery(), currentUserId, cancellationToken);
+        return View(new AdminManagementViewModel
+        {
+            Table = AdminComplexTableFactory.Create(report, currentUserId)
+        });
     }
 
     [HttpPost("admin-yonetimi/tablo")]
@@ -28,8 +32,12 @@ public sealed class AdminManagementController(
         [FromForm] AdminTableQuery query,
         CancellationToken cancellationToken)
     {
-        var report = await adminReportService.GetPageAsync(query, cancellationToken);
-        return ViewComponent("ComplexTable", new { model = AdminComplexTableFactory.Create(report) });
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId)) return Challenge();
+        var report = await adminReportService.GetPageAsync(query, currentUserId, cancellationToken);
+        return ViewComponent("ComplexTable", new
+        {
+            model = AdminComplexTableFactory.Create(report, currentUserId)
+        });
     }
 
     [HttpPost("admin-yonetimi/{id:guid}/status")]
@@ -39,11 +47,16 @@ public sealed class AdminManagementController(
         [FromForm] bool isActive,
         CancellationToken cancellationToken)
     {
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId)) return Challenge();
+        if (id == currentUserId)
+        {
+            return Conflict(new { message = "Kendi stat\u00fcn\u00fcz\u00fc de\u011fi\u015ftiremezsiniz." });
+        }
+
         var admin = await context.Users.SingleOrDefaultAsync(
             user => user.Id == id && user.IsPublished && user.RoleCode == 1,
             cancellationToken);
         if (admin is null) return NotFound();
-        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId)) return Challenge();
 
         var oldValue = admin.IsActive;
         admin.IsActive = isActive;
@@ -60,7 +73,6 @@ public sealed class AdminManagementController(
             oldValue: oldValue.ToString(),
             newValue: isActive.ToString(),
             cancellationToken: cancellationToken);
-
         return Json(new { isActive = admin.IsActive });
     }
 
@@ -152,9 +164,10 @@ public sealed class AdminManagementController(
     [HttpGet("admin-yonetimi/{id:guid}")]
     public async Task<IActionResult> Details(Guid id, CancellationToken cancellationToken)
     {
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId)) return Challenge();
         var admin = await context.Users
             .AsNoTracking()
-            .Where(user => user.Id == id && user.IsPublished && user.RoleCode == 1)
+            .Where(user => user.Id == id && user.RoleCode == 1 && (user.IsPublished || user.Id == currentUserId))
             .Select(user => new
             {
                 user.Id,
@@ -174,7 +187,6 @@ public sealed class AdminManagementController(
                 .Select(user => (user.FirstName + " " + user.LastName).Trim())
                 .SingleOrDefaultAsync(cancellationToken)
             : null;
-
         return View(new AdminDetailsViewModel
         {
             Id = admin.Id,
@@ -183,10 +195,156 @@ public sealed class AdminManagementController(
             FullName = admin.FullName,
             IsActive = admin.IsActive,
             CreatedAt = admin.CreatedAt,
-            CreatedByName = createdByName ?? "-"
+            CreatedByName = createdByName ?? "-",
+            CanDelete = admin.Id != currentUserId
         });
     }
 
+    [HttpGet("admin-yonetimi/{id:guid}/duzenle")]
+    public async Task<IActionResult> Edit(Guid id, CancellationToken cancellationToken)
+    {
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId)) return Challenge();
+        var model = await context.Users
+            .AsNoTracking()
+            .Where(user => user.Id == id && user.RoleCode == 1 && (user.IsPublished || user.Id == currentUserId))
+            .Select(user => new EditAdminViewModel
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                FullName = (user.FirstName + " " + user.LastName).Trim(),
+                IsActive = user.IsActive,
+                CanEditStatus = user.Id != currentUserId
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+        return model is null ? NotFound() : View(model);
+    }
+
+    [HttpPost("admin-yonetimi/{id:guid}/duzenle")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(
+        Guid id,
+        EditAdminViewModel model,
+        CancellationToken cancellationToken)
+    {
+        if (id != model.Id) return BadRequest();
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId)) return Challenge();
+        var admin = await context.Users.SingleOrDefaultAsync(
+            user => user.Id == id && user.RoleCode == 1 && (user.IsPublished || user.Id == currentUserId),
+            cancellationToken);
+        if (admin is null) return NotFound();
+
+        var isCurrentAdmin = admin.Id == currentUserId;
+        if (isCurrentAdmin) model.IsActive = admin.IsActive;
+        Normalize(model);
+        ModelState.Clear();
+        TryValidateModel(model);
+        if (!ModelState.IsValid)
+        {
+            return RedirectEditWithFailure(id, ValidationErrors());
+        }
+
+        if (await context.Users.AsNoTracking().AnyAsync(
+                user => user.Id != id && user.RoleCode == 1 && user.Username == model.Username,
+                cancellationToken))
+        {
+            return RedirectEditWithFailure(id, "Bu kullan\u0131c\u0131 ad\u0131 ba\u015fka bir admin taraf\u0131ndan kullan\u0131l\u0131yor.");
+        }
+        if (await context.Users.AsNoTracking().AnyAsync(
+                user => user.Id != id && user.RoleCode == 1 && user.Email == model.Email,
+                cancellationToken))
+        {
+            return RedirectEditWithFailure(id, "Bu e-posta adresi ba\u015fka bir admin taraf\u0131ndan kullan\u0131l\u0131yor.");
+        }
+
+        var currentFullName = (admin.FirstName + " " + admin.LastName).Trim();
+        var requestedIsActive = isCurrentAdmin ? admin.IsActive : model.IsActive.GetValueOrDefault();
+        var hasChanges = !string.Equals(admin.Username, model.Username, StringComparison.Ordinal) ||
+            !string.Equals(admin.Email, model.Email, StringComparison.Ordinal) ||
+            !string.Equals(currentFullName, model.FullName, StringComparison.Ordinal) ||
+            admin.IsActive != requestedIsActive ||
+            !string.IsNullOrWhiteSpace(model.Password);
+        if (!hasChanges)
+        {
+            return RedirectEditWithFailure(id, "Herhangi bir de\u011fi\u015fiklik yapmad\u0131n\u0131z.");
+        }
+
+        var fullNameParts = model.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        admin.FirstName = string.Join(' ', fullNameParts[..^1]);
+        admin.LastName = fullNameParts[^1];
+        admin.Username = model.Username;
+        admin.Email = model.Email;
+        admin.IsActive = requestedIsActive;
+        admin.UpdatedAt = DateTime.UtcNow;
+        admin.UpdatedBy = currentUserId;
+        if (!string.IsNullOrWhiteSpace(model.Password))
+        {
+            admin.PasswordHash = PasswordHashHelper.HashPassword(model.Password);
+        }
+
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            return RedirectEditWithFailure(id, "Kullan\u0131c\u0131 ad\u0131 veya e-posta adresi ba\u015fka bir admin taraf\u0131ndan kullan\u0131l\u0131yor.");
+        }
+        await activityLogger.LogAsync(
+            UserActivityTypes.UserUpdated,
+            true,
+            admin.Id,
+            admin.Username,
+            currentUserId,
+            details: "Admin bilgileri g\u00fcncellendi.",
+            cancellationToken: cancellationToken);
+
+        TempData["GenericPopup.Type"] = "success";
+        TempData["GenericPopup.Message"] = "Admin ba\u015far\u0131yla g\u00fcncellendi.";
+        TempData["GenericPopup.RedirectUrl"] = Url.Action(nameof(Details), new { id }) ?? $"/admin-yonetimi/{id}";
+        return RedirectToAction(nameof(Edit), new { id });
+    }
+
+    [HttpPost("admin-yonetimi/{id:guid}/sil")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    {
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId)) return Challenge();
+        if (id == currentUserId)
+        {
+            TempData["GenericPopup.Type"] = "fail";
+            TempData["GenericPopup.Message"] = "Kendi admin kayd\u0131n\u0131z\u0131 silemezsiniz.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+        var admin = await context.Users.SingleOrDefaultAsync(
+            user => user.Id == id && user.IsPublished && user.RoleCode == 1,
+            cancellationToken);
+        if (admin is null) return NotFound();
+
+        admin.IsPublished = false;
+        admin.IsActive = false;
+        admin.UpdatedAt = DateTime.UtcNow;
+        admin.UpdatedBy = currentUserId;
+        await context.SaveChangesAsync(cancellationToken);
+        await activityLogger.LogAsync(
+            UserActivityTypes.UserSoftDeleted,
+            true,
+            admin.Id,
+            admin.Username,
+            currentUserId,
+            details: "Admin kullan\u0131c\u0131s\u0131 yay\u0131ndan kald\u0131r\u0131ld\u0131.",
+            cancellationToken: cancellationToken);
+        TempData["GenericPopup.Type"] = "success";
+        TempData["GenericPopup.Message"] = "Admin ba\u015far\u0131yla silindi.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    private IActionResult RedirectEditWithFailure(Guid id, string message)
+    {
+        TempData["GenericPopup.Type"] = "fail";
+        TempData["GenericPopup.Message"] = message;
+        return RedirectToAction(nameof(Edit), new { id });
+    }
     private IActionResult RedirectWithFailure(AddAdminViewModel model, string message)
     {
         TempData["GenericPopup.Type"] = "fail";
@@ -211,6 +369,15 @@ public sealed class AdminManagementController(
             : "Form alanlar\u0131n\u0131 kontrol ediniz.";
     }
 
+    private static void Normalize(EditAdminViewModel model)
+    {
+        model.Username = model.Username?.Trim() ?? string.Empty;
+        model.Email = model.Email?.Trim() ?? string.Empty;
+        model.FullName = string.Join(' ', (model.FullName ?? string.Empty).Split(
+            (char[]?)null,
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        model.Password = string.IsNullOrWhiteSpace(model.Password) ? null : model.Password;
+    }
     private static void Normalize(AddAdminViewModel model)
     {
         model.Username = model.Username?.Trim() ?? string.Empty;

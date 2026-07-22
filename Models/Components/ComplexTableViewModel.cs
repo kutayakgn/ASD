@@ -80,6 +80,7 @@ public sealed class ComplexTableCellViewModel
     public string AccessibleLabel { get; init; } = string.Empty;
     public string ToggleUrl { get; init; } = string.Empty;
     public bool ToggleChecked { get; init; }
+    public bool ToggleDisabled { get; init; }
 }
 
 public sealed class ComplexTableSummarySegmentViewModel
@@ -91,6 +92,7 @@ public sealed class ComplexTableSummarySegmentViewModel
 public sealed class ComplexTableHeaderActionViewModel
 {
     public string Text { get; init; } = string.Empty;
+    public string Icon { get; init; } = string.Empty;
     public string Link { get; init; } = string.Empty;
     public string CssClass { get; init; } = string.Empty;
 }

@@ -74,6 +74,7 @@ public sealed class AdminDetailsViewModel
     public bool IsActive { get; init; }
     public DateTime? CreatedAt { get; init; }
     public string CreatedByName { get; init; } = string.Empty;
+    public bool CanDelete { get; init; }
 }
 
 public static class AdminSortColumns

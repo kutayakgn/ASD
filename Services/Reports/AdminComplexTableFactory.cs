@@ -13,7 +13,7 @@ public static class AdminComplexTableFactory
         new() { Title = "Statü", Key = "status", ColWidth = 12, IsSortable = false, CssClass = "admin-status-column" }
     ];
 
-    public static ComplexTableViewModel Create(AdminTableViewModel report)
+    public static ComplexTableViewModel Create(AdminTableViewModel report, Guid currentUserId)
     {
         var rows = report.Rows.Select(row =>
         {
@@ -41,7 +41,10 @@ public static class AdminComplexTableFactory
                     {
                         ToggleUrl = $"/admin-yonetimi/{row.UserId:D}/status",
                         ToggleChecked = row.IsActive,
-                        AccessibleLabel = $"{row.FullName} stat\u00fcs\u00fcn\u00fc de\u011fi\u015ftir",
+                        ToggleDisabled = row.UserId == currentUserId,
+                        AccessibleLabel = row.UserId == currentUserId
+                            ? $"{row.FullName} stat\u00fcs\u00fc de\u011fi\u015ftirilemez"
+                            : $"{row.FullName} stat\u00fcs\u00fcn\u00fc de\u011fi\u015ftir",
                         CssClass = "admin-status-cell"
                     }
                 ]
@@ -73,7 +76,7 @@ public static class AdminComplexTableFactory
                     EmptyMessage = "Arama kriterlerine uygun admin bulunamad\u0131.",
                     Columns = Columns,
                     Rows = rows,
-                    HeaderActions = [new() { Text = "+  Admin Ekle", Link = "/admin-yonetimi/ekle" }]
+                    HeaderActions = [new() { Icon= "/icons/plus.svg", Text = "Admin Ekle", Link = "/admin-yonetimi/ekle" }]
                 }
             ],
             SummaryContent =

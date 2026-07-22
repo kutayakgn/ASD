@@ -94,7 +94,12 @@
                         }
                         @foreach (var action in activeTab.HeaderActions)
                         {
-                            <a href="@action.Link" class="complex-table-header-action @action.CssClass">@action.Text</a>
+                            <a href="@action.Link" class="complex-table-header-action @action.CssClass"> 
+                                    @if(!string.IsNullOrEmpty(action.Icon))
+                                    {
+                                        <img src="@action.Icon" />
+                                    }
+                                    @action.Text</a>
                         }
                     </div>
                 </div>
@@ -187,6 +192,8 @@
                                                             role="switch"
                                                             aria-checked="@(cell.ToggleChecked ? "true" : "false")"
                                                             aria-label="@cell.AccessibleLabel"
+                                                            aria-disabled="@(cell.ToggleDisabled ? "true" : "false")"
+                                                            disabled="@cell.ToggleDisabled"
                                                             data-complex-table-toggle-url="@cell.ToggleUrl"></button>
                                                 }
                                                 else if (!string.IsNullOrWhiteSpace(cell.Link))

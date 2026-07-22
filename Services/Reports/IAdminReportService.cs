@@ -4,5 +4,8 @@ namespace YKBAfife.Services.Reports;
 
 public interface IAdminReportService
 {
-    Task<AdminTableViewModel> GetPageAsync(AdminTableQuery query, CancellationToken cancellationToken = default);
+    Task<AdminTableViewModel> GetPageAsync(
+        AdminTableQuery query,
+        Guid currentUserId,
+        CancellationToken cancellationToken = default);
 }

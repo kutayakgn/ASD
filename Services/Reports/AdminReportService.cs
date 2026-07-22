@@ -8,12 +8,13 @@ public sealed class AdminReportService(AfifeContext context) : IAdminReportServi
 {
     public async Task<AdminTableViewModel> GetPageAsync(
         AdminTableQuery query,
+        Guid currentUserId,
         CancellationToken cancellationToken = default)
     {
         var normalized = Normalize(query);
         var admins = context.Users
             .AsNoTracking()
-            .Where(user => user.IsPublished && user.RoleCode == 1);
+            .Where(user => user.RoleCode == 1 && (user.IsPublished || user.Id == currentUserId));
 
         if (!string.IsNullOrWhiteSpace(normalized.Search))
         {
