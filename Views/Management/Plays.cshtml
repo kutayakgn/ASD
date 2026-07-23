@@ -48,7 +48,7 @@
         </div>
 
         <footer class="play-filter-footer">
-            <button type="button" class="play-filter-reset" data-play-filter-reset>Filtreleri Kaldır</button>
+            <button type="button" class="play-filter-reset" data-play-filter-reset hidden="@(Model.JuryVotingStatus.HasValue || Model.KunyeGirisStatus.HasValue || Model.RecordType.HasValue ? null : "hidden")">Filtreleri Temizle</button>
             <button type="submit" class="play-filter-apply">Filtreleri Uygula</button>
         </footer>
     </form>

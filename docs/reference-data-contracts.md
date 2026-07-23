@@ -41,6 +41,15 @@ Category placeholder assets follow this stable convention:
 
 Application rules must compare codes by meaning, not by row order or display name.
 
+## Admin-created play invariants
+
+`Plays.RecordType = 1` identifies an admin-created play. These rows must always
+have `JuriOylamaStatus = 0` and `KunyeGirisStatus = 0`, and their `StatusCode`
+must not be `1` (`Oylama Aktif`). The UI and application endpoints must not allow
+either status toggle to be changed for these rows.
+
+Run `sql/enforce-admin-play-status-rules.sql` to normalize existing records and
+enforce these rules with database check constraints.
 ## Candidate publication and jury-vote invariants
 
 `PlayAwardCategories.IsPublished` is the only candidate publication/status field.

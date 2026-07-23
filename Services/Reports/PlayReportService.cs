@@ -23,12 +23,14 @@ public sealed class PlayReportService(AfifeContext context) : IPlayReportService
 
         if (normalized.JuryVotingStatus.HasValue)
         {
-            plays = plays.Where(play => play.JuriOylamaStatus == normalized.JuryVotingStatus.Value);
+            plays = plays.Where(play =>
+                (!play.RecordType && play.JuriOylamaStatus) == normalized.JuryVotingStatus.Value);
         }
 
         if (normalized.KunyeGirisStatus.HasValue)
         {
-            plays = plays.Where(play => play.KunyeGirisStatus == normalized.KunyeGirisStatus.Value);
+            plays = plays.Where(play =>
+                (!play.RecordType && play.KunyeGirisStatus) == normalized.KunyeGirisStatus.Value);
         }
 
         if (normalized.RecordType.HasValue)
@@ -37,7 +39,9 @@ public sealed class PlayReportService(AfifeContext context) : IPlayReportService
         }
 
         var totalCount = await plays.CountAsync(cancellationToken);
-        var juryVotingEnabledCount = await plays.CountAsync(play => play.JuriOylamaStatus, cancellationToken);
+        var juryVotingEnabledCount = await plays.CountAsync(
+            play => !play.RecordType && play.JuriOylamaStatus,
+            cancellationToken);
         var totalPages = Math.Max(1, (int)Math.Ceiling(totalCount / (double)PlayTableViewModel.PageSize));
         var currentPage = Math.Min(normalized.Page, totalPages);
 
@@ -48,8 +52,8 @@ public sealed class PlayReportService(AfifeContext context) : IPlayReportService
             TheaterName = play.TheaterName,
             RecordType = play.RecordType,
             CreatedAt = play.CreatedAt,
-            JuriOylamaStatus = play.JuriOylamaStatus,
-            KunyeGirisStatus = play.KunyeGirisStatus,
+            JuriOylamaStatus = !play.RecordType && play.JuriOylamaStatus,
+            KunyeGirisStatus = !play.RecordType && play.KunyeGirisStatus,
             Slug = play.Slug
         });
 

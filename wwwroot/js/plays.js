@@ -5,6 +5,10 @@
     if (!panel || !backdrop || !form) return;
 
     let opener = null;
+    const resetButton = form.querySelector("[data-play-filter-reset]");
+    const updateResetVisibility = () => {
+        if (resetButton) resetButton.hidden = !form.querySelector('input[type="radio"]:checked');
+    };
 
     const openPanel = (trigger) => {
         opener = trigger;
@@ -53,6 +57,8 @@
             form.querySelectorAll('input[type="radio"]').forEach((input) => {
                 input.checked = false;
             });
+            updateResetVisibility();
+            updateTableWithFilters();
         }
     });
 
@@ -62,8 +68,7 @@
         }
     });
 
-    form.addEventListener("submit", (event) => {
-        event.preventDefault();
+    const updateTableWithFilters = () => {
         const section = document.querySelector("#plays-table[data-complex-table]");
         if (!section) return;
 
@@ -84,5 +89,12 @@
             detail: filters
         }));
         closePanel();
+    };
+
+    form.addEventListener("change", updateResetVisibility);
+
+    form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        updateTableWithFilters();
     });
 })();

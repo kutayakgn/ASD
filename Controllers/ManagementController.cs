@@ -656,9 +656,107 @@ public sealed class ManagementController(
         UpdatePlayStatus(id, isActive, false, cancellationToken);
 
     [HttpGet("oyunlar/ekle")]
-    public IActionResult AddPlay() => Page(
-        "Oyun Ekle",
-        "Yeni oyun kaydını bu alandan oluşturun.");
+    public async Task<IActionResult> AddPlay(CancellationToken cancellationToken)
+    {
+        var model = new AddPlayViewModel();
+        await PopulateAddPlayOptionsAsync(model, cancellationToken);
+        return View(model);
+    }
+
+    [HttpPost("oyunlar/ekle")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AddPlay(
+        AddPlayViewModel model,
+        CancellationToken cancellationToken)
+    {
+        model.PlayName = model.PlayName?.Trim() ?? string.Empty;
+        model.TheaterName = model.TheaterName?.Trim() ?? string.Empty;
+        model.SelectedJuryIds = model.SelectedJuryIds?.Distinct().ToList() ?? [];
+
+        if (!model.StatusCode.HasValue || !await context.PlayStatuses.AsNoTracking().AnyAsync(
+                status => status.IsPublished && status.StatusCode != 1 && status.StatusCode == model.StatusCode.Value,
+                cancellationToken))
+        {
+            ModelState.AddModelError(nameof(model.StatusCode), "Geçerli bir oyun statüsü seçiniz.");
+        }
+
+        var validJuryIds = await context.Users
+            .AsNoTracking()
+            .Where(user => model.SelectedJuryIds.Contains(user.Id) &&
+                           user.IsPublished &&
+                           user.IsActive &&
+                           user.RoleCode == 2)
+            .Select(user => user.Id)
+            .ToListAsync(cancellationToken);
+        if (validJuryIds.Count == 0)
+        {
+            ModelState.AddModelError(nameof(model.SelectedJuryIds), "En az bir jüri veya jüri grubu seçiniz.");
+        }
+        else if (validJuryIds.Count != model.SelectedJuryIds.Count)
+        {
+            ModelState.AddModelError(nameof(model.SelectedJuryIds), "Jüri seçimlerinden biri artık kullanılamıyor.");
+        }
+
+        if (!ModelState.IsValid)
+        {
+            await PopulateAddPlayOptionsAsync(model, cancellationToken);
+            return View(model);
+        }
+
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId))
+        {
+            return Challenge();
+        }
+
+        var baseSlug = SlugHelper.Create(model.PlayName);
+        var slug = baseSlug;
+        var suffix = 2;
+        while (await context.Plays.AsNoTracking().AnyAsync(play => play.Slug == slug, cancellationToken))
+        {
+            slug = $"{baseSlug}-{suffix++}";
+        }
+
+        var now = DateTime.UtcNow;
+        var playId = Guid.NewGuid();
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+        var play = new Play
+        {
+            Id = playId,
+            PlayName = model.PlayName,
+            TheaterName = model.TheaterName,
+            StatusCode = model.StatusCode!.Value,
+            CreatedAt = now,
+            CreatedBy = currentUserId,
+            IsPublished = true,
+            Slug = slug,
+            RecordType = true,
+            JuriOylamaStatus = false,
+            KunyeGirisStatus = false
+        };
+        context.Plays.Add(play);
+
+        // JuryAssignedPlay navigations are intentionally ignored in AfifeContext,
+        // so persist the principal row before inserting its dependent assignments.
+        await context.SaveChangesAsync(cancellationToken);
+
+        context.JuryAssignedPlays.AddRange(validJuryIds.Select(juryId => new JuryAssignedPlay
+        {
+            Id = Guid.NewGuid(),
+            PlayId = playId,
+            JuryId = juryId,
+            CreatedAt = now,
+            CreatedBy = currentUserId,
+            IsPublished = true
+        }));
+
+        await context.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+
+        TempData["GenericPopup.Type"] = "success";
+        TempData["GenericPopup.Message"] = "Oyun başarıyla eklendi.";
+        TempData["GenericPopup.RedirectUrl"] = Url.Action(nameof(Plays)) ?? "/oyunlar";
+        return RedirectToAction(nameof(AddPlay));
+    }
 
     private async Task<IActionResult> UpdatePlayStatus(
         Guid id,
@@ -672,6 +770,23 @@ public sealed class ManagementController(
         if (play is null)
         {
             return NotFound();
+        }
+
+        if (play.RecordType)
+        {
+            var requiresNormalization = play.JuriOylamaStatus || play.KunyeGirisStatus;
+            play.JuriOylamaStatus = false;
+            play.KunyeGirisStatus = false;
+            if (requiresNormalization)
+            {
+                play.UpdatedAt = DateTime.UtcNow;
+                play.UpdatedBy = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var normalizingUserId)
+                    ? normalizingUserId
+                    : null;
+                await context.SaveChangesAsync(cancellationToken);
+            }
+
+            return Json(new { isActive = false, isDisabled = true, refreshTable = requiresNormalization });
         }
 
         if (isJuryVotingStatus)
@@ -1301,6 +1416,80 @@ public sealed class ManagementController(
         {
             model = ArchiveComparisonComplexTableFactory.Create(report)
         });
+    }
+    private async Task PopulateAddPlayOptionsAsync(
+        AddPlayViewModel model,
+        CancellationToken cancellationToken)
+    {
+        var statuses = await context.PlayStatuses
+            .AsNoTracking()
+            .Where(status => status.IsPublished && status.StatusCode != 1)
+            .OrderBy(status => status.StatusCode)
+            .Select(status => new
+            {
+                status.StatusCode,
+                status.StatusName,
+                status.StatusColor
+            })
+            .ToArrayAsync(cancellationToken);
+        model.StatusOptions = statuses
+            .Select(status => new AddPlayStatusOptionViewModel
+            {
+                StatusCode = status.StatusCode,
+                StatusName = status.StatusName,
+                StatusColor = NormalizeStatusColor(status.StatusColor)
+            })
+            .ToArray();
+
+        var juries = await context.Users
+            .AsNoTracking()
+            .Where(user => user.IsPublished && user.IsActive && user.RoleCode == 2)
+            .OrderBy(user => user.FirstName)
+            .ThenBy(user => user.LastName)
+            .Select(user => new
+            {
+                user.Id,
+                user.GroupCode,
+                FullName = (user.FirstName + " " + user.LastName).Trim()
+            })
+            .ToArrayAsync(cancellationToken);
+
+        var groupCodes = juries
+            .Where(jury => jury.GroupCode.HasValue)
+            .Select(jury => jury.GroupCode!.Value)
+            .Distinct()
+            .ToArray();
+        var groupNames = await context.Groups
+            .AsNoTracking()
+            .Where(group => group.IsPublished && groupCodes.Contains(group.Code))
+            .ToDictionaryAsync(group => group.Code, group => group.GroupName, cancellationToken);
+
+        model.JuryGroups = juries
+            .GroupBy(jury => jury.GroupCode.HasValue && groupNames.ContainsKey(jury.GroupCode.Value)
+                ? jury.GroupCode.Value.ToString()
+                : "ungrouped")
+            .Select(group =>
+            {
+                var first = group.First();
+                var name = first.GroupCode.HasValue && groupNames.TryGetValue(first.GroupCode.Value, out var groupName)
+                    ? groupName
+                    : "Grupsuz Jüriler";
+                return new AddPlayJuryGroupViewModel
+                {
+                    Key = group.Key,
+                    Name = name,
+                    Juries = group
+                        .Select(jury => new AddPlayJuryOptionViewModel
+                        {
+                            Id = jury.Id,
+                            FullName = jury.FullName
+                        })
+                        .OrderBy(jury => jury.FullName)
+                        .ToArray()
+                };
+            })
+            .OrderBy(group => group.Name)
+            .ToArray();
     }
     private async Task PopulateBlacklistSelectionAsync(AddBlacklistViewModel model, CancellationToken cancellationToken)
     {

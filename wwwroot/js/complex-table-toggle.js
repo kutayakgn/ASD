@@ -20,6 +20,7 @@
         formData.set("isActive", String(!currentValue));
         toggle.disabled = true;
         toggle.setAttribute("aria-busy", "true");
+        let remainDisabled = false;
 
         try {
             const response = await fetch(url, {
@@ -30,6 +31,7 @@
             if (!response.ok) throw new Error(`Status update failed (${response.status}).`);
             const result = await response.json();
             const isActive = result.isActive === true;
+            remainDisabled = result.isDisabled === true;
             toggle.setAttribute("aria-checked", String(isActive));
             toggle.classList.toggle("is-active", isActive);
             if (result.refreshTable === true && section) {
@@ -39,7 +41,8 @@
             console.error(error);
             window.genericPopup?.fail("Stat\u00fc g\u00fcncellenemedi. L\u00fctfen tekrar deneyiniz.");
         } finally {
-            toggle.disabled = false;
+            toggle.disabled = remainDisabled;
+            toggle.setAttribute("aria-disabled", String(remainDisabled));
             toggle.removeAttribute("aria-busy");
         }
     });

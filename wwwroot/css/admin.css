@@ -496,9 +496,8 @@ body {
 
 .add-jury-field input:not([type="file"]),
 .add-jury-field select {
-    width: 100%;
-    min-height: 44px;
-    padding: 10px 12px;
+    width: inherit;
+    padding: 10px 16px;
     color: #171717;
     background: #fff;
     border: 1px solid #bdbdbd;

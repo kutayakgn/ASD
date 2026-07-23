@@ -129,7 +129,7 @@
                 <colgroup>
                     @foreach (var column in activeTab.Columns)
                     {
-                        <col style="width: @ColumnWidth(column.ColWidth);" />
+                        <col class="@column.CssClass" style="width: @ColumnWidth(column.ColWidth);" />
                     }
                     @if (Model.IsEditableRows)
                     {
@@ -199,7 +199,7 @@
                                 @for (var index = 0; index < activeTab.Columns.Count; index++)
                                 {
                                     var cell = index < row.Cells.Count ? row.Cells[index] : null;
-                                    <td class="@activeTab.Columns[index].CssClass @((cell is not null && (!string.IsNullOrWhiteSpace(cell.Link) || !string.IsNullOrWhiteSpace(cell.ModalUrl))) ? "complex-table-action-cell" : string.Empty)" style="width: @ColumnWidth(activeTab.Columns[index].ColWidth);">
+                                    <td class="@activeTab.Columns[index].CssClass @((cell is not null && (!string.IsNullOrWhiteSpace(cell.Link) || !string.IsNullOrWhiteSpace(cell.ModalUrl))) ? "complex-table-action-cell" : string.Empty) @((cell is not null && !string.IsNullOrWhiteSpace(cell.ToggleUrl)) ? "complex-table-toggle-cell" : string.Empty)" style="width: @ColumnWidth(activeTab.Columns[index].ColWidth);">
                                         @if (cell is not null)
                                         {
                                             <div class="complex-table-cell-content @cell.CssClass">

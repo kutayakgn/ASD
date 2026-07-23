@@ -13,8 +13,8 @@ public static class PlayComplexTableFactory
         new() { Title = "Tiyatro Adı", Key = PlaySortColumns.TheaterName, ColWidth = 18 },
         new() { Title = "Eklenme Yöntemi", Key = PlaySortColumns.RecordType, ColWidth = 14 },
         new() { Title = "Eklenme Tarihi", Key = PlaySortColumns.CreatedAt, ColWidth = 18 },
-        new() { Title = "Jüri Oylama Listesi", Key = PlaySortColumns.JuryVotingStatus, ColWidth = 10 },
-        new() { Title = "Künye Giriş Sistemi", Key = PlaySortColumns.KunyeGirisStatus, ColWidth = 10 }
+        new() { Title = "Jüri Oylama Listesi", Key = PlaySortColumns.JuryVotingStatus, ColWidth = 10, CssClass = "play-toggle-column" },
+        new() { Title = "Künye Giriş Sistemi", Key = PlaySortColumns.KunyeGirisStatus, ColWidth = 10, CssClass = "play-toggle-column" }
     ];
 
     public static ComplexTableViewModel Create(PlayTableViewModel report)
@@ -28,6 +28,7 @@ public static class PlayComplexTableFactory
             return new ComplexTableRowViewModel
             {
                 Id = $"play-{row.PlayId:N}",
+                Link = detailsUrl,
                 NavigationUrl = detailsUrl,
                 NavigationAccessibleLabel = $"{row.PlayName} oyun detayına git",
                 Cells =
@@ -39,13 +40,17 @@ public static class PlayComplexTableFactory
                     new()
                     {
                         ToggleUrl = $"/oyunlar/{row.PlayId:D}/juri-oylama-status",
-                        ToggleChecked = row.JuriOylamaStatus,
+                        ToggleChecked = !row.RecordType && row.JuriOylamaStatus,
+                        ToggleDisabled = row.RecordType,
+                        CssClass = "play-toggle-cell",
                         AccessibleLabel = $"{row.PlayName} jüri oylama listesi statüsünü değiştir"
                     },
                     new()
                     {
                         ToggleUrl = $"/oyunlar/{row.PlayId:D}/kunye-giris-status",
-                        ToggleChecked = row.KunyeGirisStatus,
+                        ToggleChecked = !row.RecordType && row.KunyeGirisStatus,
+                        ToggleDisabled = row.RecordType,
+                        CssClass = "play-toggle-cell",
                         AccessibleLabel = $"{row.PlayName} künye giriş sistemi statüsünü değiştir"
                     }
                 ]
