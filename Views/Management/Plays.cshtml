@@ -1,0 +1,59 @@
+@model YKBAfife.Models.ViewModels.PlaysDashboardViewModel
+@{
+    ViewData["Title"] = "Oyunlar";
+}
+
+<section class="plays-management-page">
+    @await Component.InvokeAsync("ComplexTable", new { model = Model.PlaysTable })
+</section>
+
+<div class="play-filter-backdrop" data-play-filter-dismiss hidden></div>
+<aside id="play-filter-panel"
+       class="play-filter-panel"
+       aria-labelledby="play-filter-title"
+       aria-hidden="true"
+       inert>
+    <header class="play-filter-header">
+        <h2 id="play-filter-title">Filtrele</h2>
+        <button type="button" class="play-filter-close" aria-label="Filtreleri kapat" data-play-filter-dismiss>
+            <span aria-hidden="true"></span>
+        </button>
+    </header>
+
+    <form class="play-filter-form" data-play-filter-form>
+        <div class="play-filter-content">
+            <fieldset class="play-filter-group">
+                <legend>Jüri Oylama Sitesi Statüsü</legend>
+                <div class="play-filter-options">
+                    <label><input type="radio" name="JuryVotingStatus" value="true" checked="@(Model.JuryVotingStatus is true ? "checked" : null)" /> <span>Aktif</span></label>
+                    <label><input type="radio" name="JuryVotingStatus" value="false" checked="@(Model.JuryVotingStatus is false ? "checked" : null)" /> <span>Aktif Değil</span></label>
+                </div>
+            </fieldset>
+
+            <fieldset class="play-filter-group">
+                <legend>Künye Giriş Sistemi Statüsü</legend>
+                <div class="play-filter-options">
+                    <label><input type="radio" name="KunyeGirisStatus" value="true" checked="@(Model.KunyeGirisStatus is true ? "checked" : null)" /> <span>Aktif</span></label>
+                    <label><input type="radio" name="KunyeGirisStatus" value="false" checked="@(Model.KunyeGirisStatus is false ? "checked" : null)" /> <span>Aktif Değil</span></label>
+                </div>
+            </fieldset>
+
+            <fieldset class="play-filter-group">
+                <legend>Eklenme Yöntemi</legend>
+                <div class="play-filter-options">
+                    <label><input type="radio" name="RecordType" value="false" checked="@(Model.RecordType is false ? "checked" : null)" /> <span>Künye Giriş</span></label>
+                    <label><input type="radio" name="RecordType" value="true" checked="@(Model.RecordType is true ? "checked" : null)" /> <span>Admin Giriş</span></label>
+                </div>
+            </fieldset>
+        </div>
+
+        <footer class="play-filter-footer">
+            <button type="button" class="play-filter-reset" data-play-filter-reset>Filtreleri Kaldır</button>
+            <button type="submit" class="play-filter-apply">Filtreleri Uygula</button>
+        </footer>
+    </form>
+</aside>
+
+@section Scripts {
+    <script src="~/js/plays.js" asp-append-version="true"></script>
+}

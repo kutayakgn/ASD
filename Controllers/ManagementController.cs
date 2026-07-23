@@ -21,6 +21,7 @@ public sealed class ManagementController(
     ITicketSalesReportService ticketSalesReportService,
     IBlacklistReportService blacklistReportService,
     IJuryWatchedPlayReportService juryWatchedPlayReportService,
+    IPlayReportService playReportService,
     IUserActivityLogger activityLogger,
     IExcelExporter excelExporter) : Controller
 {
@@ -616,10 +617,80 @@ public sealed class ManagementController(
 
 
     [HttpGet("oyunlar")]
-    public IActionResult Plays() => Page(
-        "Oyunlar",
-        "Oyun kayıtlarını ve oyun künyelerini yönetin.");
+    public async Task<IActionResult> Plays(CancellationToken cancellationToken)
+    {
+        var report = await playReportService.GetPageAsync(new PlayTableQuery(), cancellationToken);
+        return View(new PlaysDashboardViewModel
+        {
+            PlaysTable = PlayComplexTableFactory.Create(report),
+            JuryVotingStatus = report.JuryVotingStatus,
+            KunyeGirisStatus = report.KunyeGirisStatus,
+            RecordType = report.RecordType
+        });
+    }
 
+    [HttpPost("oyunlar/tablo")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> PlaysTable(
+        [FromForm] PlayTableQuery query,
+        CancellationToken cancellationToken)
+    {
+        var report = await playReportService.GetPageAsync(query, cancellationToken);
+        return ViewComponent("ComplexTable", new { model = PlayComplexTableFactory.Create(report) });
+    }
+
+    [HttpPost("oyunlar/{id:guid}/juri-oylama-status")]
+    [ValidateAntiForgeryToken]
+    public Task<IActionResult> UpdateJuryVotingStatus(
+        Guid id,
+        [FromForm] bool isActive,
+        CancellationToken cancellationToken) =>
+        UpdatePlayStatus(id, isActive, true, cancellationToken);
+
+    [HttpPost("oyunlar/{id:guid}/kunye-giris-status")]
+    [ValidateAntiForgeryToken]
+    public Task<IActionResult> UpdateKunyeGirisStatus(
+        Guid id,
+        [FromForm] bool isActive,
+        CancellationToken cancellationToken) =>
+        UpdatePlayStatus(id, isActive, false, cancellationToken);
+
+    [HttpGet("oyunlar/ekle")]
+    public IActionResult AddPlay() => Page(
+        "Oyun Ekle",
+        "Yeni oyun kaydını bu alandan oluşturun.");
+
+    private async Task<IActionResult> UpdatePlayStatus(
+        Guid id,
+        bool isActive,
+        bool isJuryVotingStatus,
+        CancellationToken cancellationToken)
+    {
+        var play = await context.Plays.SingleOrDefaultAsync(
+            item => item.Id == id && item.IsPublished,
+            cancellationToken);
+        if (play is null)
+        {
+            return NotFound();
+        }
+
+        if (isJuryVotingStatus)
+        {
+            play.JuriOylamaStatus = isActive;
+        }
+        else
+        {
+            play.KunyeGirisStatus = isActive;
+        }
+
+        play.UpdatedAt = DateTime.UtcNow;
+        play.UpdatedBy = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)
+            ? userId
+            : null;
+        await context.SaveChangesAsync(cancellationToken);
+
+        return Json(new { isActive, refreshTable = true });
+    }
     [HttpGet("oyunlar/{slug}")]
     public async Task<IActionResult> PlayDetails(string slug, CancellationToken cancellationToken)
     {

@@ -402,8 +402,8 @@
 }
 
 .admin-dropdown-menu .dropdown-item.active {
-    color: var(--admin-red);
-    background: #f6f2e9;
+    color: #fff;
+    background: #918150;
 }
 
 @media (max-width: 1199.98px) {

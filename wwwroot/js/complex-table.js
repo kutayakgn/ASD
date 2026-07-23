@@ -150,6 +150,12 @@
         if (row.dataset.rowLink) window.location.href = row.dataset.rowLink;
     });
 
+    document.addEventListener("complex-table:update", (event) => {
+        const section = event.target.closest?.("[data-complex-table]");
+        if (!section) return;
+        cancelScheduledSearch(section);
+        updateTable(section, event.detail ?? {});
+    });
     document.addEventListener("keydown", (event) => {
         const row = event.target.closest("tr[data-row-link]");
         if (!row || (event.key !== "Enter" && event.key !== " ")) return;

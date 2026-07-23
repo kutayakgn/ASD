@@ -32,6 +32,9 @@
             const isActive = result.isActive === true;
             toggle.setAttribute("aria-checked", String(isActive));
             toggle.classList.toggle("is-active", isActive);
+            if (result.refreshTable === true && section) {
+                section.dispatchEvent(new CustomEvent("complex-table:update", { bubbles: true }));
+            }
         } catch (error) {
             console.error(error);
             window.genericPopup?.fail("Stat\u00fc g\u00fcncellenemedi. L\u00fctfen tekrar deneyiniz.");

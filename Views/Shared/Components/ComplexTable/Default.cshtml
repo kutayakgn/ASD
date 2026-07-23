@@ -94,12 +94,30 @@
                         }
                         @foreach (var action in activeTab.HeaderActions)
                         {
-                            <a href="@action.Link" class="complex-table-header-action @action.CssClass"> 
-                                    @if(!string.IsNullOrEmpty(action.Icon))
+                            @if (action.IsButton)
+                            {
+                                <button type="button"
+                                        class="complex-table-header-action @action.CssClass"
+                                        aria-controls="@action.PanelTarget"
+                                        aria-expanded="false"
+                                        data-complex-table-panel-target="@action.PanelTarget">
+                                    @if (!string.IsNullOrEmpty(action.Icon))
                                     {
-                                        <img src="@action.Icon" />
+                                        <img src="@action.Icon" alt="" aria-hidden="true" />
                                     }
-                                    @action.Text</a>
+                                    @action.Text
+                                </button>
+                            }
+                            else
+                            {
+                                <a href="@action.Link" class="complex-table-header-action @action.CssClass">
+                                    @if (!string.IsNullOrEmpty(action.Icon))
+                                    {
+                                        <img src="@action.Icon" alt="" aria-hidden="true" />
+                                    }
+                                    @action.Text
+                                </a>
+                            }
                         }
                     </div>
                 </div>

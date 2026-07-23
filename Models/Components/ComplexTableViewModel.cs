@@ -95,4 +95,6 @@ public sealed class ComplexTableHeaderActionViewModel
     public string Icon { get; init; } = string.Empty;
     public string Link { get; init; } = string.Empty;
     public string CssClass { get; init; } = string.Empty;
+    public bool IsButton { get; init; }
+    public string PanelTarget { get; init; } = string.Empty;
 }
