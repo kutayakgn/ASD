@@ -14,6 +14,7 @@ public class JuryVote
     public DateTime? UpdatedAt { get; set; }
     public Guid? UpdatedBy { get; set; }
     public bool IsPublished { get; set; }
+    public bool IsActive { get; set; }
     public int Score { get; set; }
     public Guid JuryId { get; set; }
 

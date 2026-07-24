@@ -733,3 +733,40 @@ tr {
         padding: 6px;
         text-align: center;
     }
+
+.complex-table-select-filter {
+    display: grid;
+    min-width: min(360px, 100%);
+    gap: 6px;
+}
+
+.complex-table-select-filter label {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.complex-table-select-filter-control {
+    position: relative;
+}
+
+.complex-table-select-filter-control select {
+    width: 100%;
+    min-height: 42px;
+    padding: 9px 38px 9px 12px;
+    color: #171717;
+    background: #fff;
+    border: 1px solid #bdbdbd;
+    border-radius: 0;
+    appearance: none;
+    font: inherit;
+}
+
+.complex-table-select-filter-control img {
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    width: 16px;
+    height: 16px;
+    pointer-events: none;
+    transform: translateY(-50%);
+}

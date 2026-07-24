@@ -77,7 +77,9 @@ public sealed class JuryWatchedPlayReportService(AfifeContext context) : IJuryWa
                 on category.PlayId equals play.Id
             where vote.JuryId == query.JuryId
                && vote.IsPublished
+               && vote.IsActive
                && category.IsPublished
+               && category.IsActive
                && play.IsPublished
             select new WatchedPlayEvent
             {

@@ -4,6 +4,8 @@ public sealed class VotingHistoryViewModel
 {
     public Guid? PlayId { get; init; }
     public Guid? JuryId { get; init; }
+    public string PlayName { get; init; } = string.Empty;
+    public bool LockPlay { get; init; }
 }
 
 public sealed class VotingHistoryCardsViewModel

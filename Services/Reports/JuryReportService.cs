@@ -68,7 +68,7 @@ public sealed class JuryReportService(AfifeContext context) : IJuryReportService
             from vote in context.JuryVotes.AsNoTracking()
             join category in context.PlayAwardCategories.AsNoTracking()
                 on vote.PlayAwardCategoryId equals category.Id
-            where vote.IsPublished && category.IsPublished
+            where vote.IsPublished && vote.IsActive && category.IsPublished && category.IsActive
             select new JuryPlayRow
             {
                 JuryId = vote.JuryId,

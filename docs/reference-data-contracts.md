@@ -61,32 +61,25 @@ enforce these rules with database check constraints.
 Run `sql/enforce-admin-play-candidate-rules.sql` to remove invalid candidate/vote
 records and install the cross-table enforcement triggers.
 
-## Candidate publication and jury-vote invariants
+## Candidate multiplicity and role history
 
-`PlayAwardCategories.IsPublished` is the only candidate publication/status field.
-The former `PlayAwardCategories.IsActive` column must not be recreated or used.
-`IsCurrent` remains separate: it identifies the current candidate in a role but does
-not decide whether the candidate or vote participates in calculations.
+See `docs/candidate-role-and-category-contracts.md` for `MultiCandidate`, stable
+RoleCode, replacement-history, and the system-managed category 1001 contract.
+Category 1001 uses `Plays.TheaterName` as its canonical Candidate value.
+## Candidate activity, soft-delete, and jury-vote invariants
 
-The logical vote identity is:
-`JuryId + PlayId + AwardCategoryCode + RoleCode`.
+`PlayAwardCategories.IsPublished` and `JuryVotes.IsPublished` are soft-delete flags.
+Normal lists and calculations exclude rows where `IsPublished = 0`.
 
-Only one physical `JuryVotes` row may exist for that group, regardless of the row's
-`IsPublished` value. If a jury's vote moves from an old candidate to the current
-candidate, or from the current candidate to an old candidate, the previous
-candidate's `JuryVotes` row is physically deleted and the new candidate row is kept.
+`PlayAwardCategories.IsActive` controls candidate availability.
+`JuryVotes.IsActive` controls whether a non-deleted vote participates in calculations.
+Changing candidate activity synchronizes activity for its non-deleted votes. Soft-deleting
+a candidate preserves its physical row and soft-deletes linked votes. Republishing the
+candidate republishes those preserved votes and aligns their `IsActive` values with the candidate.
 
-`JuryVotes.IsPublished` only controls whether that one existing vote is included in
-calculations. Setting a vote to `IsPublished = 0` does not create, restore, or modify
-another candidate vote.
+The logical vote identity remains
+`JuryId + PlayId + AwardCategoryCode + RoleCode`. Only one physical vote may exist
+for that group. Voting for another old/current candidate deletes the previous physical
+vote and keeps the new row.
 
-When `PlayAwardCategories.IsPublished` changes from `1` to `0`, related
-`JuryVotes` rows must be preserved for history but their `IsPublished` values must
-be set to `0`. When the candidate is republished, those preserved votes must
-automatically return to `IsPublished = 1`. A vote inserted or updated as published
-for an unpublished candidate is automatically stored with `IsPublished = 0`.
-Hard-deleting a candidate cascade-deletes all `JuryVotes` rows linked to it.
-
-Run `sql/migrate-candidate-publication-and-jury-vote-rules.sql` before running
-`sql/seed-voting-history-test-data.sql` or using either application against the
-shared database.
+Run `sql/migrate-candidate-vote-active-soft-delete.sql` before using either application against the shared database. The legacy migration filename is retained as an identical, backward-compatible entry point; run either file, not both.

@@ -20,16 +20,20 @@
     <header class="play-details-toolbar">
         <h1>Oyun Detay</h1>
         <div class="play-details-actions">
-            <button type="button" class="play-detail-action play-detail-action-secondary" onclick="window.print()">
-                Tüm Oyları Yazdır
-            </button>
+            @if (!Model.RecordType)
+            {
+                <form asp-action="ExportPlayVotes" asp-route-id="@Model.Id" method="post" class="play-detail-action-form">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="play-detail-action play-detail-action-secondary">Tüm Oyları Yazdır</button>
+                </form>
+                <a asp-controller="Management"
+                   asp-action="VotingHistory"
+                   asp-route-playId="@Model.Id"
+                   class="play-detail-action play-detail-action-secondary">Oylamaları Gör</a>
+            }
             <a asp-controller="Management"
-               asp-action="VotingHistory"
-               asp-route-playId="@Model.Id"
-               class="play-detail-action play-detail-action-secondary">Oylamaları Gör</a>
-            <a asp-controller="Management"
-               asp-action="Plays"
-               asp-route-edit="@Model.Slug"
+               asp-action="EditPlay"
+               asp-route-slug="@Model.Slug"
                class="play-detail-action play-detail-action-primary">Oyunu Düzenle</a>
         </div>
     </header>
@@ -87,6 +91,14 @@
                 formAction = Url.Action("AddCandidate", "Management", new { slug = Model.Slug })
             })
         </div>
+
+        @if (Model.CandidatesTable is not null)
+        {
+            <div class="play-details-divider" role="separator"></div>
+            <div id="adaylar">
+                @await Component.InvokeAsync("ComplexTable", new { model = Model.CandidatesTable })
+            </div>
+        }
     }
 </section>
 

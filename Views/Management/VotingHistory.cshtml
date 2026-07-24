@@ -14,7 +14,10 @@
             Label = "Oyun",
             Placeholder = "Oyun Seçin",
             SearchPlaceholder = "Oyun Ara",
-            Endpoint = Url.Action("PlayOptions", "Management") ?? "/secenekler/oyunlar"
+            Endpoint = Url.Action("PlayOptions", "Management") ?? "/secenekler/oyunlar",
+            SelectedValue = Model.PlayId,
+            SelectedText = Model.PlayName,
+            IsDisabled = Model.LockPlay
         })" />
         <partial name="_LazySearchSelect" model="@(new YKBAfife.Models.Components.LazySearchSelectViewModel
         {

@@ -16,6 +16,8 @@
             aria-labelledby="@($"{Model.Id}-label") @($"{Model.Id}-display")"
             aria-haspopup="listbox"
             aria-expanded="false"
+            disabled="@Model.IsDisabled"
+            aria-disabled="@(Model.IsDisabled ? "true" : "false")"
             data-lazy-select-trigger>
         <span id="@($"{Model.Id}-display")" data-lazy-select-display>
             @(Model.SelectedValue.HasValue && !string.IsNullOrWhiteSpace(Model.SelectedText) ? Model.SelectedText : Model.Placeholder)

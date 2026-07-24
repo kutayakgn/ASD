@@ -16,11 +16,19 @@
 - For each `JuryId + PlayId + AwardCategoryCode + RoleCode` group, `JuryVotes`
   may contain only one physical row regardless of `IsPublished`. Recording a vote
   for another old/current candidate must delete the previous candidate vote row.
-- `JuryVotes.IsPublished` only controls calculation eligibility. Unpublishing a
-  candidate must preserve its vote rows but set those rows to `IsPublished = 0`;
-  republishing the candidate must reactivate the preserved votes automatically.
+- `IsPublished` is the soft-delete flag for candidates and votes. Normal queries
+  must exclude rows where it is false.
+- `PlayAwardCategories.IsActive` controls candidate availability and
+  `JuryVotes.IsActive` controls vote calculation eligibility. Candidate activity
+  changes synchronize non-deleted vote activity in both directions.
 - Hard-deleting a candidate must cascade-delete all of its `JuryVotes` rows.
-- `PlayAwardCategories.IsPublished` is the only candidate publication/status field.
-  Do not recreate or reference the removed `PlayAwardCategories.IsActive` column.
+- Do not use `IsPublished` as an activity toggle. Candidate status controls must
+  update `PlayAwardCategories.IsActive`.
+- Read `docs/candidate-role-and-category-contracts.md` before changing category
+  multiplicity, role identity, candidate replacement, or default category behavior.
+- Every `RecordType = 0` play must have a system-managed category `1001` row whose
+  `Candidate` equals `Plays.TheaterName`, `RoleCode = 0`, and `IsCurrent = 1`.
+- `AwardCategories.MultiCandidate` controls simultaneous logical role slots. A
+  replacement must reuse the role's stable `RoleCode`; do not generate a new code.
 - Award-category placeholder assets are resolved by the stable convention
   `wwwroot/images/awardCategoryPlaceholder/{CategoryCode}.svg`.

@@ -15,6 +15,7 @@ public class AwardCategory
     public DateTime? UpdatedAt { get; set; }
     public Guid? UpdatedBy { get; set; }
     public bool IsPublished { get; set; }
+    public bool MultiCandidate { get; set; }
 
     public ICollection<PlayAwardCategory> PlayAwardCategories { get; set; } = [];
 }

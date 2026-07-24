@@ -30,6 +30,7 @@ BEGIN
         [UpdatedAt] [datetime2](7) NULL,
         [UpdatedBy] [uniqueidentifier] NULL,
         [IsPublished] [bit] NOT NULL,
+        [MultiCandidate] [bit] NOT NULL CONSTRAINT [DF_AwardCategories_MultiCandidate] DEFAULT (0),
         CONSTRAINT [PK_AwardCategories] PRIMARY KEY CLUSTERED ([Id])
     );
 END;
@@ -161,6 +162,7 @@ BEGIN
         [UpdatedAt] [datetime2](7) NULL,
         [UpdatedBy] [uniqueidentifier] NULL,
         [IsPublished] [bit] NOT NULL,
+        [IsActive] [bit] NOT NULL CONSTRAINT [DF_JuryVotes_IsActive] DEFAULT (1),
         [Score] [int] NOT NULL,
         [JuryId] [uniqueidentifier] NOT NULL,
         CONSTRAINT [PK_JuryVotes] PRIMARY KEY CLUSTERED ([Id])
@@ -207,6 +209,7 @@ BEGIN
         [UpdatedAt] [datetime2](7) NULL,
         [UpdatedBy] [uniqueidentifier] NULL,
         [IsPublished] [bit] NOT NULL,
+        [IsActive] [bit] NOT NULL CONSTRAINT [DF_PlayAwardCategories_IsActive] DEFAULT (1),
         [Candidate] [nvarchar](250) NOT NULL,
         [AwardCategoryCode] [int] NOT NULL,
         [IsCurrent] [bit] NOT NULL,

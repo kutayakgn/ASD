@@ -1,3 +1,5 @@
+using YKBAfife.Models.Components;
+
 namespace YKBAfife.Models.ViewModels;
 
 public sealed class PlayDetailsViewModel
@@ -16,4 +18,5 @@ public sealed class PlayDetailsViewModel
     public DateTime? UpdatedAt { get; init; }
     public string? UpdatedByName { get; init; }
     public string Slug { get; init; } = string.Empty;
+    public ComplexTableViewModel? CandidatesTable { get; init; }
 }

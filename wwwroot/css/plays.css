@@ -367,7 +367,7 @@ body.play-filter-open {
     gap: 12px;
     color: #171717;
     background: #fff;
-    border: 1px solid #777;
+    border: 1px solid #bdbdbd;
     font: inherit;
     font-size: 14px;
     text-align: left;
@@ -623,4 +623,35 @@ body.play-filter-open {
     .add-play-status-menu {
         max-height: 48vh;
     }
+}
+
+.play-detail-action-form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.candidate-status-column,
+.candidate-status-cell {
+    text-align: center;
+}
+.edit-play-status-grid {
+    display: grid;
+    margin-top: 24px;
+    gap: 24px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.edit-play-record-type {
+    width: calc(50% - 12px);
+    margin-top: 24px;
+}
+
+.edit-play-record-type input:disabled {
+    color: #646464;
+    background: #f5f5f5;
+}
+
+@media (max-width: 767.98px) {
+    .edit-play-status-grid { grid-template-columns: 1fr; }
+    .edit-play-record-type { width: 100%; }
 }

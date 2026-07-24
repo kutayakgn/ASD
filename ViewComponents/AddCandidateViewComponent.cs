@@ -29,12 +29,13 @@ public sealed class AddCandidateViewComponent(AfifeContext context) : ViewCompon
 
         var categories = await context.AwardCategories
             .AsNoTracking()
-            .Where(category => category.IsPublished)
+            .Where(category => category.IsPublished && category.CategoryCode != 1001)
             .OrderBy(category => category.CategoryName)
-            .Select(category => new SelectListItem
+            .Select(category => new AddCandidateCategoryOptionViewModel
             {
-                Value = category.CategoryCode.ToString(),
-                Text = category.CategoryName
+                CategoryCode = category.CategoryCode,
+                CategoryName = category.CategoryName,
+                MultiCandidate = category.MultiCandidate
             })
             .ToListAsync(cancellationToken);
 

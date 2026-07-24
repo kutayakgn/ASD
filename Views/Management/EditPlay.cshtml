@@ -1,0 +1,49 @@
+@model YKBAfife.Models.ViewModels.EditPlayViewModel
+@{
+    ViewData["Title"] = "Oyunu Düzenle";
+}
+<section class="play-details-page add-jury-page add-play-page" aria-labelledby="edit-play-title">
+    <a asp-action="PlayDetails" asp-route-slug="@Model.Slug" class="play-details-back">
+        <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
+        <span>Oyun Detaya Dön</span>
+    </a>
+    <header class="play-details-toolbar"><h1 id="edit-play-title">Oyunu Düzenle</h1></header>
+
+    <form asp-action="EditPlay" asp-route-slug="@Model.Slug" method="post"
+          class="add-jury-form add-play-form" novalidate
+          data-add-play-form data-confirm-message="Oyunu güncellemek istediğinize emin misiniz?"
+          data-similarity-check-url="@Url.Action("CheckPlaySimilarity", "Management")">
+        @Html.AntiForgeryToken()
+        <input asp-for="Id" type="hidden" />
+        <input asp-for="RecordType" type="hidden" />
+        <input asp-for="ConfirmSimilarPlay" type="hidden" data-confirm-similar-play />
+        <div asp-validation-summary="ModelOnly" class="add-jury-validation-summary" role="alert"></div>
+
+        <partial name="_PlayFormFields" model="Model" />
+
+        @if (!Model.RecordType)
+        {
+            <div class="edit-play-status-grid">
+                <fieldset class="add-candidate-status">
+                    <legend>Jüri Oylama Sitesi Statü</legend>
+                    <label><input asp-for="JuriOylamaStatus" type="radio" value="true" /><span>Aktif</span></label>
+                    <label><input asp-for="JuriOylamaStatus" type="radio" value="false" /><span>Aktif Değil</span></label>
+                </fieldset>
+                <fieldset class="add-candidate-status">
+                    <legend>Künye Giriş Sistemi Statü</legend>
+                    <label><input asp-for="KunyeGirisStatus" type="radio" value="true" /><span>Aktif</span></label>
+                    <label><input asp-for="KunyeGirisStatus" type="radio" value="false" /><span>Aktif Değil</span></label>
+                </fieldset>
+            </div>
+        }
+        <div class="add-jury-field edit-play-record-type">
+            <label>Eklenme Yöntemi</label>
+            <input value="@Model.RecordTypeDisplay" disabled aria-disabled="true" />
+        </div>
+        <div class="add-jury-actions">
+            <a asp-action="PlayDetails" asp-route-slug="@Model.Slug" class="add-jury-cancel">İptal</a>
+            <button type="submit" class="add-jury-submit">Kaydet</button>
+        </div>
+    </form>
+</section>
+@section Scripts { <script src="~/js/add-play.js" asp-append-version="true"></script> }

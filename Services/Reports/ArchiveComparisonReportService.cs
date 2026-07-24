@@ -45,7 +45,9 @@ public sealed class ArchiveComparisonReportService(AfifeContext context) : IArch
             join play in context.Plays.AsNoTracking()
                 on category.PlayId equals play.Id
             where vote.IsPublished
+                && vote.IsActive
                 && category.IsPublished
+                && category.IsActive
                 && play.IsPublished
                 && play.CreatedAt.HasValue
                 && play.CreatedAt.Value >= rangeStart

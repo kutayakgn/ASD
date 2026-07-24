@@ -40,6 +40,18 @@
     white-space: pre-line;
 }
 
+.generic-popup-message a {
+    color: #665a35;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.generic-popup-message a:hover,
+.generic-popup-message a:focus-visible {
+    color: #918150;
+}
+
 .generic-popup-actions {
     display: flex;
     width: 100%;

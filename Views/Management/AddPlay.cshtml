@@ -1,8 +1,6 @@
 @model YKBAfife.Models.ViewModels.AddPlayViewModel
 @{
     ViewData["Title"] = "Oyun Ekle";
-    var selectedJuryIds = Model.SelectedJuryIds.ToHashSet();
-    var selectedStatus = Model.StatusOptions.FirstOrDefault(status => status.StatusCode == Model.StatusCode);
 }
 
 <section class="play-details-page add-jury-page add-play-page" aria-labelledby="add-play-title">
@@ -16,109 +14,12 @@
     </header>
 
     <form asp-action="AddPlay" method="post" class="add-jury-form add-play-form" novalidate
-          data-add-play-form data-generic-confirm data-confirm-message="Oyunu eklemek istediğinize emin misiniz?">
+          data-add-play-form
+          data-similarity-check-url="@Url.Action("CheckPlaySimilarity", "Management")">
         @Html.AntiForgeryToken()
+        <input asp-for="ConfirmSimilarPlay" type="hidden" data-confirm-similar-play />
         <div asp-validation-summary="ModelOnly" class="add-jury-validation-summary" role="alert"></div>
-
-        <div class="add-jury-grid add-play-grid">
-            <div class="add-jury-field">
-                <label asp-for="PlayName"></label>
-                <input asp-for="PlayName" required minlength="2" maxlength="250" autocomplete="off" />
-                <span asp-validation-for="PlayName"></span>
-            </div>
-            <div class="add-jury-field">
-                <label asp-for="TheaterName"></label>
-                <input asp-for="TheaterName" required minlength="2" maxlength="250" autocomplete="organization" />
-                <span asp-validation-for="TheaterName"></span>
-            </div>
-
-            <div class="add-jury-field add-play-jury-field">
-                <label id="jury-group-label">Jüri Grup Bilgisi</label>
-                <div class="add-play-jury-select" data-jury-multiselect>
-                    <div class="add-play-select-trigger" role="combobox" tabindex="0"
-                         aria-labelledby="jury-group-label" aria-controls="jury-group-options"
-                         aria-expanded="false" data-jury-select-trigger>
-                        <div class="add-play-selected-values" data-jury-selected-values>
-                            <span class="add-play-select-placeholder" data-jury-placeholder>Jüri Grubunu Seçin</span>
-                        </div>
-                        <img src="~/icons/angle-down.svg" alt="" aria-hidden="true" />
-                    </div>
-                    <div data-jury-hidden-inputs>
-                        @foreach (var juryId in selectedJuryIds)
-                        {
-                            <input type="hidden" name="SelectedJuryIds" value="@juryId" />
-                        }
-                    </div>
-                    <div id="jury-group-options" class="add-play-jury-menu" data-jury-menu hidden>
-                        @foreach (var group in Model.JuryGroups)
-                        {
-                            var isGroupSelected = group.Juries.Count > 0 && group.Juries.All(jury => selectedJuryIds.Contains(jury.Id));
-                            <section class="add-play-jury-group" data-jury-group data-group-key="@group.Key" data-group-name="@group.Name">
-                                <div class="add-play-jury-group-header">
-                                    <label class="add-play-group-checkbox" aria-label="@($"{group.Name} grubunu seç")">
-                                        <input type="checkbox" data-jury-group-checkbox checked="@(isGroupSelected ? "checked" : null)" />
-                                        <span class="add-play-check-mark" aria-hidden="true"></span>
-                                    </label>
-                                    <button type="button" class="add-play-group-toggle"
-                                            aria-label="@($"{group.Name} üyelerini göster")" aria-expanded="false"
-                                            data-jury-group-toggle>
-                                        <span>@group.Name</span>
-                                        <img src="~/icons/angle-down.svg" alt="" aria-hidden="true" />
-                                    </button>
-                                </div>
-                                <div class="add-play-jury-members" data-jury-members hidden>
-                                    @foreach (var jury in group.Juries)
-                                    {
-                                        <label class="add-play-check-option add-play-jury-option">
-                                            <input type="checkbox" value="@jury.Id" data-jury-checkbox
-                                                   data-jury-name="@jury.FullName" checked="@(selectedJuryIds.Contains(jury.Id) ? "checked" : null)" />
-                                            <span class="add-play-check-mark" aria-hidden="true"></span>
-                                            <span>@jury.FullName</span>
-                                        </label>
-                                    }
-                                </div>
-                            </section>
-                        }
-                    </div>
-                </div>
-                <span asp-validation-for="SelectedJuryIds"></span>
-            </div>
-
-            <div class="add-jury-field add-play-status-field">
-                <label asp-for="StatusCode"></label>
-                <div class="add-play-status-select" data-play-status-select>
-                    <input asp-for="StatusCode" type="hidden" data-play-status-value />
-                    <button type="button" class="add-play-status-trigger" aria-haspopup="listbox"
-                            aria-expanded="false" aria-controls="play-status-options" data-play-status-trigger>
-                        <span data-play-status-label class="@(selectedStatus is null ? "is-placeholder" : string.Empty)">
-                            @if (selectedStatus is not null)
-                            {
-                                <i style="--status-color: @selectedStatus.StatusColor" aria-hidden="true"></i>
-                                @selectedStatus.StatusName
-                            }
-                            else
-                            {
-                                <text>Oyun Statüsü Seçin</text>
-                            }
-                        </span>
-                        <img src="~/icons/angle-down.svg" alt="" aria-hidden="true" />
-                    </button>
-                    <div id="play-status-options" class="add-play-status-menu" role="listbox" data-play-status-menu hidden>
-                        @foreach (var status in Model.StatusOptions)
-                        {
-                            <button type="button" class="add-play-status-option" role="option"
-                                    aria-selected="@(status.StatusCode == Model.StatusCode ? "true" : "false")"
-                                    data-status-code="@status.StatusCode" data-status-name="@status.StatusName"
-                                    data-status-color="@status.StatusColor">
-                                <i style="--status-color: @status.StatusColor" aria-hidden="true"></i>
-                                <span>@status.StatusName</span>
-                            </button>
-                        }
-                    </div>
-                </div>
-                <span asp-validation-for="StatusCode"></span>
-            </div>
-        </div>
+        <partial name="_PlayFormFields" model="Model" />
 
         <div class="add-jury-actions">
             <a asp-action="Plays" class="add-jury-cancel" data-history-back>İptal</a>

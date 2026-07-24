@@ -20,6 +20,26 @@ public static class PlaySimilarityHelper
                theaterConfidence >= DuplicateConfidenceThreshold;
     }
 
+    public static bool AreExactDuplicates(
+        string firstPlayName,
+        string firstTheaterName,
+        string secondPlayName,
+        string secondTheaterName) =>
+        string.Equals(
+            NormalizeExact(firstPlayName),
+            NormalizeExact(secondPlayName),
+            StringComparison.Ordinal) &&
+        string.Equals(
+            NormalizeExact(firstTheaterName),
+            NormalizeExact(secondTheaterName),
+            StringComparison.Ordinal);
+
+    private static string NormalizeExact(string value) =>
+        string.Join(
+            ' ',
+            value.Trim().ToUpper(new CultureInfo("tr-TR"))
+                .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
     private static double CalculateTypoTolerantConfidence(string first, string second)
     {
         var normalizedFirst = Normalize(first);

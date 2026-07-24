@@ -195,7 +195,37 @@
 
     window.addEventListener("resize", syncDropdownClearance);
 
-    form.addEventListener("submit", (event) => {
+    let isCheckingSimilarity = false;
+    let isReadyToSubmit = false;
+
+    const buildSimilarityMessage = (matches) => {
+        const content = document.createDocumentFragment();
+        content.append("Kaydetmek istediğiniz oyun ile benzer oyun adı ve tiyatro adına sahip başka bir oyun var.\n");
+        matches.forEach((match, index) => {
+            if (index > 0) content.append(", ");
+            const link = document.createElement("a");
+            link.textContent = match.name;
+            link.href = match.url;
+            content.append(link);
+        });
+        content.append("\nYine de kayıt yapmak istiyor musunuz?");
+        return content;
+    };
+
+    const submitAfterConfirmation = (submitter, confirmsSimilarity) => {
+        const confirmationInput = form.querySelector("[data-confirm-similar-play]");
+        if (confirmationInput) confirmationInput.value = String(confirmsSimilarity);
+        isReadyToSubmit = true;
+        form.requestSubmit(submitter || undefined);
+    };
+
+    form.addEventListener("submit", async (event) => {
+        if (isReadyToSubmit) return;
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (isCheckingSimilarity) return;
+
         const messages = [];
         const playName = form.querySelector('[name="PlayName"]')?.value.trim() ?? "";
         const theaterName = form.querySelector('[name="TheaterName"]')?.value.trim() ?? "";
@@ -203,11 +233,81 @@
         if (theaterName.length < 2) messages.push("Tiyatro adı en az 2 karakter olmalıdır.");
         if (!juryMenu.querySelector("[data-jury-checkbox]:checked")) messages.push("En az bir jüri veya jüri grubu seçiniz.");
         if (!statusValue.value) messages.push("Oyun statüsü seçiniz.");
-        if (messages.length === 0) return;
+        if (messages.length > 0) {
+            window.genericPopup?.fail(messages.join(" "));
+            return;
+        }
 
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        window.genericPopup?.fail(messages.join(" "));
+        const checkUrl = form.dataset.similarityCheckUrl;
+        const verificationToken = form.querySelector('[name="__RequestVerificationToken"]')?.value;
+        if (!checkUrl || !verificationToken) {
+            window.genericPopup?.fail("Benzer oyun kontrolü başlatılamadı.");
+            return;
+        }
+
+        const submitter = event.submitter;
+        isCheckingSimilarity = true;
+        if (submitter) {
+            submitter.disabled = true;
+            submitter.setAttribute("aria-busy", "true");
+        }
+
+        try {
+            const body = new FormData();
+            body.set("__RequestVerificationToken", verificationToken);
+            body.set("playName", playName);
+            body.set("theaterName", theaterName);
+            const playId = form.querySelector('[name="Id"]')?.value;
+            if (playId) body.set("playId", playId);
+            const response = await fetch(checkUrl, {
+                method: "POST",
+                body,
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+            });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(result.message || "Benzer oyun kontrolü tamamlanamadı.");
+            }
+
+            if (result.status === "exact") {
+                window.genericPopup?.fail(
+                    result.message || "Aynı oyun adı ve tiyatro adına sahip bir oyun var. Yinelenen kayıt oluşturamazsınız.");
+                return;
+            }
+
+            const matches = Array.isArray(result.matches) ? result.matches : [];
+            if (result.status === "similar" && matches.length > 0) {
+                window.genericPopup?.show({
+                    type: "question",
+                    messageContent: buildSimilarityMessage(matches),
+                    confirmText: "Evet",
+                    cancelText: "İptal",
+                    showCancel: true,
+                    returnFocus: submitter,
+                    onConfirm: () => submitAfterConfirmation(submitter, true)
+                });
+                return;
+            }
+
+            window.genericPopup?.show({
+                type: "question",
+                message: form.dataset.confirmMessage || "Oyunu eklemek istediğinize emin misiniz?",
+                confirmText: "Evet",
+                cancelText: "İptal",
+                showCancel: true,
+                returnFocus: submitter,
+                onConfirm: () => submitAfterConfirmation(submitter, false)
+            });
+        } catch (error) {
+            console.error(error);
+            window.genericPopup?.fail(error.message || "Benzer oyun kontrolü tamamlanamadı.");
+        } finally {
+            isCheckingSimilarity = false;
+            if (submitter) {
+                submitter.disabled = false;
+                submitter.removeAttribute("aria-busy");
+            }
+        }
     });
 
     groups.forEach(syncGroupState);

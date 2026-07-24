@@ -1,60 +1,63 @@
-SET NOCOUNT ON;
-SET XACT_ABORT ON;
+USE [AfifeAdmin];
+GO
 
-IF OBJECT_ID(N'dbo.PlayAwardCategories', N'U') IS NULL OR
-   OBJECT_ID(N'dbo.JuryVotes', N'U') IS NULL
-    THROW 51130, 'PlayAwardCategories or JuryVotes table was not found.', 1;
+SET XACT_ABORT ON;
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+SET ANSI_PADDING ON;
+SET ANSI_WARNINGS ON;
+SET ARITHABORT ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET NUMERIC_ROUNDABORT OFF;
+GO
+
+IF OBJECT_ID(N'dbo.PlayAwardCategories', N'U') IS NULL
+   OR OBJECT_ID(N'dbo.JuryVotes', N'U') IS NULL
+BEGIN
+    THROW 51500, N'PlayAwardCategories veya JuryVotes tablosu bulunamadi.', 1;
+END;
+GO
 
 BEGIN TRY
     BEGIN TRANSACTION;
 
-    -- IsPublished becomes the only candidate publication/status field. Preserve
-    -- every previously inactive candidate by making it unpublished before drop.
-    IF COL_LENGTH(N'dbo.PlayAwardCategories', N'IsActive') IS NOT NULL
+    IF COL_LENGTH(N'dbo.PlayAwardCategories', N'IsActive') IS NULL
     BEGIN
+        ALTER TABLE dbo.PlayAwardCategories
+            ADD IsActive bit NOT NULL
+                CONSTRAINT DF_PlayAwardCategories_IsActive DEFAULT (1) WITH VALUES;
+
+        -- Before this migration IsPublished represented candidate activity.
         EXEC sys.sp_executesql N'
             UPDATE dbo.PlayAwardCategories
-            SET IsPublished = 0,
-                UpdatedAt = COALESCE(UpdatedAt, DATEADD(HOUR, 3, SYSUTCDATETIME()))
-            WHERE IsActive = 0
-              AND IsPublished = 1;';
-
-        DECLARE @DefaultConstraint sysname;
-        SELECT @DefaultConstraint = defaultConstraint.name
-        FROM sys.default_constraints AS defaultConstraint
-        INNER JOIN sys.columns AS columnInfo
-            ON columnInfo.object_id = defaultConstraint.parent_object_id
-           AND columnInfo.column_id = defaultConstraint.parent_column_id
-        WHERE defaultConstraint.parent_object_id = OBJECT_ID(N'dbo.PlayAwardCategories')
-          AND columnInfo.name = N'IsActive';
-
-        IF @DefaultConstraint IS NOT NULL
-        BEGIN
-            DECLARE @DropDefaultSql nvarchar(max) =
-                N'ALTER TABLE dbo.PlayAwardCategories DROP CONSTRAINT '
-                + QUOTENAME(@DefaultConstraint) + N';';
-            EXEC sys.sp_executesql @DropDefaultSql;
-        END;
-
-        EXEC(N'ALTER TABLE dbo.PlayAwardCategories DROP COLUMN IsActive;');
+            SET IsActive = IsPublished,
+                IsPublished = 1;';
     END;
 
-    -- The logical vote identity is Jury + Play + Category + Role. If legacy data
-    -- contains old/new candidate vote rows together, keep only the latest row.
+    IF COL_LENGTH(N'dbo.JuryVotes', N'IsActive') IS NULL
+    BEGIN
+        ALTER TABLE dbo.JuryVotes
+            ADD IsActive bit NOT NULL
+                CONSTRAINT DF_JuryVotes_IsActive DEFAULT (1) WITH VALUES;
+
+        -- Preserve the former calculation state while making existing rows non-deleted.
+        EXEC sys.sp_executesql N'
+            UPDATE dbo.JuryVotes
+            SET IsActive = IsPublished,
+                IsPublished = 1;';
+    END;
+
+    -- Normalize legacy duplicates before enabling the one-vote-per-logical-role trigger.
     ;WITH RankedVotes AS
     (
         SELECT
             vote.Id,
             ROW_NUMBER() OVER
             (
-                PARTITION BY
-                    vote.JuryId,
-                    candidate.PlayId,
-                    candidate.AwardCategoryCode,
-                    candidate.RoleCode
-                ORDER BY
-                    COALESCE(vote.UpdatedAt, vote.CreatedAt, CONVERT(datetime2, '19000101')) DESC,
-                    vote.Id DESC
+                PARTITION BY vote.JuryId, candidate.PlayId,
+                    candidate.AwardCategoryCode, candidate.RoleCode
+                ORDER BY COALESCE(vote.UpdatedAt, vote.CreatedAt,
+                    CONVERT(datetime2, '19000101')) DESC, vote.Id DESC
             ) AS VoteOrder
         FROM dbo.JuryVotes AS vote
         INNER JOIN dbo.PlayAwardCategories AS candidate
@@ -65,9 +68,8 @@ BEGIN TRY
     INNER JOIN RankedVotes AS ranked ON ranked.Id = vote.Id
     WHERE ranked.VoteOrder > 1;
 
-
-    -- Deleting a candidate is an explicit hard-delete operation. Its dependent
-    -- JuryVotes rows must be deleted by the database in the same transaction.
+    -- A physical candidate delete is exceptional, but when it occurs its votes
+    -- must be removed atomically. UI delete operations remain soft deletes.
     DECLARE @CandidateVoteForeignKey sysname;
     SELECT TOP (1) @CandidateVoteForeignKey = foreignKey.name
     FROM sys.foreign_keys AS foreignKey
@@ -81,29 +83,38 @@ BEGIN TRY
       AND parentColumn.name = N'PlayAwardCategoryId';
 
     IF @CandidateVoteForeignKey IS NOT NULL
+       AND NOT EXISTS
+       (
+           SELECT 1
+           FROM sys.foreign_keys
+           WHERE name = @CandidateVoteForeignKey
+             AND delete_referential_action = 1
+             AND update_referential_action = 1
+       )
     BEGIN
-        DECLARE @DropCandidateVoteForeignKeySql nvarchar(max) =
-            N'ALTER TABLE dbo.JuryVotes DROP CONSTRAINT '
-            + QUOTENAME(@CandidateVoteForeignKey) + N';';
+        DECLARE @DropCandidateVoteForeignKeySql nvarchar(max);
+        SET @DropCandidateVoteForeignKeySql =
+            N'ALTER TABLE dbo.JuryVotes DROP CONSTRAINT ['
+            + REPLACE(@CandidateVoteForeignKey, N']', N']]') + N'];';
         EXEC sys.sp_executesql @DropCandidateVoteForeignKeySql;
+        SET @CandidateVoteForeignKey = NULL;
     END;
 
-    ALTER TABLE dbo.JuryVotes WITH CHECK
-        ADD CONSTRAINT FK_JuryVotes_PlayAwardCategories
-        FOREIGN KEY (PlayAwardCategoryId)
-        REFERENCES dbo.PlayAwardCategories (Id)
-        ON UPDATE CASCADE
-        ON DELETE CASCADE;
+    IF @CandidateVoteForeignKey IS NULL
+    BEGIN
+        ALTER TABLE dbo.JuryVotes WITH CHECK
+            ADD CONSTRAINT FK_JuryVotes_PlayAwardCategories
+            FOREIGN KEY (PlayAwardCategoryId)
+            REFERENCES dbo.PlayAwardCategories (Id)
+            ON UPDATE CASCADE
+            ON DELETE CASCADE;
+    END;
     COMMIT TRANSACTION;
 END TRY
 BEGIN CATCH
     IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
     THROW;
 END CATCH;
-GO
-
-DROP TRIGGER IF EXISTS dbo.TR_JuryVotes_SinglePublishedPerPlayCategoryRole;
-DROP TRIGGER IF EXISTS dbo.TR_PlayAwardCategories_NormalizePublishedJuryVotes;
 GO
 
 CREATE OR ALTER TRIGGER dbo.TR_JuryVotes_SingleRecordPerPlayCategoryRole
@@ -133,14 +144,10 @@ BEGIN
             candidate.RoleCode,
             ROW_NUMBER() OVER
             (
-                PARTITION BY
-                    changedVote.JuryId,
-                    candidate.PlayId,
-                    candidate.AwardCategoryCode,
-                    candidate.RoleCode
-                ORDER BY
-                    COALESCE(changedVote.UpdatedAt, changedVote.CreatedAt, CONVERT(datetime2, '19000101')) DESC,
-                    changedVote.Id DESC
+                PARTITION BY changedVote.JuryId, candidate.PlayId,
+                    candidate.AwardCategoryCode, candidate.RoleCode
+                ORDER BY COALESCE(changedVote.UpdatedAt, changedVote.CreatedAt,
+                    CONVERT(datetime2, '19000101')) DESC, changedVote.Id DESC
             ) AS VoteOrder
         FROM inserted AS changedVote
         INNER JOIN dbo.PlayAwardCategories AS candidate
@@ -152,8 +159,6 @@ BEGIN
     FROM ChangedVotes
     WHERE VoteOrder = 1;
 
-    -- Lock candidate rows for each logical group so shared applications cannot
-    -- concurrently leave two physical JuryVotes records in the same group.
     DECLARE @LockedCandidateCount bigint;
     SELECT @LockedCandidateCount = COUNT_BIG(*)
     FROM dbo.PlayAwardCategories AS candidate WITH (UPDLOCK, HOLDLOCK)
@@ -162,18 +167,17 @@ BEGIN
        AND affected.AwardCategoryCode = candidate.AwardCategoryCode
        AND affected.RoleCode = candidate.RoleCode;
 
-    -- A vote may be preserved for an unpublished candidate, but it can never be
-    -- calculation-eligible while that candidate remains unpublished.
     UPDATE vote
     SET
-        vote.IsPublished = 0,
+        vote.IsPublished = CASE WHEN candidate.IsPublished = 0 THEN 0 ELSE vote.IsPublished END,
+        vote.IsActive = CASE WHEN candidate.IsActive = 0 THEN 0 ELSE vote.IsActive END,
         vote.UpdatedAt = DATEADD(HOUR, 3, SYSUTCDATETIME())
     FROM dbo.JuryVotes AS vote
     INNER JOIN inserted AS changedVote ON changedVote.Id = vote.Id
     INNER JOIN dbo.PlayAwardCategories AS candidate
         ON candidate.Id = vote.PlayAwardCategoryId
-    WHERE candidate.IsPublished = 0
-      AND vote.IsPublished = 1;
+    WHERE (candidate.IsPublished = 0 AND vote.IsPublished = 1)
+       OR (candidate.IsActive = 0 AND vote.IsActive = 1);
 
     DELETE vote
     FROM dbo.JuryVotes AS vote
@@ -195,28 +199,44 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Candidate publication controls vote calculation eligibility in both
-    -- directions. Hard deletion is handled separately by ON DELETE CASCADE.
+    IF UPDATE(IsActive)
+    BEGIN
+        UPDATE vote
+        SET
+            vote.IsActive = candidate.IsActive,
+            vote.UpdatedAt = DATEADD(HOUR, 3, SYSUTCDATETIME())
+        FROM dbo.JuryVotes AS vote
+        INNER JOIN inserted AS candidate ON candidate.Id = vote.PlayAwardCategoryId
+        INNER JOIN deleted AS previousCandidate ON previousCandidate.Id = candidate.Id
+        WHERE previousCandidate.IsActive <> candidate.IsActive
+          AND vote.IsPublished = 1
+          AND vote.IsActive <> candidate.IsActive;
+    END;
+
     IF UPDATE(IsPublished)
     BEGIN
         UPDATE vote
         SET
             vote.IsPublished = candidate.IsPublished,
+            vote.IsActive = CASE
+                WHEN candidate.IsPublished = 1 THEN candidate.IsActive
+                ELSE vote.IsActive
+            END,
             vote.UpdatedAt = DATEADD(HOUR, 3, SYSUTCDATETIME())
         FROM dbo.JuryVotes AS vote
-        INNER JOIN inserted AS candidate
-            ON candidate.Id = vote.PlayAwardCategoryId
-        INNER JOIN deleted AS previousCandidate
-            ON previousCandidate.Id = candidate.Id
+        INNER JOIN inserted AS candidate ON candidate.Id = vote.PlayAwardCategoryId
+        INNER JOIN deleted AS previousCandidate ON previousCandidate.Id = candidate.Id
         WHERE previousCandidate.IsPublished <> candidate.IsPublished
-          AND vote.IsPublished <> candidate.IsPublished;
+          AND
+          (
+              vote.IsPublished <> candidate.IsPublished
+              OR (candidate.IsPublished = 1 AND vote.IsActive <> candidate.IsActive)
+          );
     END;
 
     IF NOT (UPDATE(PlayId) OR UPDATE(AwardCategoryCode) OR UPDATE(RoleCode))
         RETURN;
 
-    -- Moving a candidate can merge two logical groups. Keep the newest physical
-    -- vote row for each jury in every affected old/new group and delete the rest.
     ;WITH AffectedGroups AS
     (
         SELECT PlayId, AwardCategoryCode, RoleCode FROM inserted
@@ -229,14 +249,10 @@ BEGIN
             vote.Id,
             ROW_NUMBER() OVER
             (
-                PARTITION BY
-                    vote.JuryId,
-                    candidate.PlayId,
-                    candidate.AwardCategoryCode,
-                    candidate.RoleCode
-                ORDER BY
-                    COALESCE(vote.UpdatedAt, vote.CreatedAt, CONVERT(datetime2, '19000101')) DESC,
-                    vote.Id DESC
+                PARTITION BY vote.JuryId, candidate.PlayId,
+                    candidate.AwardCategoryCode, candidate.RoleCode
+                ORDER BY COALESCE(vote.UpdatedAt, vote.CreatedAt,
+                    CONVERT(datetime2, '19000101')) DESC, vote.Id DESC
             ) AS VoteOrder
         FROM dbo.JuryVotes AS vote
         INNER JOIN dbo.PlayAwardCategories AS candidate
@@ -253,21 +269,7 @@ BEGIN
 END;
 GO
 
--- Both verification queries must return zero rows.
 SELECT
-    vote.JuryId,
-    candidate.PlayId,
-    candidate.AwardCategoryCode,
-    candidate.RoleCode,
-    COUNT_BIG(*) AS VoteRecordCount
-FROM dbo.JuryVotes AS vote
-INNER JOIN dbo.PlayAwardCategories AS candidate
-    ON candidate.Id = vote.PlayAwardCategoryId
-GROUP BY
-    vote.JuryId,
-    candidate.PlayId,
-    candidate.AwardCategoryCode,
-    candidate.RoleCode
-HAVING COUNT_BIG(*) > 1;
-
-SELECT COL_LENGTH(N'dbo.PlayAwardCategories', N'IsActive') AS IsActiveColumnLength;
+    COL_LENGTH(N'dbo.PlayAwardCategories', N'IsActive') AS CandidateIsActiveColumn,
+    COL_LENGTH(N'dbo.JuryVotes', N'IsActive') AS VoteIsActiveColumn;
+GO

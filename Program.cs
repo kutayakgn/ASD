@@ -9,6 +9,10 @@ using YKBAfife.Services.Reports;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+
 builder.Services.AddControllersWithViews();
 
 var connectionString = builder.Configuration.GetConnectionString("AfifeAdmin")
@@ -20,6 +24,7 @@ builder.Services.AddScoped<IUserActivityLogger, UserActivityLogger>();
 builder.Services.AddScoped<IAdminAuthenticationService, AdminAuthenticationService>();
 builder.Services.AddScoped<IPlayWatchReportService, PlayWatchReportService>();
 builder.Services.AddScoped<IPlayReportService, PlayReportService>();
+builder.Services.AddScoped<ICandidateReportService, CandidateReportService>();
 builder.Services.AddScoped<IJuryReportService, JuryReportService>();
 builder.Services.AddScoped<IAdminReportService, AdminReportService>();
 builder.Services.AddScoped<IArchiveComparisonReportService, ArchiveComparisonReportService>();

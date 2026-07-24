@@ -25,7 +25,12 @@
         currentOptions = options;
         popup.dataset.type = type;
         icon.src = icons[type];
-        message.textContent = options.message || "\u0130\u015flem tamamlanamad\u0131.";
+        message.replaceChildren();
+        if (options.messageContent instanceof Node) {
+            message.append(options.messageContent);
+        } else {
+            message.textContent = options.message || "\u0130\u015flem tamamlanamad\u0131.";
+        }
         confirmButton.textContent = options.confirmText || "Tamam";
         cancelButton.textContent = options.cancelText || "\u0130ptal";
         cancelButton.hidden = !options.showCancel;

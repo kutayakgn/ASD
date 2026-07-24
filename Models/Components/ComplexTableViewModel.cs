@@ -14,6 +14,7 @@ public sealed class ComplexTableViewModel
     public bool IsExportEnabled { get; init; } = true;
     public bool ShowHeading { get; init; } = true;
     public bool ShowSearch { get; init; } = true;
+    public ComplexTableSelectFilterViewModel? SelectFilter { get; init; }
     public bool ShowColumnHeaders { get; init; } = true;
     public bool IsEditableRows { get; init; }
     public bool IsDeleteColActive { get; init; }
@@ -97,4 +98,17 @@ public sealed class ComplexTableHeaderActionViewModel
     public string CssClass { get; init; } = string.Empty;
     public bool IsButton { get; init; }
     public string PanelTarget { get; init; } = string.Empty;
+}
+public sealed class ComplexTableSelectFilterViewModel
+{
+    public string Name { get; init; } = string.Empty;
+    public string Label { get; init; } = string.Empty;
+    public string Value { get; init; } = string.Empty;
+    public IReadOnlyList<ComplexTableSelectOptionViewModel> Options { get; init; } = [];
+}
+
+public sealed class ComplexTableSelectOptionViewModel
+{
+    public string Value { get; init; } = string.Empty;
+    public string Text { get; init; } = string.Empty;
 }

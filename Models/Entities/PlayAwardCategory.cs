@@ -15,6 +15,7 @@ public class PlayAwardCategory
     public DateTime? UpdatedAt { get; set; }
     public Guid? UpdatedBy { get; set; }
     public bool IsPublished { get; set; }
+    public bool IsActive { get; set; }
     public string Candidate { get; set; } = null!;
     public int AwardCategoryCode { get; set; }
     public bool IsCurrent { get; set; }

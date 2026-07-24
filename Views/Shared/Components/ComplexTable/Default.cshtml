@@ -66,7 +66,7 @@
                     }
                 </div>
             }
-            @if (Model.ShowHeading || Model.ShowSearch || activeTab.HeaderActions.Count > 0)
+            @if (Model.ShowHeading || Model.ShowSearch || Model.SelectFilter is not null || activeTab.HeaderActions.Count > 0)
             {
                 <div class="complex-table-heading">
                     @if (Model.ShowHeading)
@@ -74,6 +74,23 @@
                         <h2 id="@(Model.Id)-title">@activeTab.Title</h2>
                     }
                     <div class="complex-table-heading-tools">
+                        @if (Model.SelectFilter is not null)
+                        {
+                            <div class="complex-table-select-filter">
+                                <label for="@(Model.Id)-select-filter">@Model.SelectFilter.Label</label>
+                                <div class="complex-table-select-filter-control">
+                                    <select id="@(Model.Id)-select-filter"
+                                            name="@Model.SelectFilter.Name"
+                                            data-complex-table-filter>
+                                        @foreach (var option in Model.SelectFilter.Options)
+                                        {
+                                            <option value="@option.Value" selected="@(option.Value == Model.SelectFilter.Value ? "selected" : null)">@option.Text</option>
+                                        }
+                                    </select>
+                                    <img src="~/icons/angle-down.svg" alt="" aria-hidden="true" />
+                                </div>
+                            </div>
+                        }
                         @if (Model.ShowSearch)
                         {
                             <div class="jury-voting-table-search-form">

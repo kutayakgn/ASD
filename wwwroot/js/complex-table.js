@@ -103,6 +103,15 @@
         searchTimers.set(requestKey, timer);
     });
 
+
+    document.addEventListener("change", (event) => {
+        const filter = event.target.closest("[data-complex-table-filter]");
+        if (!filter) return;
+        const section = filter.closest("[data-complex-table]");
+        if (!section || !filter.name) return;
+        cancelScheduledSearch(section);
+        updateTable(section, { [filter.name]: filter.value, page: "1" });
+    });
     document.addEventListener("submit", (event) => {
         const stateForm = event.target.closest("[data-complex-table-state]");
         if (!stateForm) return;

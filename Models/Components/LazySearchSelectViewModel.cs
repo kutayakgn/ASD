@@ -11,4 +11,5 @@ public sealed class LazySearchSelectViewModel
     public Guid? SelectedValue { get; init; }
     public string SelectedText { get; init; } = string.Empty;
     public bool IsRequired { get; init; }
+    public bool IsDisabled { get; init; }
 }

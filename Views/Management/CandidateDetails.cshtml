@@ -1,0 +1,22 @@
+@model YKBAfife.Models.ViewModels.CandidateDetailsViewModel
+@{
+    ViewData["Title"] = Model.Candidate;
+}
+<section class="play-details-page" aria-labelledby="candidate-details-title">
+    <a asp-action="PlayDetails" asp-route-slug="@Model.PlaySlug" class="play-details-back">
+        <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
+        <span>Oyuna Dön</span>
+    </a>
+    <header class="play-details-toolbar">
+        <h1 id="candidate-details-title">Aday Detay</h1>
+    </header>
+    <dl class="play-details-content">
+        <div class="play-detail-field"><dt>Oyun</dt><dd>@Model.PlayName</dd></div>
+        <div class="play-detail-field"><dt>Ödül Kategorisi</dt><dd>@Model.CategoryName</dd></div>
+        <div class="play-detail-field"><dt>Adı Soyadı</dt><dd>@Model.Candidate</dd></div>
+        <div class="play-detail-field"><dt>Role Adı</dt><dd>@Model.Role</dd></div>
+        <div class="play-detail-field"><dt>Rol Değişimi</dt><dd>@Model.CurrentState</dd></div>
+        <div class="play-detail-field"><dt>Statü</dt><dd>@Model.Status</dd></div>
+        <div class="play-detail-field"><dt>Eklenme Tarihi</dt><dd>@(Model.CreatedAt?.ToString("dd.MM.yyyy HH:mm") ?? "-")</dd></div>
+    </dl>
+</section>
