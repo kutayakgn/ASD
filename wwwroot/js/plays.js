@@ -98,3 +98,130 @@
         updateTableWithFilters();
     });
 })();
+(() => {
+    let activeTooltip = null;
+    let closeTimer = 0;
+
+    const cancelClose = () => {
+        window.clearTimeout(closeTimer);
+        closeTimer = 0;
+    };
+
+    const closeTooltip = () => {
+        cancelClose();
+        if (!activeTooltip) return;
+
+        activeTooltip.trigger.setAttribute("aria-expanded", "false");
+        activeTooltip.trigger.removeAttribute("aria-describedby");
+        activeTooltip.element.remove();
+        activeTooltip = null;
+    };
+
+    const scheduleClose = () => {
+        cancelClose();
+        closeTimer = window.setTimeout(() => {
+            const focusedElement = document.activeElement;
+            if (activeTooltip?.element.contains(focusedElement) ||
+                activeTooltip?.trigger.contains(focusedElement)) {
+                return;
+            }
+
+            closeTooltip();
+        }, 160);
+    };
+
+    const positionTooltip = (trigger, tooltip) => {
+        const gap = 8;
+        const viewportPadding = 16;
+        const triggerBounds = trigger.getBoundingClientRect();
+        const tooltipBounds = tooltip.getBoundingClientRect();
+        const maximumLeft = window.innerWidth - tooltipBounds.width - viewportPadding;
+        const left = Math.min(
+            Math.max(viewportPadding, triggerBounds.left),
+            Math.max(viewportPadding, maximumLeft));
+        const belowTop = triggerBounds.bottom + gap;
+        const top = belowTop + tooltipBounds.height <= window.innerHeight - viewportPadding
+            ? belowTop
+            : Math.max(viewportPadding, triggerBounds.top - tooltipBounds.height - gap);
+
+        tooltip.style.left = `${left}px`;
+        tooltip.style.top = `${top}px`;
+    };
+
+    const openTooltip = (trigger) => {
+        cancelClose();
+        if (activeTooltip?.trigger === trigger) return;
+
+        closeTooltip();
+        const template = trigger.parentElement?.querySelector("[data-play-similar-content]");
+        if (!(template instanceof HTMLTemplateElement)) return;
+
+        const tooltip = document.createElement("div");
+        const tooltipId = `play-similar-tooltip-${crypto.randomUUID()}`;
+        tooltip.id = tooltipId;
+        tooltip.className = "play-similar-tooltip";
+        tooltip.setAttribute("role", "tooltip");
+        tooltip.append(template.content.cloneNode(true));
+        tooltip.addEventListener("mouseenter", cancelClose);
+        tooltip.addEventListener("mouseleave", scheduleClose);
+        tooltip.addEventListener("focusin", cancelClose);
+        tooltip.addEventListener("focusout", scheduleClose);
+        document.body.append(tooltip);
+
+        activeTooltip = { trigger, element: tooltip };
+        trigger.setAttribute("aria-expanded", "true");
+        trigger.setAttribute("aria-describedby", tooltipId);
+        positionTooltip(trigger, tooltip);
+    };
+
+    document.addEventListener("mouseover", (event) => {
+        const trigger = event.target.closest?.("[data-play-similar-trigger]");
+        if (!trigger || trigger.contains(event.relatedTarget)) return;
+        openTooltip(trigger);
+    });
+
+    document.addEventListener("mouseout", (event) => {
+        const trigger = event.target.closest?.("[data-play-similar-trigger]");
+        if (!trigger || trigger.contains(event.relatedTarget)) return;
+        scheduleClose();
+    });
+
+    document.addEventListener("focusin", (event) => {
+        const trigger = event.target.closest?.("[data-play-similar-trigger]");
+        if (trigger) openTooltip(trigger);
+    });
+
+    document.addEventListener("focusout", (event) => {
+        if (event.target.closest?.("[data-play-similar-trigger]")) scheduleClose();
+    });
+
+    document.addEventListener("click", (event) => {
+        const trigger = event.target.closest?.("[data-play-similar-trigger]");
+        if (trigger) {
+            event.preventDefault();
+            event.stopPropagation();
+            if (activeTooltip?.trigger === trigger) {
+                closeTooltip();
+            } else {
+                openTooltip(trigger);
+            }
+            return;
+        }
+
+        if (activeTooltip && !activeTooltip.element.contains(event.target)) {
+            closeTooltip();
+        }
+    });
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && activeTooltip) {
+            const trigger = activeTooltip.trigger;
+            closeTooltip();
+            trigger.focus({ preventScroll: true });
+        }
+    });
+
+    document.addEventListener("complex-table:update", closeTooltip);
+    window.addEventListener("resize", closeTooltip);
+    window.addEventListener("scroll", closeTooltip, true);
+})();

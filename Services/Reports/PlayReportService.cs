@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using YKBAfife.Data;
+using YKBAfife.Helpers;
 using YKBAfife.Models.ViewModels;
 
 namespace YKBAfife.Services.Reports;
@@ -11,6 +12,17 @@ public sealed class PlayReportService(AfifeContext context) : IPlayReportService
         CancellationToken cancellationToken = default)
     {
         var normalized = Normalize(query);
+        var similarityCandidates = await context.Plays
+            .AsNoTracking()
+            .Where(play => play.IsPublished)
+            .Select(play => new PlaySimilarityCandidate(
+                play.Id,
+                play.PlayName,
+                play.TheaterName,
+                play.Slug))
+            .ToArrayAsync(cancellationToken);
+        var similarPlaysById = FindSimilarPlays(similarityCandidates);
+        var similarPlayIds = similarPlaysById.Keys.ToArray();
         var plays = context.Plays.AsNoTracking().Where(play => play.IsPublished);
 
         if (!string.IsNullOrWhiteSpace(normalized.Search))
@@ -51,6 +63,7 @@ public sealed class PlayReportService(AfifeContext context) : IPlayReportService
             PlayName = play.PlayName,
             TheaterName = play.TheaterName,
             RecordType = play.RecordType,
+            HasSimilarPlay = similarPlayIds.Contains(play.Id),
             IsNew = !play.RecordType &&
                     (!play.UpdatedAt.HasValue || play.UpdatedAt == play.CreatedAt),
             CreatedAt = play.CreatedAt,
@@ -63,6 +76,14 @@ public sealed class PlayReportService(AfifeContext context) : IPlayReportService
             .Skip((currentPage - 1) * PlayTableViewModel.PageSize)
             .Take(PlayTableViewModel.PageSize)
             .ToArrayAsync(cancellationToken);
+
+        foreach (var row in pageRows)
+        {
+            if (similarPlaysById.TryGetValue(row.PlayId, out var similarPlays))
+            {
+                row.SimilarPlays = similarPlays;
+            }
+        }
 
         return new PlayTableViewModel
         {
@@ -86,7 +107,8 @@ public sealed class PlayReportService(AfifeContext context) : IPlayReportService
     {
         var descending = sortDirection == "desc";
         var prioritizedRows = rows
-            .OrderByDescending(row => row.IsNew)
+            .OrderByDescending(row => row.HasSimilarPlay)
+            .ThenByDescending(row => row.IsNew)
             .ThenByDescending(row => row.IsNew ? row.CreatedAt : null);
 
         return sortBy switch
@@ -111,6 +133,53 @@ public sealed class PlayReportService(AfifeContext context) : IPlayReportService
                 : prioritizedRows.ThenBy(row => row.PlayName).ThenBy(row => row.PlayId)
         };
     }
+    private static Dictionary<Guid, IReadOnlyList<SimilarPlayViewModel>> FindSimilarPlays(
+        IReadOnlyList<PlaySimilarityCandidate> candidates)
+    {
+        var matches = candidates.ToDictionary(
+            candidate => candidate.Id,
+            _ => new List<SimilarPlayViewModel>());
+
+        for (var firstIndex = 0; firstIndex < candidates.Count - 1; firstIndex++)
+        {
+            var first = candidates[firstIndex];
+            for (var secondIndex = firstIndex + 1; secondIndex < candidates.Count; secondIndex++)
+            {
+                var second = candidates[secondIndex];
+                if (!PlaySimilarityHelper.AreLikelyDuplicates(
+                        first.PlayName,
+                        first.TheaterName,
+                        second.PlayName,
+                        second.TheaterName))
+                {
+                    continue;
+                }
+
+                matches[first.Id].Add(new SimilarPlayViewModel
+                {
+                    PlayId = second.Id,
+                    PlayName = second.PlayName,
+                    Slug = second.Slug
+                });
+                matches[second.Id].Add(new SimilarPlayViewModel
+                {
+                    PlayId = first.Id,
+                    PlayName = first.PlayName,
+                    Slug = first.Slug
+                });
+            }
+        }
+
+        return matches
+            .Where(pair => pair.Value.Count > 0)
+            .ToDictionary(
+                pair => pair.Key,
+                pair => (IReadOnlyList<SimilarPlayViewModel>)pair.Value
+                    .OrderBy(play => play.PlayName, StringComparer.Create(new System.Globalization.CultureInfo("tr-TR"), true))
+                    .ThenBy(play => play.PlayId)
+                    .ToArray());
+    }
+
     private static PlayTableQuery Normalize(PlayTableQuery query)
     {
         var allowedSortColumns = new HashSet<string>(StringComparer.Ordinal)
@@ -134,4 +203,10 @@ public sealed class PlayReportService(AfifeContext context) : IPlayReportService
             RecordType = query.RecordType
         };
     }
+
+    private sealed record PlaySimilarityCandidate(
+        Guid Id,
+        string PlayName,
+        string TheaterName,
+        string Slug);
 }

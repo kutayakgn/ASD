@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using System.Text.Encodings.Web;
 using YKBAfife.Helpers;
 using YKBAfife.Models.Components;
@@ -27,9 +28,7 @@ public static class PlayComplexTableFactory
             var slug = SlugHelper.Resolve(row.Slug, row.PlayName);
             var detailsUrl = $"/oyunlar/{Uri.EscapeDataString(slug)}";
             var encodedPlayName = HtmlEncoder.Default.Encode(row.PlayName);
-            var playNameContent = row.IsNew
-                ? $"<span class=\"play-name-with-tag\"><span>{encodedPlayName}</span><span class=\"play-new-tag\">Yeni</span></span>"
-                : row.PlayName;
+            var playNameContent = BuildPlayNameContent(row, encodedPlayName);
             return new ComplexTableRowViewModel
             {
                 Id = $"play-{row.PlayId:N}",
@@ -38,7 +37,7 @@ public static class PlayComplexTableFactory
                 NavigationAccessibleLabel = $"{row.PlayName} oyun detayına git",
                 Cells =
                 [
-                    new() { Content = playNameContent, IsHtml = row.IsNew },
+                    new() { Content = playNameContent, IsHtml = row.IsNew || row.HasSimilarPlay },
                     new() { Content = row.TheaterName },
                     new() { Content = row.RecordType ? "Admin Giriş" : "Künye Giriş" },
                     new() { Content = row.CreatedAt?.ToString("dd.MM.yyyy HH:mm", CultureInfo.CurrentCulture) ?? "-" },
@@ -114,6 +113,48 @@ public static class PlayComplexTableFactory
                 new() { Text = " kayıt jüri tarafından oylanabilir." }
             ]
         };
+    }
+
+    private static string BuildPlayNameContent(PlayTableRowViewModel row, string encodedPlayName)
+    {
+        if (!row.IsNew && !row.HasSimilarPlay)
+        {
+            return row.PlayName;
+        }
+
+        var markers = new StringBuilder();
+        if (row.IsNew)
+        {
+            markers.Append("<span class=\"play-new-tag\">Yeni</span>");
+        }
+
+        if (row.HasSimilarPlay && row.SimilarPlays.Count > 0)
+        {
+            var links = string.Join(", ", row.SimilarPlays.Select(similarPlay =>
+            {
+                var slug = SlugHelper.Resolve(similarPlay.Slug, similarPlay.PlayName);
+                var href = HtmlEncoder.Default.Encode($"/oyunlar/{Uri.EscapeDataString(slug)}");
+                var name = HtmlEncoder.Default.Encode(similarPlay.PlayName);
+                return $"<a href=\"{href}\">{name}</a>";
+            }));
+
+            markers.Append($$"""
+                <span class="play-similar-warning">
+                    <button type="button"
+                            class="play-similar-warning-button"
+                            aria-label="Benzer isimde oyun mevcut"
+                            aria-expanded="false"
+                            data-play-similar-trigger>
+                        <img src="/icons/yellow-info-circle-filled.svg" alt="" aria-hidden="true" />
+                    </button>
+                    <template data-play-similar-content>
+                        <span>Benzer isimde oyun mevcut. Benzer oyun/oyunlar: </span>{{links}}
+                    </template>
+                </span>
+                """);
+        }
+
+        return $"<span class=\"play-name-with-tag\"><span>{encodedPlayName}</span>{markers}</span>";
     }
 
     private static string FormatFilter(bool? value) =>
