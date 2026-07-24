@@ -6,6 +6,7 @@ public sealed class PlayDetailsViewModel
     public string PlayName { get; init; } = string.Empty;
     public string TheaterName { get; init; } = string.Empty;
     public bool JuriOylamaStatus { get; init; }
+    public bool KunyeGirisStatus { get; init; }
     public string JuryGroupInfo { get; init; } = string.Empty;
     public string PlayStatus { get; init; } = string.Empty;
     public string PlayStatusColor { get; init; } = "#6b7280";

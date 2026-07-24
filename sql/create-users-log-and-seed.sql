@@ -110,7 +110,7 @@ BEGIN TRY
         seed.[Username],
         seed.[EventType],
         CASE WHEN seed.[EventType] = N'LoginFailed' THEN 0 ELSE 1 END,
-        DATEADD(hour, -seed.[N] * 7, SYSUTCDATETIME()),
+        DATEADD(hour, -seed.[N] * 7, DATEADD(HOUR, 3, SYSUTCDATETIME())),
         CONCAT(N'192.168.1.', (seed.[N] % 20) + 10),
         N'Mozilla/5.0 Afife test tarayıcısı',
         N'AfifeAdmin',

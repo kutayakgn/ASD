@@ -43,13 +43,24 @@ Application rules must compare codes by meaning, not by row order or display nam
 
 ## Admin-created play invariants
 
+See `docs/play-source-and-voting-contracts.md` for the complete two-application
+source, visibility, voting, assignment, and ticket-fee contract.
+
 `Plays.RecordType = 1` identifies an admin-created play. These rows must always
 have `JuriOylamaStatus = 0` and `KunyeGirisStatus = 0`, and their `StatusCode`
 must not be `1` (`Oylama Aktif`). The UI and application endpoints must not allow
 either status toggle to be changed for these rows.
 
+Admin-created plays cannot have `PlayAwardCategories`, `JuryVotes`, or `Blacklist` records and
+cannot participate in candidate voting. They may have `JuryAssignedPlays` and
+`JuryGameTicketFees` records. An existing play with candidates cannot be converted
+to `RecordType = 1` until those candidate records are removed.
+
 Run `sql/enforce-admin-play-status-rules.sql` to normalize existing records and
 enforce these rules with database check constraints.
+Run `sql/enforce-admin-play-candidate-rules.sql` to remove invalid candidate/vote
+records and install the cross-table enforcement triggers.
+
 ## Candidate publication and jury-vote invariants
 
 `PlayAwardCategories.IsPublished` is the only candidate publication/status field.

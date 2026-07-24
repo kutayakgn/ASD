@@ -211,7 +211,7 @@ public sealed class ManagementController(
 
         jury.IsPublished = false;
         jury.IsActive = false;
-        jury.UpdatedAt = DateTime.UtcNow;
+        jury.UpdatedAt = TurkeyTime.Now;
         jury.UpdatedBy = currentUserId;
         await context.SaveChangesAsync(cancellationToken);
         await activityLogger.LogAsync(
@@ -353,7 +353,7 @@ public sealed class ManagementController(
         jury.Email = model.Email;
         jury.Phone = model.Phone;
         jury.IsActive = model.IsActive!.Value;
-        jury.UpdatedAt = DateTime.UtcNow;
+        jury.UpdatedAt = TurkeyTime.Now;
         jury.UpdatedBy = currentUserId;
         if (passwordChanged)
         {
@@ -370,7 +370,7 @@ public sealed class ManagementController(
                 FileName = photoFileName,
                 ContentType = photoContentType,
                 ImageData = photoData,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = TurkeyTime.Now,
                 CreatedBy = currentUserId,
                 IsPublished = true
             });
@@ -389,7 +389,7 @@ public sealed class ManagementController(
             if (oldPhoto is not null)
             {
                 oldPhoto.IsPublished = false;
-                oldPhoto.UpdatedAt = DateTime.UtcNow;
+                oldPhoto.UpdatedAt = TurkeyTime.Now;
                 oldPhoto.UpdatedBy = currentUserId;
             }
         }
@@ -516,7 +516,7 @@ public sealed class ManagementController(
         var fullNameParts = model.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var lastName = fullNameParts[^1];
         var firstName = string.Join(' ', fullNameParts[..^1]);
-        var now = DateTime.UtcNow;
+        var now = TurkeyTime.Now;
         Guid? photoId = null;
 
         if (photoData is not null && photoContentType is not null && photoFileName is not null)
@@ -716,7 +716,7 @@ public sealed class ManagementController(
             slug = $"{baseSlug}-{suffix++}";
         }
 
-        var now = DateTime.UtcNow;
+        var now = TurkeyTime.Now;
         var playId = Guid.NewGuid();
         await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
         var play = new Play
@@ -779,32 +779,45 @@ public sealed class ManagementController(
             play.KunyeGirisStatus = false;
             if (requiresNormalization)
             {
-                play.UpdatedAt = DateTime.UtcNow;
+                play.UpdatedAt = TurkeyTime.Now;
                 play.UpdatedBy = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var normalizingUserId)
                     ? normalizingUserId
                     : null;
                 await context.SaveChangesAsync(cancellationToken);
             }
 
-            return Json(new { isActive = false, isDisabled = true, refreshTable = requiresNormalization });
+            return Json(new { isActive = false, isDisabled = true, refreshTable = false });
         }
 
-        if (isJuryVotingStatus)
-        {
-            play.JuriOylamaStatus = isActive;
-        }
-        else
-        {
-            play.KunyeGirisStatus = isActive;
-        }
-
-        play.UpdatedAt = DateTime.UtcNow;
-        play.UpdatedBy = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)
+        var updatedAt = TurkeyTime.Now;
+        Guid? updatedBy = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)
             ? userId
             : null;
-        await context.SaveChangesAsync(cancellationToken);
+        var kunyeRecords = context.Plays.Where(item =>
+            item.Id == id &&
+            item.IsPublished &&
+            !item.RecordType);
 
-        return Json(new { isActive, refreshTable = true });
+        var updatedRowCount = isJuryVotingStatus
+            ? await kunyeRecords.ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(item => item.JuriOylamaStatus, isActive)
+                    .SetProperty(item => item.UpdatedAt, updatedAt)
+                    .SetProperty(item => item.UpdatedBy, updatedBy),
+                cancellationToken)
+            : await kunyeRecords.ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(item => item.KunyeGirisStatus, isActive)
+                    .SetProperty(item => item.UpdatedAt, updatedAt)
+                    .SetProperty(item => item.UpdatedBy, updatedBy),
+                cancellationToken);
+
+        if (updatedRowCount == 0)
+        {
+            return Conflict(new { message = "Künye giriş oyunu statüsü güncellenemedi." });
+        }
+
+        return Json(new { isActive, refreshTable = false });
     }
     [HttpGet("oyunlar/{slug}")]
     public async Task<IActionResult> PlayDetails(string slug, CancellationToken cancellationToken)
@@ -872,7 +885,8 @@ public sealed class ManagementController(
             Id = play.Id,
             PlayName = play.PlayName,
             TheaterName = play.TheaterName,
-            JuriOylamaStatus = play.JuriOylamaStatus,
+            JuriOylamaStatus = !play.RecordType && play.JuriOylamaStatus,
+            KunyeGirisStatus = !play.RecordType && play.KunyeGirisStatus,
             JuryGroupInfo = groupNames.Count == 0 ? "-" : string.Join(", ", groupNames),
             PlayStatus = playStatus?.StatusName ?? "-",
             PlayStatusColor = NormalizeStatusColor(playStatus?.StatusColor),
@@ -978,7 +992,7 @@ public sealed class ManagementController(
         {
             Id = Guid.NewGuid(),
             PlayId = play.Id,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = TurkeyTime.Now,
             CreatedBy = currentUserId,
             IsPublished = input.IsPublished.Value,
             Candidate = input.Candidate,
@@ -1172,7 +1186,7 @@ public sealed class ManagementController(
         }
 
         vote.IsPublished = false;
-        vote.UpdatedAt = DateTime.UtcNow;
+        vote.UpdatedAt = TurkeyTime.Now;
         vote.UpdatedBy = currentUserId;
         await context.SaveChangesAsync(cancellationToken);
         await activityLogger.LogAsync(
@@ -1248,7 +1262,7 @@ public sealed class ManagementController(
         }
 
         ticket.TicketFee = model.TicketFee;
-        ticket.UpdatedAt = DateTime.UtcNow;
+        ticket.UpdatedAt = TurkeyTime.Now;
         ticket.UpdatedBy = currentUserId;
         await context.SaveChangesAsync(cancellationToken);
 
@@ -1349,7 +1363,7 @@ public sealed class ManagementController(
             JuryId = model.JuryId!.Value,
             PlayId = model.PlayId!.Value,
             CreatedBy = currentUserId,
-            CreatedOn = DateTime.UtcNow,
+            CreatedOn = TurkeyTime.Now,
             IsPublished = true
         });
         await context.SaveChangesAsync(cancellationToken);

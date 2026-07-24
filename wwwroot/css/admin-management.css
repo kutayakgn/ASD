@@ -16,16 +16,16 @@
     place-items: center;
 }
 
-.complex-table-navigation-link img {
-    width: 24px;
-    height: 24px;
-    transition: transform .15s ease-in-out;
-}
+    .complex-table-navigation-link img {
+        width: 24px;
+        height: 24px;
+        transition: transform .15s ease-in-out;
+    }
 
-.complex-table-navigation-link:hover img,
-.complex-table-navigation-link:focus-visible img {
-    transform: translateX(3px);
-}
+    .complex-table-navigation-link:hover img,
+    .complex-table-navigation-link:focus-visible img {
+        transform: translateX(3px);
+    }
 
 .complex-table-toggle {
     position: relative;
@@ -34,39 +34,40 @@
     height: 22px;
     padding: 2px;
     align-items: center;
-    background: #bdbdbd;
+    background: #D9322D;
     border: 0;
     border-radius: 999px;
     transition: background-color .15s ease-in-out;
 }
 
-.complex-table-toggle::after {
-    width: 18px;
-    height: 18px;
-    content: "";
-    background: #fff;
-    border-radius: 50%;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, .18);
-    transition: transform .15s ease-in-out;
-}
+    .complex-table-toggle::after {
+        width: 18px;
+        height: 18px;
+        content: "";
+        background: #fff;
+        border-radius: 50%;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, .18);
+        transition: transform .15s ease-in-out;
+    }
 
-.complex-table-toggle.is-active {
-    background: #27ae60;
-}
+    .complex-table-toggle.is-active {
+        background: #27ae60;
+    }
 
-.complex-table-toggle.is-active::after {
-    transform: translateX(16px);
-}
+        .complex-table-toggle.is-active::after {
+            transform: translateX(16px);
+        }
 
-.complex-table-toggle:focus-visible {
-    outline: 2px solid #171717;
-    outline-offset: 2px;
-}
+    .complex-table-toggle:focus-visible {
+        outline: 2px solid #171717;
+        outline-offset: 2px;
+    }
 
-.complex-table-toggle:disabled {
-    cursor: not-allowed;
-    opacity: .65;
-}
+    .complex-table-toggle:disabled {
+        cursor: not-allowed;
+        background: #BDBDBD;
+        opacity: .65;
+    }
 
 .admin-status-cell {
     display: flex;
@@ -112,6 +113,7 @@
     min-width: 48px;
     max-width: 48px;
 }
+
 .admin-delete-form {
     margin: 0;
 }

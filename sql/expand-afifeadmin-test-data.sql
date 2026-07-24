@@ -7,7 +7,7 @@ SET XACT_ABORT ON;
 BEGIN TRY
     BEGIN TRANSACTION;
 
-    DECLARE @Now datetime2(7) = SYSUTCDATETIME();
+    DECLARE @Now datetime2(7) = DATEADD(HOUR, 3, SYSUTCDATETIME());
     DECLARE @CoordinatorUserId uniqueidentifier = '50000000-0000-0000-0000-000000000001';
 
     DECLARE @Rows TABLE
@@ -165,7 +165,7 @@ BEGIN TRY
         f.[LightDesign] = CONCAT(N'[{"Name":"Işık Tasarımcısı ', formData.N, N'"}]'),
         f.[StageMusic] = CONCAT(N'[{"Name":"Sahne Müziği Bestecisi ', formData.N, N'"}]'),
         f.[Choreography] = CONCAT(N'[{"Name":"Koreograf ', formData.N, N'"}]'),
-        f.[UpdatedDate] = GETDATE()
+        f.[UpdatedDate] = DATEADD(HOUR, 3, SYSUTCDATETIME())
     FROM [dbo].[Form] AS f
     CROSS APPLY
     (

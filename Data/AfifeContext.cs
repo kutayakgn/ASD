@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using YKBAfife.Models.Entities;
 
 namespace YKBAfife.Data;
@@ -57,6 +58,8 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
         modelBuilder.Entity<Play>(entity =>
         {
             entity.ToTable("Plays", "dbo");
+            entity.Property(x => x.RecordType)
+                .Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
             entity.Ignore(x => x.Status);
             entity.Ignore(x => x.JuryAssignments);
             entity.HasMany(x => x.PlayAwardCategories)

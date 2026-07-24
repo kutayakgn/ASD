@@ -15,7 +15,7 @@ BEGIN TRY
         EXEC sys.sp_executesql N'
             UPDATE dbo.PlayAwardCategories
             SET IsPublished = 0,
-                UpdatedAt = COALESCE(UpdatedAt, SYSUTCDATETIME())
+                UpdatedAt = COALESCE(UpdatedAt, DATEADD(HOUR, 3, SYSUTCDATETIME()))
             WHERE IsActive = 0
               AND IsPublished = 1;';
 
@@ -167,7 +167,7 @@ BEGIN
     UPDATE vote
     SET
         vote.IsPublished = 0,
-        vote.UpdatedAt = SYSUTCDATETIME()
+        vote.UpdatedAt = DATEADD(HOUR, 3, SYSUTCDATETIME())
     FROM dbo.JuryVotes AS vote
     INNER JOIN inserted AS changedVote ON changedVote.Id = vote.Id
     INNER JOIN dbo.PlayAwardCategories AS candidate
@@ -202,7 +202,7 @@ BEGIN
         UPDATE vote
         SET
             vote.IsPublished = candidate.IsPublished,
-            vote.UpdatedAt = SYSUTCDATETIME()
+            vote.UpdatedAt = DATEADD(HOUR, 3, SYSUTCDATETIME())
         FROM dbo.JuryVotes AS vote
         INNER JOIN inserted AS candidate
             ON candidate.Id = vote.PlayAwardCategoryId

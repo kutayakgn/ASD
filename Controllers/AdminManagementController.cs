@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using YKBAfife.Business.Helpers;
 using YKBAfife.Data;
+using YKBAfife.Helpers;
 using YKBAfife.Models.Entities;
 using YKBAfife.Models.ViewModels;
 using YKBAfife.Services.Audit;
@@ -60,7 +61,7 @@ public sealed class AdminManagementController(
 
         var oldValue = admin.IsActive;
         admin.IsActive = isActive;
-        admin.UpdatedAt = DateTime.UtcNow;
+        admin.UpdatedAt = TurkeyTime.Now;
         admin.UpdatedBy = currentUserId;
         await context.SaveChangesAsync(cancellationToken);
         await activityLogger.LogAsync(
@@ -128,7 +129,7 @@ public sealed class AdminManagementController(
             Username = model.Username,
             Email = model.Email,
             PasswordHash = PasswordHashHelper.HashPassword(model.Password),
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = TurkeyTime.Now,
             CreatedBy = currentUserId,
             IsPublished = true,
             IsActive = model.IsActive!.Value,
@@ -275,7 +276,7 @@ public sealed class AdminManagementController(
         admin.Username = model.Username;
         admin.Email = model.Email;
         admin.IsActive = requestedIsActive;
-        admin.UpdatedAt = DateTime.UtcNow;
+        admin.UpdatedAt = TurkeyTime.Now;
         admin.UpdatedBy = currentUserId;
         if (!string.IsNullOrWhiteSpace(model.Password))
         {
@@ -323,7 +324,7 @@ public sealed class AdminManagementController(
 
         admin.IsPublished = false;
         admin.IsActive = false;
-        admin.UpdatedAt = DateTime.UtcNow;
+        admin.UpdatedAt = TurkeyTime.Now;
         admin.UpdatedBy = currentUserId;
         await context.SaveChangesAsync(cancellationToken);
         await activityLogger.LogAsync(

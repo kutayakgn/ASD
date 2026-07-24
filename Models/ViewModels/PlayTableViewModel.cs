@@ -43,6 +43,7 @@ public sealed class PlayTableRowViewModel
     public string PlayName { get; init; } = string.Empty;
     public string TheaterName { get; init; } = string.Empty;
     public bool RecordType { get; init; }
+    public bool IsNew { get; init; }
     public DateTime? CreatedAt { get; init; }
     public bool JuriOylamaStatus { get; init; }
     public bool KunyeGirisStatus { get; init; }

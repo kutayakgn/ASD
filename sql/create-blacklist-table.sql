@@ -14,7 +14,7 @@ BEGIN
         PlayId uniqueidentifier NOT NULL,
         CreatedBy uniqueidentifier NOT NULL,
         CreatedOn datetime2(0) NOT NULL
-            CONSTRAINT DF_Blacklist_CreatedOn DEFAULT SYSUTCDATETIME(),
+            CONSTRAINT DF_Blacklist_CreatedOn DEFAULT DATEADD(HOUR, 3, SYSUTCDATETIME()),
         IsPublished bit NOT NULL
             CONSTRAINT DF_Blacklist_IsPublished DEFAULT (1),
         CONSTRAINT PK_Blacklist PRIMARY KEY CLUSTERED (Id),

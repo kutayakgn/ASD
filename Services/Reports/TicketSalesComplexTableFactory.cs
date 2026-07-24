@@ -63,7 +63,7 @@ public static class TicketSalesComplexTableFactory
             [
                 Cell(row.JuryName),
                 Cell(row.PlayName),
-                Cell(row.Date?.ToLocalTime().ToString("dd.MM.yyyy", CultureInfo.CurrentCulture) ?? "-"),
+                Cell(row.Date?.ToString("dd.MM.yyyy", CultureInfo.CurrentCulture) ?? "-"),
                 Cell($"{row.TicketFee.ToString("N2", CultureInfo.CurrentCulture)} TL")
             ]
         };

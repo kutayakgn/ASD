@@ -18,7 +18,7 @@ public static class JuryWatchedPlayExcelExportFactory
         Rows = report.Rows.Select(row => (IReadOnlyList<ExcelExportCell>)
         [
             new ExcelExportCell { Value = row.PlayName },
-            new ExcelExportCell { Value = row.WatchedAt?.ToLocalTime().ToString("dd.MM.yyyy") ?? "-" }
+            new ExcelExportCell { Value = row.WatchedAt?.ToString("dd.MM.yyyy") ?? "-" }
         ]).ToArray(),
         FooterLines = [$"Toplam kayıt sayısı: {report.Rows.Count}"]
     };

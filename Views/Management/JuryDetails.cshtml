@@ -4,10 +4,10 @@
 
     string DisplayValue(string? value) => string.IsNullOrWhiteSpace(value) ? "-" : value;
     string DateValue(DateTime? value) => value.HasValue
-        ? value.Value.ToLocalTime().ToString("dd.MM.yyyy")
+        ? value.Value.ToString("dd.MM.yyyy")
         : "-";
     string AuditValue(string? userName, DateTime? date) => date.HasValue
-        ? $"{date.Value.ToLocalTime():dd.MM.yyyy} / {DisplayValue(userName)}"
+        ? $"{date.Value:dd.MM.yyyy} / {DisplayValue(userName)}"
         : DisplayValue(userName);
 }
 

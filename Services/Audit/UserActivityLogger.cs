@@ -1,4 +1,5 @@
 using YKBAfife.Data;
+using YKBAfife.Helpers;
 using YKBAfife.Models.Entities;
 
 namespace YKBAfife.Services.Audit;
@@ -32,7 +33,7 @@ public sealed class UserActivityLogger(
             Username = Truncate(username?.Trim(), 100) ?? string.Empty,
             EventType = Truncate(eventType, 50) ?? throw new ArgumentException("Event type is required.", nameof(eventType)),
             IsSuccessful = isSuccessful,
-            OccurredAt = DateTime.UtcNow,
+            OccurredAt = TurkeyTime.Now,
             IpAddress = Truncate(httpContext?.Connection.RemoteIpAddress?.ToString(), 64),
             UserAgent = Truncate(httpContext?.Request.Headers.UserAgent.ToString(), 1000),
             Application = "AfifeAdmin",

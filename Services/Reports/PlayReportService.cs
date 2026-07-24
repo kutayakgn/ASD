@@ -51,6 +51,8 @@ public sealed class PlayReportService(AfifeContext context) : IPlayReportService
             PlayName = play.PlayName,
             TheaterName = play.TheaterName,
             RecordType = play.RecordType,
+            IsNew = !play.RecordType &&
+                    (!play.UpdatedAt.HasValue || play.UpdatedAt == play.CreatedAt),
             CreatedAt = play.CreatedAt,
             JuriOylamaStatus = !play.RecordType && play.JuriOylamaStatus,
             KunyeGirisStatus = !play.RecordType && play.KunyeGirisStatus,
@@ -83,29 +85,32 @@ public sealed class PlayReportService(AfifeContext context) : IPlayReportService
         string sortDirection)
     {
         var descending = sortDirection == "desc";
+        var prioritizedRows = rows
+            .OrderByDescending(row => row.IsNew)
+            .ThenByDescending(row => row.IsNew ? row.CreatedAt : null);
+
         return sortBy switch
         {
             PlaySortColumns.TheaterName => descending
-                ? rows.OrderByDescending(row => row.TheaterName).ThenBy(row => row.PlayId)
-                : rows.OrderBy(row => row.TheaterName).ThenBy(row => row.PlayId),
+                ? prioritizedRows.ThenByDescending(row => row.TheaterName).ThenBy(row => row.PlayId)
+                : prioritizedRows.ThenBy(row => row.TheaterName).ThenBy(row => row.PlayId),
             PlaySortColumns.RecordType => descending
-                ? rows.OrderByDescending(row => row.RecordType).ThenBy(row => row.PlayName)
-                : rows.OrderBy(row => row.RecordType).ThenBy(row => row.PlayName),
+                ? prioritizedRows.ThenByDescending(row => row.RecordType).ThenBy(row => row.PlayName)
+                : prioritizedRows.ThenBy(row => row.RecordType).ThenBy(row => row.PlayName),
             PlaySortColumns.CreatedAt => descending
-                ? rows.OrderByDescending(row => row.CreatedAt).ThenBy(row => row.PlayName)
-                : rows.OrderBy(row => row.CreatedAt).ThenBy(row => row.PlayName),
+                ? prioritizedRows.ThenByDescending(row => row.CreatedAt).ThenBy(row => row.PlayName)
+                : prioritizedRows.ThenBy(row => row.CreatedAt).ThenBy(row => row.PlayName),
             PlaySortColumns.JuryVotingStatus => descending
-                ? rows.OrderByDescending(row => row.JuriOylamaStatus).ThenBy(row => row.PlayName)
-                : rows.OrderBy(row => row.JuriOylamaStatus).ThenBy(row => row.PlayName),
+                ? prioritizedRows.ThenByDescending(row => row.JuriOylamaStatus).ThenBy(row => row.PlayName)
+                : prioritizedRows.ThenBy(row => row.JuriOylamaStatus).ThenBy(row => row.PlayName),
             PlaySortColumns.KunyeGirisStatus => descending
-                ? rows.OrderByDescending(row => row.KunyeGirisStatus).ThenBy(row => row.PlayName)
-                : rows.OrderBy(row => row.KunyeGirisStatus).ThenBy(row => row.PlayName),
+                ? prioritizedRows.ThenByDescending(row => row.KunyeGirisStatus).ThenBy(row => row.PlayName)
+                : prioritizedRows.ThenBy(row => row.KunyeGirisStatus).ThenBy(row => row.PlayName),
             _ => descending
-                ? rows.OrderByDescending(row => row.PlayName).ThenBy(row => row.PlayId)
-                : rows.OrderBy(row => row.PlayName).ThenBy(row => row.PlayId)
+                ? prioritizedRows.ThenByDescending(row => row.PlayName).ThenBy(row => row.PlayId)
+                : prioritizedRows.ThenBy(row => row.PlayName).ThenBy(row => row.PlayId)
         };
     }
-
     private static PlayTableQuery Normalize(PlayTableQuery query)
     {
         var allowedSortColumns = new HashSet<string>(StringComparer.Ordinal)

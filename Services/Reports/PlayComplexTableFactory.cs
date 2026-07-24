@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Encodings.Web;
 using YKBAfife.Helpers;
 using YKBAfife.Models.Components;
 using YKBAfife.Models.ViewModels;
@@ -25,6 +26,10 @@ public static class PlayComplexTableFactory
         {
             var slug = SlugHelper.Resolve(row.Slug, row.PlayName);
             var detailsUrl = $"/oyunlar/{Uri.EscapeDataString(slug)}";
+            var encodedPlayName = HtmlEncoder.Default.Encode(row.PlayName);
+            var playNameContent = row.IsNew
+                ? $"<span class=\"play-name-with-tag\"><span>{encodedPlayName}</span><span class=\"play-new-tag\">Yeni</span></span>"
+                : row.PlayName;
             return new ComplexTableRowViewModel
             {
                 Id = $"play-{row.PlayId:N}",
@@ -33,10 +38,10 @@ public static class PlayComplexTableFactory
                 NavigationAccessibleLabel = $"{row.PlayName} oyun detayına git",
                 Cells =
                 [
-                    new() { Content = row.PlayName },
+                    new() { Content = playNameContent, IsHtml = row.IsNew },
                     new() { Content = row.TheaterName },
                     new() { Content = row.RecordType ? "Admin Giriş" : "Künye Giriş" },
-                    new() { Content = row.CreatedAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm", CultureInfo.CurrentCulture) ?? "-" },
+                    new() { Content = row.CreatedAt?.ToString("dd.MM.yyyy HH:mm", CultureInfo.CurrentCulture) ?? "-" },
                     new()
                     {
                         ToggleUrl = $"/oyunlar/{row.PlayId:D}/juri-oylama-status",

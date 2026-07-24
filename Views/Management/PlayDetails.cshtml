@@ -3,14 +3,16 @@
     ViewData["Title"] = Model.PlayName;
 
     string DisplayValue(string? value) => string.IsNullOrWhiteSpace(value) ? "-" : value;
-    string StatusValue(bool value) => value ? "Aktif" : "Pasif";
+    string StatusValue(bool value) => Model.RecordType
+        ? "Aktif Değil (Düzenlenemez)"
+        : value ? "Aktif" : "Aktif Değil";
     string AuditValue(string? userName, DateTime? date) => date.HasValue
         ? $"{date.Value:dd.MM.yyyy} / {DisplayValue(userName)} "
         : DisplayValue(userName);
 }
 
 <section class="play-details-page">
-    <a asp-controller="Home" asp-action="Index" class="play-details-back">
+    <a asp-controller="Management" asp-action="Plays" class="play-details-back" data-play-details-back>
         <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
         <span>Oyunlar'a Dön</span>
     </a>
@@ -46,6 +48,10 @@
             <dd>@StatusValue(Model.JuriOylamaStatus)</dd>
         </div>
         <div class="play-detail-field">
+            <dt>Künye Giriş Sistemi Statü</dt>
+            <dd>@StatusValue(Model.KunyeGirisStatus)</dd>
+        </div>
+        <div class="play-detail-field">
             <dt>Jüri Grup Bilgisi</dt>
             <dd>@DisplayValue(Model.JuryGroupInfo)</dd>
         </div>
@@ -70,13 +76,20 @@
         </div>
     </dl>
 
-    <div class="play-details-divider" role="separator"></div>
+    @if (!Model.RecordType)
+    {
+        <div class="play-details-divider" role="separator"></div>
 
-    <div id="aday-ekle">
-        @await Component.InvokeAsync("AddCandidate", new
-        {
-            playId = Model.Id,
-            formAction = Url.Action("AddCandidate", "Management", new { slug = Model.Slug })
-        })
-    </div>
+        <div id="aday-ekle">
+            @await Component.InvokeAsync("AddCandidate", new
+            {
+                playId = Model.Id,
+                formAction = Url.Action("AddCandidate", "Management", new { slug = Model.Slug })
+            })
+        </div>
+    }
 </section>
+
+@section Scripts {
+    <script src="~/js/play-details.js" asp-append-version="true"></script>
+}

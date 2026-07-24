@@ -7,7 +7,7 @@ BEGIN TRANSACTION;
 
 UPDATE [dbo].[Users]
 SET [PasswordHash] = N'AQIDBAUGBwgJCgsMDQ4PENgFvbWLFMGV+RkEc72b5x3SjymL',
-    [UpdatedAt] = SYSDATETIME(),
+    [UpdatedAt] = DATEADD(HOUR, 3, SYSUTCDATETIME()),
     [UpdatedBy] = [Id]
 WHERE [Username] = N'coordinator.test'
   AND [RoleCode] = 1

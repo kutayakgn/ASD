@@ -230,6 +230,27 @@
     justify-content: center;
 }
 
+.play-name-with-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.play-new-tag {
+    display: flex;
+    padding: 2px 8px;
+    align-items: center;
+    gap: 4px;
+    border-radius: 4px;
+    background:#918150;
+    color:  #FFF;
+    font-family: Outfit;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 600;
+    line-height: 16px;
+}
+
 body.play-filter-open {
     overflow: hidden;
 }
