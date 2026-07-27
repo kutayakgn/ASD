@@ -41,6 +41,7 @@ public sealed class AddPlayJuryGroupViewModel
 {
     public string Key { get; init; } = string.Empty;
     public string Name { get; init; } = string.Empty;
+    public bool CanSelectAll { get; init; } = true;
     public IReadOnlyList<AddPlayJuryOptionViewModel> Juries { get; init; } = [];
 }
 

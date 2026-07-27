@@ -33,6 +33,43 @@ BEGIN TRY
         ALTER TABLE dbo.[Manager] ADD IsPublished bit NOT NULL
             CONSTRAINT DF_Manager_IsPublished DEFAULT (1) WITH VALUES;
 
+    /* Database-side defaults ensure omitted IsPublished values are inserted as 1. */
+    IF NOT EXISTS (SELECT 1 FROM sys.default_constraints dc JOIN sys.columns c ON c.object_id = dc.parent_object_id AND c.column_id = dc.parent_column_id WHERE dc.parent_object_id = OBJECT_ID(N'dbo.Announcements') AND c.name = N'IsPublished')
+        ALTER TABLE dbo.Announcements ADD CONSTRAINT DF_Announcements_IsPublished_SoftDelete DEFAULT (1) FOR IsPublished;
+    IF NOT EXISTS (SELECT 1 FROM sys.default_constraints dc JOIN sys.columns c ON c.object_id = dc.parent_object_id AND c.column_id = dc.parent_column_id WHERE dc.parent_object_id = OBJECT_ID(N'dbo.AwardCategories') AND c.name = N'IsPublished')
+        ALTER TABLE dbo.AwardCategories ADD CONSTRAINT DF_AwardCategories_IsPublished_SoftDelete DEFAULT (1) FOR IsPublished;
+    IF NOT EXISTS (SELECT 1 FROM sys.default_constraints dc JOIN sys.columns c ON c.object_id = dc.parent_object_id AND c.column_id = dc.parent_column_id WHERE dc.parent_object_id = OBJECT_ID(N'dbo.Blacklist') AND c.name = N'IsPublished')
+        ALTER TABLE dbo.Blacklist ADD CONSTRAINT DF_Blacklist_IsPublished_SoftDelete DEFAULT (1) FOR IsPublished;
+    IF NOT EXISTS (SELECT 1 FROM sys.default_constraints dc JOIN sys.columns c ON c.object_id = dc.parent_object_id AND c.column_id = dc.parent_column_id WHERE dc.parent_object_id = OBJECT_ID(N'dbo.Configs') AND c.name = N'IsPublished')
+        ALTER TABLE dbo.Configs ADD CONSTRAINT DF_Configs_IsPublished_SoftDelete DEFAULT (1) FOR IsPublished;
+    IF NOT EXISTS (SELECT 1 FROM sys.default_constraints dc JOIN sys.columns c ON c.object_id = dc.parent_object_id AND c.column_id = dc.parent_column_id WHERE dc.parent_object_id = OBJECT_ID(N'dbo.Form') AND c.name = N'IsPublished')
+        ALTER TABLE dbo.Form ADD CONSTRAINT DF_Form_IsPublished_SoftDelete DEFAULT (1) FOR IsPublished;
+    IF NOT EXISTS (SELECT 1 FROM sys.default_constraints dc JOIN sys.columns c ON c.object_id = dc.parent_object_id AND c.column_id = dc.parent_column_id WHERE dc.parent_object_id = OBJECT_ID(N'dbo.[Group]') AND c.name = N'IsPublished')
+        ALTER TABLE dbo.[Group] ADD CONSTRAINT DF_Group_IsPublished_SoftDelete DEFAULT (1) FOR IsPublished;
+    IF NOT EXISTS (SELECT 1 FROM sys.default_constraints dc JOIN sys.columns c ON c.object_id = dc.parent_object_id AND c.column_id = dc.parent_column_id WHERE dc.parent_object_id = OBJECT_ID(N'dbo.Images') AND c.name = N'IsPublished')
+        ALTER TABLE dbo.Images ADD CONSTRAINT DF_Images_IsPublished_SoftDelete DEFAULT (1) FOR IsPublished;
+    IF NOT EXISTS (SELECT 1 FROM sys.default_constraints dc JOIN sys.columns c ON c.object_id = dc.parent_object_id AND c.column_id = dc.parent_column_id WHERE dc.parent_object_id = OBJECT_ID(N'dbo.JuryAssignedPlays') AND c.name = N'IsPublished')
+        ALTER TABLE dbo.JuryAssignedPlays ADD CONSTRAINT DF_JuryAssignedPlays_IsPublished_SoftDelete DEFAULT (1) FOR IsPublished;
+    IF NOT EXISTS (SELECT 1 FROM sys.default_constraints dc JOIN sys.columns c ON c.object_id = dc.parent_object_id AND c.column_id = dc.parent_column_id WHERE dc.parent_object_id = OBJECT_ID(N'dbo.JuryGameTicketFees') AND c.name = N'IsPublished')
+        ALTER TABLE dbo.JuryGameTicketFees ADD CONSTRAINT DF_JuryGameTicketFees_IsPublished_SoftDelete DEFAULT (1) FOR IsPublished;
+    IF NOT EXISTS (SELECT 1 FROM sys.default_constraints dc JOIN sys.columns c ON c.object_id = dc.parent_object_id AND c.column_id = dc.parent_column_id WHERE dc.parent_object_id = OBJECT_ID(N'dbo.JuryVotes') AND c.name = N'IsPublished')
+        ALTER TABLE dbo.JuryVotes ADD CONSTRAINT DF_JuryVotes_IsPublished_SoftDelete DEFAULT (1) FOR IsPublished;
+    IF NOT EXISTS (SELECT 1 FROM sys.default_constraints dc JOIN sys.columns c ON c.object_id = dc.parent_object_id AND c.column_id = dc.parent_column_id WHERE dc.parent_object_id = OBJECT_ID(N'dbo.[Log]') AND c.name = N'IsPublished')
+        ALTER TABLE dbo.[Log] ADD CONSTRAINT DF_Log_IsPublished_SoftDelete DEFAULT (1) FOR IsPublished;
+    IF NOT EXISTS (SELECT 1 FROM sys.default_constraints dc JOIN sys.columns c ON c.object_id = dc.parent_object_id AND c.column_id = dc.parent_column_id WHERE dc.parent_object_id = OBJECT_ID(N'dbo.[Manager]') AND c.name = N'IsPublished')
+        ALTER TABLE dbo.[Manager] ADD CONSTRAINT DF_Manager_IsPublished_SoftDelete DEFAULT (1) FOR IsPublished;
+    IF NOT EXISTS (SELECT 1 FROM sys.default_constraints dc JOIN sys.columns c ON c.object_id = dc.parent_object_id AND c.column_id = dc.parent_column_id WHERE dc.parent_object_id = OBJECT_ID(N'dbo.PlayAwardCategories') AND c.name = N'IsPublished')
+        ALTER TABLE dbo.PlayAwardCategories ADD CONSTRAINT DF_PlayAwardCategories_IsPublished_SoftDelete DEFAULT (1) FOR IsPublished;
+    IF NOT EXISTS (SELECT 1 FROM sys.default_constraints dc JOIN sys.columns c ON c.object_id = dc.parent_object_id AND c.column_id = dc.parent_column_id WHERE dc.parent_object_id = OBJECT_ID(N'dbo.Plays') AND c.name = N'IsPublished')
+        ALTER TABLE dbo.Plays ADD CONSTRAINT DF_Plays_IsPublished_SoftDelete DEFAULT (1) FOR IsPublished;
+    IF NOT EXISTS (SELECT 1 FROM sys.default_constraints dc JOIN sys.columns c ON c.object_id = dc.parent_object_id AND c.column_id = dc.parent_column_id WHERE dc.parent_object_id = OBJECT_ID(N'dbo.PlayStatuses') AND c.name = N'IsPublished')
+        ALTER TABLE dbo.PlayStatuses ADD CONSTRAINT DF_PlayStatuses_IsPublished_SoftDelete DEFAULT (1) FOR IsPublished;
+    IF NOT EXISTS (SELECT 1 FROM sys.default_constraints dc JOIN sys.columns c ON c.object_id = dc.parent_object_id AND c.column_id = dc.parent_column_id WHERE dc.parent_object_id = OBJECT_ID(N'dbo.Roles') AND c.name = N'IsPublished')
+        ALTER TABLE dbo.Roles ADD CONSTRAINT DF_Roles_IsPublished_SoftDelete DEFAULT (1) FOR IsPublished;
+    IF NOT EXISTS (SELECT 1 FROM sys.default_constraints dc JOIN sys.columns c ON c.object_id = dc.parent_object_id AND c.column_id = dc.parent_column_id WHERE dc.parent_object_id = OBJECT_ID(N'dbo.Users') AND c.name = N'IsPublished')
+        ALTER TABLE dbo.Users ADD CONSTRAINT DF_Users_IsPublished_SoftDelete DEFAULT (1) FOR IsPublished;
+    IF NOT EXISTS (SELECT 1 FROM sys.default_constraints dc JOIN sys.columns c ON c.object_id = dc.parent_object_id AND c.column_id = dc.parent_column_id WHERE dc.parent_object_id = OBJECT_ID(N'dbo.UsersLog') AND c.name = N'IsPublished')
+        ALTER TABLE dbo.UsersLog ADD CONSTRAINT DF_UsersLog_IsPublished_SoftDelete DEFAULT (1) FOR IsPublished;
     IF EXISTS
     (
         SELECT 1
@@ -86,7 +123,7 @@ BEGIN TRY
     WHERE ranked.VoteOrder > 1;
 
     CREATE UNIQUE INDEX UX_JuryVotes_JuryId_PlayAwardCategoryId
-        ON dbo.JuryVotes (JuryId, PlayAwardCategoryId)
+        ON dbo.JuryVotes (PlayAwardCategoryId, JuryId)
         WHERE IsPublished = 1;
 
     IF EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.JuryAssignedPlays') AND name = N'UX_JuryAssignedPlays_PlayId_JuryId')
@@ -111,15 +148,41 @@ BEGIN TRY
         ON dbo.PlayAwardCategories (PlayId, AwardCategoryCode, RoleCode, IsCurrent)
         WHERE IsCurrent = 1 AND IsPublished = 1;
 
+    IF EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.Blacklist') AND name = N'UX_Blacklist_JuryId_PlayId_Published')
+        DROP INDEX UX_Blacklist_JuryId_PlayId_Published ON dbo.Blacklist;
+    CREATE UNIQUE INDEX UX_Blacklist_JuryId_PlayId_Published
+        ON dbo.Blacklist (JuryId, PlayId) WHERE IsPublished = 1;
+
     IF EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.Users') AND name = N'UX_Users_Admin_Username')
         DROP INDEX UX_Users_Admin_Username ON dbo.Users;
-    CREATE UNIQUE INDEX UX_Users_Admin_Username
-        ON dbo.Users (Username) WHERE RoleCode = 1 AND IsPublished = 1;
-
     IF EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.Users') AND name = N'UX_Users_Admin_Email')
         DROP INDEX UX_Users_Admin_Email ON dbo.Users;
-    CREATE UNIQUE INDEX UX_Users_Admin_Email
-        ON dbo.Users (Email) WHERE RoleCode = 1 AND IsPublished = 1;
+    IF EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.Users') AND name = N'UX_Users_RoleCode_Username_Published')
+        DROP INDEX UX_Users_RoleCode_Username_Published ON dbo.Users;
+    IF EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.Users') AND name = N'UX_Users_RoleCode_Email_Published')
+        DROP INDEX UX_Users_RoleCode_Email_Published ON dbo.Users;
+
+    IF EXISTS
+    (
+        SELECT 1 FROM dbo.Users
+        WHERE IsPublished = 1
+        GROUP BY RoleCode, Username
+        HAVING COUNT_BIG(*) > 1
+    )
+        THROW 51701, N'Published Users contain duplicate RoleCode + Username values.', 1;
+    IF EXISTS
+    (
+        SELECT 1 FROM dbo.Users
+        WHERE IsPublished = 1
+        GROUP BY RoleCode, Email
+        HAVING COUNT_BIG(*) > 1
+    )
+        THROW 51702, N'Published Users contain duplicate RoleCode + Email values.', 1;
+
+    CREATE UNIQUE INDEX UX_Users_RoleCode_Username_Published
+        ON dbo.Users (RoleCode, Username) WHERE IsPublished = 1;
+    CREATE UNIQUE INDEX UX_Users_RoleCode_Email_Published
+        ON dbo.Users (RoleCode, Email) WHERE IsPublished = 1;
     COMMIT TRANSACTION;
 END TRY
 BEGIN CATCH
@@ -332,8 +395,22 @@ BEGIN
     INNER JOIN deleted source ON source.Id = target.Id;
 END;
 GO
-CREATE OR ALTER TRIGGER dbo.TR_Plays_SoftDelete ON dbo.Plays INSTEAD OF DELETE AS
-BEGIN SET NOCOUNT ON; UPDATE target SET IsPublished = 0 FROM dbo.Plays target INNER JOIN deleted source ON source.Id = target.Id; END;
+CREATE OR ALTER TRIGGER dbo.TR_Plays_SoftDelete
+ON dbo.Plays
+INSTEAD OF DELETE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF EXISTS (SELECT 1 FROM deleted WHERE RecordType = 0)
+        THROW 51502, N'Kunye Giris Sistemi kaynakli oyunlar silinemez.', 1;
+
+    UPDATE target
+    SET IsPublished = 0
+    FROM dbo.Plays target
+    INNER JOIN deleted source ON source.Id = target.Id
+    WHERE source.RecordType = 1;
+END;
 GO
 CREATE OR ALTER TRIGGER dbo.TR_PlayStatuses_SoftDelete ON dbo.PlayStatuses INSTEAD OF DELETE AS
 BEGIN SET NOCOUNT ON; UPDATE target SET IsPublished = 0 FROM dbo.PlayStatuses target INNER JOIN deleted source ON source.Id = target.Id; END;

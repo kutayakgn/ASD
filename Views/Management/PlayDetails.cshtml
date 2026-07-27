@@ -33,7 +33,25 @@
                 <a asp-controller="Management"
                    asp-action="VotingHistory"
                    asp-route-playId="@Model.Id"
+                   asp-route-fromPlayDetails="true"
+                   asp-route-returnUrl="@Model.ReturnUrl"
                    class="play-detail-action play-detail-action-secondary">Oylamaları Gör</a>
+            }
+            @if (Model.RecordType)
+            {
+                <form asp-controller="Management"
+                      asp-action="DeletePlay"
+                      asp-route-id="@Model.Id"
+                      method="post"
+                      class="play-detail-action-form"
+                      data-generic-confirm
+                      data-confirm-message="Silmek istediğinize emin misiniz?"
+                      data-confirm-text="Evet"
+                      data-cancel-text="İptal">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                    <button type="submit" class="play-detail-action play-detail-action-danger">Oyunu Sil</button>
+                </form>
             }
             <a asp-controller="Management"
                asp-action="EditPlay"

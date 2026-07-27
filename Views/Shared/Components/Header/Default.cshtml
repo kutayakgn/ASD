@@ -68,7 +68,7 @@
                 <ul class="navbar-nav ms-auto align-items-xl-center admin-menu">
                     <li class="nav-item"><a class="nav-link@(string.Equals(currentController, "Home", StringComparison.OrdinalIgnoreCase) && string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase) ? " active" : string.Empty)" asp-controller="Home" asp-action="Index">Anasayfa</a></li>
                     <li class="nav-item"><a class="nav-link@(ActiveClass("Juries", "AddJury", "JuryDetails", "EditJury"))" asp-controller="Management" asp-action="Juries">Jüriler</a></li>
-                    <li class="nav-item"><a class="nav-link@(ActiveClass("Plays", "PlayDetails", "AddPlay", "EditPlay", "CandidateDetails"))" asp-controller="Management" asp-action="Plays">Oyunlar</a></li>
+                    <li class="nav-item"><a class="nav-link@(ActiveClass("Plays", "PlayDetails", "AddPlay", "EditPlay", "CandidateDetails", "EditCandidate"))" asp-controller="Management" asp-action="Plays">Oyunlar</a></li>
                     <li class="nav-item"><a class="nav-link@(ActiveClass("Rankings"))" asp-controller="Management" asp-action="Rankings">Sıralamalar</a></li>
                     <li class="nav-item dropdown admin-other-menu">
                         <button class="nav-link dropdown-toggle admin-dropdown-toggle@(isOtherActive ? " active" : string.Empty)" type="button" data-bs-toggle="dropdown" aria-expanded="false">

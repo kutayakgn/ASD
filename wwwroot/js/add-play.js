@@ -47,6 +47,7 @@
     const syncGroupState = (group) => {
         const groupCheckbox = group.querySelector("[data-jury-group-checkbox]");
         const members = [...group.querySelectorAll("[data-jury-checkbox]")];
+        if (!groupCheckbox) return;
         const selectedCount = members.filter((member) => member.checked).length;
         groupCheckbox.checked = members.length > 0 && selectedCount === members.length;
         groupCheckbox.indeterminate = selectedCount > 0 && selectedCount < members.length;
@@ -81,7 +82,7 @@
             const selectedMembers = members.filter((member) => member.checked);
             selectionCount += selectedMembers.length;
 
-            if (groupCheckbox.checked) {
+            if (groupCheckbox?.checked) {
                 selectedValues.append(createToken(group.dataset.groupName, "group", group.dataset.groupKey));
             } else {
                 selectedMembers.forEach((member) => {

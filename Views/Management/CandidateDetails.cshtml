@@ -1,22 +1,62 @@
 @model YKBAfife.Models.ViewModels.CandidateDetailsViewModel
 @{
     ViewData["Title"] = Model.Candidate;
+
+    string DisplayValue(string? value) => string.IsNullOrWhiteSpace(value) ? "-" : value;
+    string AuditValue(string? userName, DateTime? date) =>
+        $"{DisplayValue(userName)} / {(date.HasValue ? date.Value.ToString("dd.MM.yyyy HH:mm") : "-")}";
 }
-<section class="play-details-page" aria-labelledby="candidate-details-title">
+<section class="play-details-page candidate-details-page" aria-labelledby="candidate-details-title">
     <a asp-action="PlayDetails" asp-route-slug="@Model.PlaySlug" class="play-details-back">
         <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
         <span>Oyuna Dön</span>
     </a>
+
     <header class="play-details-toolbar">
         <h1 id="candidate-details-title">Aday Detay</h1>
+        @if (Model.CanManage)
+        {
+            <div class="play-details-actions">
+                <form asp-action="DeleteCandidate"
+                      asp-route-id="@Model.Id"
+                      method="post"
+                      data-generic-confirm
+                      data-confirm-message="Adayı silmek istediğinize emin misiniz?"
+                      data-confirm-text="Evet"
+                      data-cancel-text="İptal">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="play-detail-action play-detail-action-secondary candidate-delete-action">
+                        Adayı Sil
+                    </button>
+                </form>
+                <a asp-action="EditCandidate"
+                   asp-route-id="@Model.Id"
+                   class="play-detail-action play-detail-action-primary">Adayı Düzenle</a>
+            </div>
+        }
     </header>
-    <dl class="play-details-content">
-        <div class="play-detail-field"><dt>Oyun</dt><dd>@Model.PlayName</dd></div>
-        <div class="play-detail-field"><dt>Ödül Kategorisi</dt><dd>@Model.CategoryName</dd></div>
-        <div class="play-detail-field"><dt>Adı Soyadı</dt><dd>@Model.Candidate</dd></div>
-        <div class="play-detail-field"><dt>Role Adı</dt><dd>@Model.Role</dd></div>
-        <div class="play-detail-field"><dt>Rol Değişimi</dt><dd>@Model.CurrentState</dd></div>
-        <div class="play-detail-field"><dt>Statü</dt><dd>@Model.Status</dd></div>
-        <div class="play-detail-field"><dt>Eklenme Tarihi</dt><dd>@(Model.CreatedAt?.ToString("dd.MM.yyyy HH:mm") ?? "-")</dd></div>
-    </dl>
+
+    <div class="candidate-details-layout @(Model.HasRoleAndPhoto ? "has-photo" : string.Empty)">
+        @if (Model.HasRoleAndPhoto)
+        {
+            <aside class="candidate-details-photo-panel">
+                <img src="@(Model.HasPhoto
+                              ? Url.Action("CandidatePhoto", "Management", new { id = Model.Id })
+                              : Url.Content($"~/images/awardCategoryPlaceholder/{Model.CategoryCode}.svg"))"
+                     alt="@Model.Candidate aday görseli"
+                     class="candidate-details-photo" />
+            </aside>
+        }
+
+        <dl class="play-details-content candidate-details-content">
+            <div class="play-detail-field"><dt>Oyun</dt><dd>@Model.PlayName</dd></div>
+            <div class="play-detail-field"><dt>Ödül Kategorisi</dt><dd>@Model.CategoryName</dd></div>
+            <div class="play-detail-field"><dt>Adı Soyadı</dt><dd>@Model.Candidate</dd></div>
+            <div class="play-detail-field"><dt>Rol Adı</dt><dd>@Model.Role</dd></div>
+            <div class="play-detail-field"><dt>Rol Değişimi</dt><dd>@Model.CurrentState</dd></div>
+            <div class="play-detail-field"><dt>Statü</dt><dd>@Model.Status</dd></div>
+            <div class="play-detail-field"><dt>Ekleyen</dt><dd>@AuditValue(Model.CreatedByName, Model.CreatedAt)</dd></div>
+            <div class="play-detail-field"><dt>Düzenleyen</dt><dd>@AuditValue(Model.UpdatedByName, Model.UpdatedAt)</dd></div>
+        </dl>
+    </div>
 </section>

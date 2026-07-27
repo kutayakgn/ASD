@@ -220,3 +220,63 @@
         }
     });
 })();
+(() => {
+    const closeSelect = (select, returnFocus = false) => {
+        if (!select) return;
+        const trigger = select.querySelector("[data-complex-table-select-trigger]");
+        const menu = select.querySelector("[data-complex-table-select-menu]");
+        select.classList.remove("is-open");
+        trigger?.setAttribute("aria-expanded", "false");
+        if (menu) menu.hidden = true;
+        if (returnFocus) trigger?.focus({ preventScroll: true });
+    };
+
+    const closeOtherSelects = (current) => {
+        document.querySelectorAll("[data-complex-table-select].is-open").forEach((select) => {
+            if (select !== current) closeSelect(select);
+        });
+    };
+
+    document.addEventListener("click", (event) => {
+        const option = event.target.closest("[data-complex-table-select-option]");
+        if (option) {
+            const select = option.closest("[data-complex-table-select]");
+            const input = select?.querySelector("[data-complex-table-filter]");
+            const label = select?.querySelector("[data-complex-table-select-label]");
+            if (!select || !input || !label) return;
+
+            input.value = option.dataset.value || "";
+            label.textContent = option.textContent.trim();
+            select.querySelectorAll("[data-complex-table-select-option]").forEach((item) => {
+                item.setAttribute("aria-selected", item === option ? "true" : "false");
+            });
+            closeSelect(select, true);
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+            return;
+        }
+
+        const trigger = event.target.closest("[data-complex-table-select-trigger]");
+        if (trigger) {
+            const select = trigger.closest("[data-complex-table-select]");
+            const menu = select?.querySelector("[data-complex-table-select-menu]");
+            if (!select || !menu) return;
+            const willOpen = !select.classList.contains("is-open");
+            closeOtherSelects(select);
+            select.classList.toggle("is-open", willOpen);
+            trigger.setAttribute("aria-expanded", willOpen ? "true" : "false");
+            menu.hidden = !willOpen;
+            if (willOpen) menu.querySelector('[aria-selected="true"]')?.focus({ preventScroll: true });
+            return;
+        }
+
+        document.querySelectorAll("[data-complex-table-select].is-open").forEach((select) => {
+            if (!select.contains(event.target)) closeSelect(select);
+        });
+    });
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key !== "Escape") return;
+        const select = event.target.closest("[data-complex-table-select].is-open");
+        if (select) closeSelect(select, true);
+    });
+})();

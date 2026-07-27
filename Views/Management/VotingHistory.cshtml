@@ -4,6 +4,13 @@
 }
 
 <section class="voting-history-page" aria-labelledby="voting-history-title" data-voting-history>
+    @if (!string.IsNullOrWhiteSpace(Model.PlayDetailsUrl))
+    {
+        <a href="@Model.PlayDetailsUrl" class="play-details-back voting-history-back">
+            <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
+            <span>Oyun Detayına Dön</span>
+        </a>
+    }
     <h1 id="voting-history-title">Oylama Geçmişi</h1>
 
     <div class="voting-history-filters">

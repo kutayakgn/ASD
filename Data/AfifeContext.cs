@@ -41,6 +41,12 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
             entity.Ignore(x => x.AssignedPlays);
             entity.Ignore(x => x.JuryGameTicketFees);
             entity.Ignore(x => x.JuryVotes);
+            entity.HasIndex(x => new { x.RoleCode, x.Username })
+                .IsUnique()
+                .HasFilter("[IsPublished] = 1");
+            entity.HasIndex(x => new { x.RoleCode, x.Email })
+                .IsUnique()
+                .HasFilter("[IsPublished] = 1");
             entity.HasOne(x => x.PhotoImage)
                 .WithMany(x => x.UserPhotos)
                 .HasForeignKey(x => x.PhotoImageId)
@@ -62,7 +68,13 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
         });
         modelBuilder.Entity<Play>(entity =>
         {
-            entity.ToTable("Plays", "dbo", table => table.UseSqlOutputClause(false));
+            entity.ToTable("Plays", "dbo", table =>
+            {
+                table.UseSqlOutputClause(false);
+                table.HasCheckConstraint(
+                    "CK_Plays_KunyeMustRemainPublished",
+                    "[RecordType] = 1 OR [IsPublished] = 1");
+            });
             entity.Property(x => x.RecordType)
                 .Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
             entity.Ignore(x => x.Status);
@@ -81,6 +93,12 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
         {
             entity.ToTable("PlayAwardCategories", "dbo", table => table.UseSqlOutputClause(false));
             entity.Ignore(x => x.AwardCategory);
+            entity.HasIndex(x => new { x.PlayId, x.AwardCategoryCode, x.RoleCode, x.Candidate })
+                .IsUnique()
+                .HasFilter("[IsPublished] = 1");
+            entity.HasIndex(x => new { x.PlayId, x.AwardCategoryCode, x.RoleCode, x.IsCurrent })
+                .IsUnique()
+                .HasFilter("[IsCurrent] = 1 AND [IsPublished] = 1");
             entity.HasOne(x => x.PhotoImage)
                 .WithMany(x => x.CandidatePhotos)
                 .HasForeignKey(x => x.PhotoImageId)
@@ -152,11 +170,17 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
             entity.ToTable("JuryAssignedPlays", "dbo");
             entity.Ignore(x => x.Play);
             entity.Ignore(x => x.Jury);
+            entity.HasIndex(x => new { x.PlayId, x.JuryId })
+                .IsUnique()
+                .HasFilter("[IsPublished] = 1");
         });
         modelBuilder.Entity<JuryVote>(entity =>
         {
             entity.ToTable("JuryVotes", "dbo", table => table.UseSqlOutputClause(false));
             entity.Ignore(x => x.Jury);
+            entity.HasIndex(x => new { x.PlayAwardCategoryId, x.JuryId })
+                .IsUnique()
+                .HasFilter("[IsPublished] = 1");
         });
 
         modelBuilder.Entity<JuryGameTicketFee>(entity =>
@@ -164,6 +188,9 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
             entity.ToTable("JuryGameTicketFees", "dbo");
             entity.Ignore(x => x.User);
             entity.Property(x => x.TicketFee).HasPrecision(10, 2);
+            entity.HasIndex(x => new { x.UserId, x.PlayId })
+                .IsUnique()
+                .HasFilter("[IsPublished] = 1");
         });
 
         modelBuilder.Entity<Blacklist>(entity =>
@@ -190,7 +217,7 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
-        ConvertDeletesToSoftDeletes();
+        ApplyPersistenceRules();
         return base.SaveChanges(acceptAllChangesOnSuccess);
     }
 
@@ -198,7 +225,7 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
         bool acceptAllChangesOnSuccess,
         CancellationToken cancellationToken = default)
     {
-        ConvertDeletesToSoftDeletes();
+        ApplyPersistenceRules();
         return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
     }
 
@@ -212,6 +239,8 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
                 continue;
             }
 
+            isPublishedProperty.SetDefaultValue(true);
+
             var parameter = Expression.Parameter(entityType.ClrType, "entity");
             var body = Expression.Equal(
                 Expression.Property(parameter, "IsPublished"),
@@ -221,8 +250,19 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
         }
     }
 
-    private void ConvertDeletesToSoftDeletes()
+    private void ApplyPersistenceRules()
     {
+        foreach (var entry in ChangeTracker.Entries()
+                     .Where(entry => entry.State == EntityState.Added)
+                     .ToArray())
+        {
+            var isPublishedProperty = entry.Metadata.FindProperty("IsPublished");
+            if (isPublishedProperty?.ClrType == typeof(bool))
+            {
+                entry.Property("IsPublished").CurrentValue = true;
+            }
+        }
+
         foreach (var entry in ChangeTracker.Entries()
                      .Where(entry => entry.State == EntityState.Deleted)
                      .ToArray())

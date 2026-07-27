@@ -20,6 +20,11 @@ candidate slots in the category:
 `MultiCandidate` does not limit historical rows. A single-slot category can keep
 old candidate rows after a replacement, but only one row can be current.
 
+`HasRoleAndPhoto` controls whether the add-candidate UI requires a role name
+and offers an optional candidate photo. Its initial values mirror `MultiCandidate`;
+changing the two metadata values independently requires a deliberate contract review.
+Category 1001 is system-managed and is never offered by the add-candidate UI.
+
 ## System-managed category 1001
 
 Every `Plays.RecordType = 0` (Kunye) play has exactly one canonical category 1001
@@ -43,6 +48,8 @@ allocated once for a new role and must be reused by every replacement in that ro
 it must never be randomly regenerated for a replacement.
 
 For `MultiCandidate = 1`, `RoleCode` must be positive and `Role` must be present.
+Within a play, a normalized role name cannot belong to two different logical RoleCodes, even across categories. Old/current candidates in the same logical role group must share the same Role value. Editing that Role updates every published row in the same PlayId + AwardCategoryCode + RoleCode group after explicit confirmation. The group rename must be executed as one set-based SQL statement so the role-integrity trigger never observes a temporary mixed-role group.
+
 Within one play/category, one role name maps to one RoleCode and one RoleCode maps
 to one role name. Different roles may each have a current candidate.
 
@@ -76,17 +83,17 @@ otherwise change a vote for another candidate.
 
 ## Application flow
 
-The add-candidate UI excludes category 1001. It asks for Role only when the selected
-category has `MultiCandidate = 1`. `Yeni Aday` creates a new slot; `Aday/Rol
-Degisimi` finds the current slot by role name, closes it, and inserts the replacement
-with the same RoleCode. The operation runs in a serializable transaction and the
-database constraints remain the final concurrency guard.
+The add-candidate UI excludes category 1001. It asks for Role and offers Photo when the selected category has `HasRoleAndPhoto = 1`. `Yeni Aday` allocates a positive role code from 1-9999 that is unused by any published logical role in the play. `Aday/Rol Degisimi` identifies the selected current candidate by GUID, closes it, and inserts the replacement with exactly the same Role and RoleCode. The operation runs in a serializable transaction and the database constraints remain the final concurrency guard.
 
 ## Operational scripts
 
 Run `sql/add-award-category-multiplicity-and-default-play-category.sql` once on each
 shared database. It adds metadata, normalizes the canonical 1001 slot without
 deleting legacy rows, backfills missing defaults, and installs enforcement triggers.
+
+Run `sql/add-award-category-role-photo-metadata.sql` after the multiplicity migration.
+It adds `HasRoleAndPhoto` without changing CategoryCode values and initially mirrors
+the existing `MultiCandidate` metadata.
 
 Run `sql/test-candidate-role-and-category-scenarios.sql` after the migration. Every
 test is wrapped in a transaction and rolled back, so no test data remains.

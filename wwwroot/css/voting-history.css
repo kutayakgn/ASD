@@ -121,6 +121,10 @@
     font-size: 13px;
 }
 
+.voting-history-back {
+    width: fit-content;
+    margin-bottom: 16px;
+}
 .voting-history-page {
     padding: 24px 16px 48px 16px;
     width: min(100%,1440px);

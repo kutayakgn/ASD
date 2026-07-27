@@ -1,18 +1,17 @@
 @model YKBAfife.Models.Components.AddCandidateViewModel
+@{
+    var selectedPlay = Model.Plays.FirstOrDefault(play => play.Selected);
+}
 
 <section class="add-candidate" data-add-candidate>
     <header class="add-candidate-header"><h2>Aday Ekle</h2></header>
 
-    @if (TempData["CandidateSuccess"] is string successMessage)
-    {
-        <div class="add-candidate-message add-candidate-message-success" role="status">@successMessage</div>
-    }
-    @if (TempData["CandidateError"] is string errorMessage)
-    {
-        <div class="add-candidate-message add-candidate-message-error" role="alert">@errorMessage</div>
-    }
-
-    <form method="post" action="@Model.FormAction" class="add-candidate-form">
+    <form method="post"
+          action="@Model.FormAction"
+          enctype="multipart/form-data"
+          class="add-candidate-form"
+          data-candidate-form
+          novalidate>
         @Html.AntiForgeryToken()
         <fieldset class="add-candidate-mode-group">
             <legend class="visually-hidden">Aday işlem türü</legend>
@@ -20,43 +19,153 @@
             <label class="add-candidate-mode"><input type="radio" asp-for="Input.Mode" value="change" /><span>Aday/Rol Değişimi</span></label>
         </fieldset>
 
-        <div data-candidate-fields="new change">
-            <div class="add-candidate-grid">
-                <div class="add-candidate-field">
-                    <label asp-for="Input.PlayId">Oyun Adı</label>
-                    <select asp-for="Input.PlayId" asp-items="Model.Plays" disabled="@Model.LockPlay"><option value="">Oyun seçiniz</option></select>
-                    @if (Model.LockPlay) { <input type="hidden" asp-for="Input.PlayId" /> }
+        <div class="add-candidate-grid">
+            <div class="add-candidate-field">
+                <label asp-for="Input.PlayId">Oyun Adı</label>
+                <div class="add-candidate-select@(Model.LockPlay ? " is-disabled" : string.Empty)" data-candidate-select>
+                    <input asp-for="Input.PlayId" type="hidden" data-candidate-select-value />
+                    <button type="button"
+                            class="add-candidate-select-trigger"
+                            aria-haspopup="listbox"
+                            aria-expanded="false"
+                            data-candidate-select-trigger
+                            disabled="@Model.LockPlay">
+                        <span class="@(selectedPlay is null ? "is-placeholder" : string.Empty)" data-candidate-select-label>
+                            @(selectedPlay?.Text ?? "Oyun seçiniz")
+                        </span>
+                        <img src="~/icons/angle-down.svg" alt="" aria-hidden="true" />
+                    </button>
+                    <div class="add-candidate-select-menu" role="listbox" data-candidate-select-menu hidden>
+                        @foreach (var play in Model.Plays)
+                        {
+                            <button type="button"
+                                    class="add-candidate-select-option"
+                                    role="option"
+                                    aria-selected="@(play.Selected ? "true" : "false")"
+                                    data-candidate-select-option
+                                    data-value="@play.Value"
+                                    data-label="@play.Text">@play.Text</button>
+                        }
+                    </div>
                 </div>
-                <div class="add-candidate-field">
-                    <label asp-for="Input.AwardCategoryCode">Ödül Kategorisi</label>
-                    <select asp-for="Input.AwardCategoryCode" data-candidate-category>
-                        <option value="">Kategori seçiniz</option>
+            </div>
+
+            <div class="add-candidate-field">
+                <label asp-for="Input.AwardCategoryCode">Ödül Kategorisi</label>
+                <div class="add-candidate-select" data-candidate-select data-candidate-category-select>
+                    <input asp-for="Input.AwardCategoryCode" type="hidden" data-candidate-select-value data-candidate-category />
+                    <button type="button"
+                            class="add-candidate-select-trigger"
+                            aria-haspopup="listbox"
+                            aria-expanded="false"
+                            data-candidate-select-trigger>
+                        <span class="is-placeholder" data-candidate-select-label>Kategori seçiniz</span>
+                        <img src="~/icons/angle-down.svg" alt="" aria-hidden="true" />
+                    </button>
+                    <div class="add-candidate-select-menu" role="listbox" data-candidate-select-menu hidden>
                         @foreach (var category in Model.AwardCategories)
                         {
-                            <option value="@category.CategoryCode"
-                                    data-multi-candidate="@category.MultiCandidate.ToString().ToLowerInvariant()">
-                                @category.CategoryName
-                            </option>
+                            <button type="button"
+                                    class="add-candidate-select-option"
+                                    role="option"
+                                    aria-selected="false"
+                                    data-candidate-select-option
+                                    data-value="@category.CategoryCode"
+                                    data-label="@category.CategoryName"
+                                    data-multi-candidate="@category.MultiCandidate.ToString().ToLowerInvariant()"
+                                    data-has-role-photo="@category.HasRoleAndPhoto.ToString().ToLowerInvariant()">@category.CategoryName</button>
                         }
-                    </select>
+                    </div>
                 </div>
-                <div class="add-candidate-field">
-                    <label asp-for="Input.Candidate">Adı Soyadı</label>
-                    <input asp-for="Input.Candidate" autocomplete="off" minlength="2" required />
-                </div>
-                <div class="add-candidate-field" data-candidate-role-field hidden>
-                    <label asp-for="Input.Role">Rolü</label>
-                    <input asp-for="Input.Role" autocomplete="off" data-candidate-role />
-                </div>
-                <fieldset class="add-candidate-status">
-                    <legend>Statü</legend>
-                    <label><input type="radio" asp-for="Input.IsActive" value="true" required /><span>Aktif</span></label>
-                    <label><input type="radio" asp-for="Input.IsActive" value="false" required /><span>Aktif değil</span></label>
-                </fieldset>
             </div>
-            <div asp-validation-summary="ModelOnly" class="add-candidate-validation"></div>
-            <div class="add-candidate-actions"><button type="submit" class="add-candidate-submit">Kaydet</button></div>
+
+            <div class="add-candidate-field" data-candidate-replacement-field hidden>
+                <label asp-for="Input.ReplacedCandidateId">Değişimi Yapılacak Aday/Rol</label>
+                <div class="add-candidate-select" data-candidate-select data-candidate-replacement-select>
+                    <input asp-for="Input.ReplacedCandidateId" type="hidden" data-candidate-select-value data-candidate-replacement />
+                    <button type="button"
+                            class="add-candidate-select-trigger"
+                            aria-haspopup="listbox"
+                            aria-expanded="false"
+                            data-candidate-select-trigger>
+                        <span class="is-placeholder" data-candidate-select-label>Aday/rol seçiniz</span>
+                        <img src="~/icons/angle-down.svg" alt="" aria-hidden="true" />
+                    </button>
+                    <div class="add-candidate-select-menu" role="listbox" data-candidate-select-menu hidden>
+                        @foreach (var candidate in Model.ReplacementCandidates)
+                        {
+                            <button type="button"
+                                    class="add-candidate-select-option"
+                                    role="option"
+                                    aria-selected="false"
+                                    data-candidate-select-option
+                                    data-value="@candidate.Id"
+                                    data-label="@candidate.DisplayName"
+                                    data-category-code="@candidate.CategoryCode"
+                                    data-role="@candidate.Role"
+                                    data-role-code="@candidate.RoleCode">@candidate.DisplayName</button>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="add-candidate-field">
+                <label asp-for="Input.Candidate">Adı Soyadı</label>
+                <input asp-for="Input.Candidate" autocomplete="off" minlength="2" maxlength="250" required />
+            </div>
+
+            <div class="add-jury-field add-jury-photo-field add-candidate-photo-field" data-candidate-photo-field hidden>
+                <label asp-for="Input.Photo">Fotoğraf Ekle</label>
+                <div class="add-jury-upload" data-candidate-upload-control>
+                    <button type="button"
+                            class="add-jury-upload-picker"
+                            aria-label="Fotoğraf dosyası seç"
+                            data-candidate-photo-picker>
+                        <span data-candidate-file-name>Dosya Ekle</span>
+                    </button>
+                    <button type="button"
+                            class="add-jury-upload-icon"
+                            aria-label="Dosya ekle"
+                            data-candidate-photo-primary>
+                        <img src="~/icons/upload.svg" alt="" aria-hidden="true" data-candidate-photo-primary-icon />
+                    </button>
+                </div>
+                <input id="candidate-photo-input"
+                       asp-for="Input.Photo"
+                       type="file"
+                       class="visually-hidden"
+                       accept="image/jpeg,image/png,image/webp"
+                       data-candidate-photo-input />
+                <div class="add-jury-photo-actions" data-candidate-photo-actions hidden>
+                    <button type="button" class="add-jury-photo-action" data-candidate-photo-view>
+                        <img src="~/icons/eye.svg" alt="" aria-hidden="true" />
+                        <span>Fotoğrafı Görüntüle</span>
+                    </button>
+                    <button type="button" class="add-jury-photo-action" data-candidate-photo-replace>
+                        <img src="~/icons/upload.svg" alt="" aria-hidden="true" />
+                        <span>Farklı Fotoğraf Ekle</span>
+                    </button>
+                </div>
+            </div>
+
+            <fieldset class="add-candidate-status">
+                <legend>Statü</legend>
+                <label><input type="radio" asp-for="Input.IsActive" value="true" required /><span>Aktif</span></label>
+                <label><input type="radio" asp-for="Input.IsActive" value="false" required /><span>Aktif değil</span></label>
+            </fieldset>
+
+            <div class="add-candidate-field" data-candidate-role-field hidden>
+                <label asp-for="Input.Role">Rol Adı</label>
+                <input asp-for="Input.Role" autocomplete="off" maxlength="200" data-candidate-role />
+            </div>
         </div>
 
+        <div class="add-candidate-actions"><button type="submit" class="add-candidate-submit">Kaydet</button></div>
     </form>
+
+    <div class="add-jury-photo-modal" data-candidate-photo-modal hidden>
+        <div class="add-jury-photo-dialog" role="dialog" aria-modal="true" aria-label="Fotoğraf önizleme">
+            <img src="" alt="Aday fotoğrafı önizlemesi" data-candidate-photo-preview />
+        </div>
+    </div>
 </section>

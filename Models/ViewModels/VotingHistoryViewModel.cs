@@ -6,6 +6,7 @@ public sealed class VotingHistoryViewModel
     public Guid? JuryId { get; init; }
     public string PlayName { get; init; } = string.Empty;
     public bool LockPlay { get; init; }
+    public string? PlayDetailsUrl { get; init; }
 }
 
 public sealed class VotingHistoryCardsViewModel

@@ -148,7 +148,10 @@ p {
     overflow-x: auto;
     padding: 0px 16px;
 }
-
+#adaylar .jury-voting-table-wrapper {
+    overflow-x: auto;
+    padding: 0px;
+}
 tr {
     border: none;
 }
@@ -374,7 +377,7 @@ tr {
     align-items: center;
     color: #171717;
     background: transparent;
-    border: 0;
+    border: initial;
     font: inherit;
     text-align: left;
     text-decoration: underline;
@@ -767,7 +770,7 @@ tr {
     font: inherit;
 }
 
-.complex-table-select-filter-control img {
+.complex-table-select-filter-control > img {
     position: absolute;
     top: 50%;
     right: 12px;
@@ -778,5 +781,100 @@ tr {
 }
 
 #adaylar .complex-table-heading {
-    padding: 0px 16px 16px 16px;
+    padding: 0px 0px 16px 0px;
+}
+#adaylar .complex-table-summary-wrapper {
+    padding: 0px 0px;
+}
+.complex-table-select-filter-control[data-complex-table-select] {
+    position: relative;
+    width: 100%;
+}
+
+.complex-table-select-trigger {
+    display: flex;
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    color: #171717;
+    background: #fff;
+    border: 1px solid #777;
+    font: inherit;
+    text-align: left;
+}
+
+.complex-table-select-trigger:focus-visible {
+    border-color: #171717;
+    outline: 1px solid #171717;
+    outline-offset: 1px;
+}
+
+.complex-table-select-trigger > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.complex-table-select-trigger > img {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    transition: transform .2s ease;
+}
+
+.complex-table-select-filter-control.is-open {
+    z-index: 50;
+}
+
+.complex-table-select-filter-control.is-open .complex-table-select-trigger > img {
+    transform: rotate(180deg);
+}
+
+.complex-table-select-menu {
+    position: absolute;
+    z-index: 55;
+    top: calc(100% + 6px);
+    right: 0;
+    left: 0;
+    max-height: min(320px, 45vh);
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #777;
+    box-shadow: 0 12px 28px rgba(23, 23, 23, .14);
+}
+
+.complex-table-select-menu[hidden] {
+    display: none !important;
+}
+
+.complex-table-select-option {
+    display: block;
+    width: 100%;
+    min-height: 42px;
+    padding: 10px 12px;
+    color: #171717;
+    background: #fff;
+    border: 0;
+    border-bottom: 1px solid #f0eee8;
+    font: inherit;
+    text-align: left;
+}
+
+.complex-table-select-option:last-child {
+    border-bottom: 0;
+}
+
+.complex-table-select-option:hover,
+.complex-table-select-option:focus-visible,
+.complex-table-select-option[aria-selected="true"] {
+    background: #e9e5da;
+    outline: none;
+}
+
+.play-candidates-table-select-filter {
+    width: min(420px, 100%);
 }

@@ -344,6 +344,11 @@ body {
     background: transparent;
 }
 
+.play-detail-action-danger {
+    color: #b31d1d;
+    background: #fff;
+    border-color: #b31d1d;
+}
 .play-detail-action-primary {
     color: #fff;
     background: #171717;
@@ -435,12 +440,12 @@ body {
 .play-status-dot { width: 10px; height: 10px; flex: 0 0 10px; border-radius: 50%; }
 .play-details-divider { height: 1px; margin: 24px 0 24px 0; background: #d8d4ca; }
 .add-candidate { font-family: Outfit; }
-.add-candidate-header h2 { margin: 0 0 24px; font-family: LimeLight; font-size: 28px; font-weight: 400; line-height: 36px; }
+.add-candidate-header h2 { margin: 0 0 16px; font-family: LimeLight; font-size: 28px; font-weight: 400; line-height: 36px; }
 .add-candidate-mode-group, .add-candidate-status { display: flex; margin: 0; padding: 0; border: 0; gap: 24px; }
-.add-candidate-mode-group { margin-bottom: 28px; }
+.add-candidate-mode-group { margin-bottom: 16px; }
 .add-candidate-mode, .add-candidate-status label { display: inline-flex; align-items: center; gap: 9px; cursor: pointer; font-weight: 600; }
 .add-candidate-mode input, .add-candidate-status input { width: 18px; height: 18px; margin: 0; accent-color: #171717; }
-.add-candidate-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px clamp(32px, 7vw, 96px); }
+.add-candidate-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
 .add-candidate-field { display: flex; min-width: 0; flex-direction: column; gap: 8px; }
 .add-candidate-field label, .add-candidate-status legend { color: #777064; font-size: 13px; font-weight: 500; line-height: 18px; }
 .add-candidate-field input, .add-candidate-field select { width: 100%; min-height: 44px; padding: 10px 12px; color: #171717; background: #fff; border: 1px solid #bdbdbd; border-radius: 0; }
@@ -719,32 +724,33 @@ body {
 .add-jury-photo-actions {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 24px;
     flex-wrap: wrap;
+    justify-content:flex-end;
+    margin-top:16px;
 }
 
 .add-jury-photo-action {
     display: inline-flex;
-    min-height: 38px;
-    padding: 8px 12px;
     align-items: center;
     justify-content: center;
     gap: 8px;
     color: #171717;
     background: #fff;
-    border: 1px solid #bdbdbd;
+    border: none;
+    padding:0;
+    margin:0;
     font-family: Outfit;
     font-size: 14px;
     font-weight: 600;
+    line-height: 20px; /* 142.857% */
 }
 
-.add-jury-photo-action:hover,
-.add-jury-photo-action:focus-visible {
-    color: #fff;
-    background: #918150;
-    border-color: #918150;
-    outline: none;
-}
+    .add-jury-photo-action:hover,
+    .add-jury-photo-action:focus-visible {
+        color: #918150;
+        outline: none;
+    }
 
 .add-jury-photo-action:hover img,
 .add-jury-photo-action:focus-visible img {
@@ -908,3 +914,179 @@ body.has-photo-preview {
     }
 }
 .jury-watched-plays { margin-bottom: 24px; }
+/* Candidate custom selects */
+.add-candidate-select {
+    position: relative;
+    width: 100%;
+}
+
+.add-candidate-select.is-open {
+    z-index: 40;
+}
+
+.add-candidate-select-trigger {
+    display: flex;
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    color: #171717;
+    background: #fff;
+    border: 1px solid #777;
+    font: inherit;
+    text-align: left;
+}
+
+.add-candidate-select-trigger:focus-visible {
+    border-color: #171717;
+    outline: 1px solid #171717;
+    outline-offset: 1px;
+}
+
+.add-candidate-select-trigger > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.add-candidate-select-trigger .is-placeholder {
+    opacity: .5;
+}
+
+.add-candidate-select-trigger > img {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    transition: transform .2s ease;
+}
+
+.add-candidate-select.is-open .add-candidate-select-trigger > img {
+    transform: rotate(180deg);
+}
+
+.add-candidate-select.is-disabled .add-candidate-select-trigger,
+.add-candidate-select-trigger:disabled {
+    color: #656565;
+    background: #f3f2ef;
+    cursor: not-allowed;
+    opacity: 1;
+}
+
+.add-candidate-select-menu {
+    position: absolute;
+    z-index: 45;
+    top: calc(100% + 6px);
+    right: 0;
+    left: 0;
+    max-height: min(320px, 45vh);
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #777;
+    box-shadow: 0 12px 28px rgba(23, 23, 23, .14);
+}
+
+.add-candidate-select-menu[hidden],
+.add-candidate-select-option[hidden],
+.add-candidate-photo-field[hidden] {
+    display: none !important;
+}
+
+.add-candidate-select-option {
+    display: block;
+    width: 100%;
+    min-height: 42px;
+    padding: 10px 12px;
+    color: #171717;
+    background: #fff;
+    border: 0;
+    border-bottom: 1px solid #f0eee8;
+    font: inherit;
+    text-align: left;
+}
+
+.add-candidate-select-option:last-child {
+    border-bottom: 0;
+}
+
+.add-candidate-select-option:hover,
+.add-candidate-select-option:focus-visible,
+.add-candidate-select-option[aria-selected="true"] {
+    background: #e9e5da;
+    outline: none;
+}
+
+.add-candidate-photo-field {
+    min-width: 0;
+}
+
+@media (max-width: 700px) {
+    .add-candidate-select-menu {
+        max-height: min(280px, 42vh);
+    }
+}
+
+/* Candidate detail and edit */
+.candidate-details-layout {
+    display: block;
+    margin-top: 24px;
+}
+
+.candidate-details-layout.has-photo {
+    display: grid;
+    grid-template-columns: 370px minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+}
+
+.candidate-details-photo-panel {
+    width: 370px;
+    max-width: 100%;
+}
+
+.candidate-details-photo {
+    display: block;
+    width: 370px;
+    max-width: 100%;
+    height: 420px;
+    object-fit: cover;
+    background: #f4f1e8;
+}
+
+.candidate-details-content {
+    margin: 0;
+    padding: 0;
+}
+
+.candidate-delete-action {
+    color: #b31d1d;
+    border-color: #b31d1d;
+}
+
+.edit-candidate-page [data-valmsg-for] {
+    display: none;
+}
+
+@media (max-width: 900px) {
+    .candidate-details-layout.has-photo {
+        grid-template-columns: 1fr;
+    }
+
+    .candidate-details-photo-panel {
+        width: min(100%, 370px);
+    }
+
+    .candidate-details-photo {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 37 / 42;
+    }
+}
+
+@media (max-width: 560px) {
+    .candidate-details-photo-panel {
+        width: 100%;
+    }
+}

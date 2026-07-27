@@ -8,8 +8,14 @@ AfifeAdmin database.
 - `IsPublished = 1` means the row is non-deleted and available to normal queries.
 - `IsPublished = 0` means the row is deleted logically but retained physically.
 - `IsActive` and domain status fields are not delete flags.
-- Normal EF queries exclude soft-deleted rows. Deliberate audit or restore flows
-  must opt in explicitly with `IgnoreQueryFilters()`.
+- Every screen, API response, lookup, report, export, and authentication query must
+  exclude soft-deleted rows. EF global query filters enforce `IsPublished = 1` for
+  every mapped entity.
+- `IgnoreQueryFilters()` is forbidden in normal application flows. A deliberate
+  audit or restore flow may use it only when the soft-deleted data is explicitly
+  required and must not expose those rows through a normal endpoint.
+- Every newly added entity is forced to `IsPublished = 1` by the DbContext. Every
+  table also has a database default of `1` for inserts that omit the column.
 
 ## Prohibited operations
 
@@ -40,6 +46,27 @@ For `JuryId + PlayId + AwardCategoryCode + RoleCode`, at most one published vote
 may exist. Casting a vote for another old/current candidate soft-deletes the previous
 vote (`IsPublished = 0`, `IsActive = 0`) and retains it as history. It never deletes
 the physical row.
+
+
+## Published-row uniqueness
+
+Business uniqueness applies only to non-deleted rows. Unique indexes for jury votes,
+jury assignments, ticket fees, candidates, current candidate slots, blacklist rows,
+and role-scoped usernames/emails use `WHERE IsPublished = 1`. Any number of
+soft-deleted historical rows may reuse those business-key values.
+
+Primary keys remain globally unique. Shared alternate integration keys referenced by
+foreign keys (`AwardCategories.CategoryCode`, `PlayStatuses.StatusCode`,
+`Roles.RoleCode`, and `Group.Code`) also remain globally unique because SQL Server
+foreign keys cannot reference filtered unique indexes and these codes are immutable
+integration identities, not reusable business records.
+## Play soft-delete cascade
+
+Only an AfifeAdmin (`RecordType = 1`) play may be soft-deleted. A Kunye Giris (`RecordType = 0`) play must always remain `IsPublished = 1`; both the application and database reject attempts to delete or unpublish it. Deleting an eligible Admin play is one atomic soft-delete operation.
+The play and its published `PlayAwardCategories`, `JuryVotes`,
+`JuryAssignedPlays`, `JuryGameTicketFees`, and `Blacklist` rows are changed to
+`IsPublished = 0`. Candidate and vote `IsActive` values are also changed to `0`.
+No row is physically deleted; the transaction rolls back if any dependent update fails.
 
 ## Restore
 

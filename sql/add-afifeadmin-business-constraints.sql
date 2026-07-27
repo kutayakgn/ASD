@@ -57,7 +57,7 @@ BEGIN TRY
           AND [name] = N'UX_JuryVotes_JuryId_PlayAwardCategoryId'
     )
         CREATE UNIQUE INDEX [UX_JuryVotes_JuryId_PlayAwardCategoryId]
-            ON [dbo].[JuryVotes] ([JuryId], [PlayAwardCategoryId])
+            ON [dbo].[JuryVotes] ([PlayAwardCategoryId], [JuryId])
             WHERE [IsPublished] = 1;
 
     -- The same candidate cannot be entered twice for a play/category/role.

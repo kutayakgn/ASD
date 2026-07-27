@@ -12,10 +12,20 @@
 - No application or SQL path may physically delete a database row. Every table
   uses `IsPublished`: `1` is non-deleted and `0` is soft-deleted. All foreign keys
   use `ON DELETE NO ACTION`; delete cascades are forbidden.
-- Normal queries must exclude `IsPublished = 0`. Restores must be explicit and
-  must revalidate uniqueness and domain invariants before setting it back to `1`.
+- Every screen, API, lookup, report, export, and authentication query must exclude
+  `IsPublished = 0`; never use `IgnoreQueryFilters()` in a normal application flow.
+- Every newly inserted entity must start with `IsPublished = 1`. The DbContext
+  enforces this and database tables must have `DEFAULT (1)` for the column.
+- Business unique indexes must be filtered with `WHERE IsPublished = 1`, allowing
+  any number of soft-deleted historical duplicates. Primary keys and immutable FK
+  target codes remain globally unique and are not filtered.
+- Restores must be explicit and must revalidate uniqueness and domain invariants
+  before setting `IsPublished` back to `1`.
 - `Plays.RecordType` is immutable provenance: `0` means Kunye Giris and `1`
   means AfifeAdmin. It is not a visibility or activation flag.
+- Kunye (`RecordType = 0`) plays can never be soft-deleted and must always
+  remain `IsPublished = 1`; only AfifeAdmin (`RecordType = 1`) plays may be
+  soft-deleted.
 - `KunyeGirisStatus` and `JuriOylamaStatus` are editable only for `RecordType = 0`.
   Both must remain false for `RecordType = 1`.
 - Candidates and votes are allowed only for `RecordType = 0`; ticket fees and
@@ -36,5 +46,7 @@
   `Candidate` equals `Plays.TheaterName`, `RoleCode = 0`, and `IsCurrent = 1`.
 - `AwardCategories.MultiCandidate` controls simultaneous logical role slots. A
   replacement must reuse the role's stable `RoleCode`; do not generate a new code.
+- AwardCategories.HasRoleAndPhoto controls required role input and optional
+  candidate-photo input; category 1001 is never user-selectable.
 - Award-category placeholder assets are resolved by the stable convention
   `wwwroot/images/awardCategoryPlaceholder/{CategoryCode}.svg`.

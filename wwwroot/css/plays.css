@@ -467,6 +467,14 @@ body.play-filter-open {
     border-top: 1px solid #f0eee8;
 }
 
+.add-play-group-toggle-ungrouped {
+    padding-left: 0;
+}
+
+.add-play-jury-group[data-group-key="ungrouped"] .add-play-jury-group-header {
+    padding-left: 16px;
+}
+
 .add-play-jury-group-header {
     display: flex;
     min-height: 40px;

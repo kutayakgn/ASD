@@ -82,7 +82,7 @@ public static class CandidateComplexTableFactory
             NavigationUrl = detailsUrl,
             NavigationAccessibleLabel = $"{row.Candidate} aday detayına git",
             DeleteUrl = row.CategoryCode == 1001 ? string.Empty : $"/adaylar/{row.Id:D}/sil",
-            DeleteConfirmMessage = "İlgili aday kaydı silinsin mi?",
+            DeleteConfirmMessage = "İlgili kategorideki adayı silmek istediğinize emin misiniz?",
             DeleteAccessibleLabel = $"{row.Candidate} aday kaydını sil",
             Cells =
             [

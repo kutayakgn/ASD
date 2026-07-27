@@ -27,13 +27,16 @@
             <div id="jury-group-options" class="add-play-jury-menu" data-jury-menu hidden>
                 @foreach (var group in Model.JuryGroups)
                 {
-                    var groupSelected = group.Juries.Count > 0 && group.Juries.All(jury => selectedJuryIds.Contains(jury.Id));
+                    var groupSelected = group.CanSelectAll && group.Juries.Count > 0 && group.Juries.All(jury => selectedJuryIds.Contains(jury.Id));
                     <section class="add-play-jury-group" data-jury-group data-group-key="@group.Key" data-group-name="@group.Name">
                         <div class="add-play-jury-group-header">
-                            <label class="add-play-group-checkbox" aria-label="@($"{group.Name} grubunu seç")">
-                                <input type="checkbox" data-jury-group-checkbox checked="@(groupSelected ? "checked" : null)" /><span class="add-play-check-mark" aria-hidden="true"></span>
-                            </label>
-                            <button type="button" class="add-play-group-toggle" aria-expanded="false" data-jury-group-toggle><span>@group.Name</span><img src="~/icons/angle-down.svg" alt="" aria-hidden="true" /></button>
+                            @if (group.CanSelectAll)
+                            {
+                                <label class="add-play-group-checkbox" aria-label="@($"{group.Name} grubunu seç")">
+                                    <input type="checkbox" data-jury-group-checkbox checked="@(groupSelected ? "checked" : null)" /><span class="add-play-check-mark" aria-hidden="true"></span>
+                                </label>
+                            }
+                            <button type="button" class="add-play-group-toggle@(group.CanSelectAll ? string.Empty : " add-play-group-toggle-ungrouped")" aria-expanded="false" data-jury-group-toggle><span>@group.Name</span><img src="~/icons/angle-down.svg" alt="" aria-hidden="true" /></button>
                         </div>
                         <div class="add-play-jury-members" data-jury-members hidden>
                             @foreach (var jury in group.Juries)

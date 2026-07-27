@@ -76,18 +76,40 @@
                     <div class="complex-table-heading-tools">
                         @if (Model.SelectFilter is not null)
                         {
-                            <div class="complex-table-select-filter">
-                                <label for="@(Model.Id)-select-filter">@Model.SelectFilter.Label</label>
-                                <div class="complex-table-select-filter-control">
-                                    <select id="@(Model.Id)-select-filter"
-                                            name="@Model.SelectFilter.Name"
-                                            data-complex-table-filter>
+                            var selectedFilterOption = Model.SelectFilter.Options.FirstOrDefault(option =>
+                                option.Value == Model.SelectFilter.Value) ?? Model.SelectFilter.Options.First();
+                            <div class="complex-table-select-filter @(Model.Id == "play-candidates-table" ? "play-candidates-table-select-filter" : string.Empty)">
+                                <label id="@(Model.Id)-select-filter-label">@Model.SelectFilter.Label</label>
+                                <div class="complex-table-select-filter-control" data-complex-table-select>
+                                    <input type="hidden"
+                                           id="@(Model.Id)-select-filter"
+                                           name="@Model.SelectFilter.Name"
+                                           value="@Model.SelectFilter.Value"
+                                           data-complex-table-filter />
+                                    <button type="button"
+                                            class="complex-table-select-trigger"
+                                            aria-labelledby="@(Model.Id)-select-filter-label @(Model.Id)-select-filter-value"
+                                            aria-haspopup="listbox"
+                                            aria-expanded="false"
+                                            data-complex-table-select-trigger>
+                                        <span id="@(Model.Id)-select-filter-value" data-complex-table-select-label>@selectedFilterOption.Text</span>
+                                        <img src="~/icons/angle-down.svg" alt="" aria-hidden="true" />
+                                    </button>
+                                    <div class="complex-table-select-menu"
+                                         role="listbox"
+                                         aria-labelledby="@(Model.Id)-select-filter-label"
+                                         data-complex-table-select-menu
+                                         hidden>
                                         @foreach (var option in Model.SelectFilter.Options)
                                         {
-                                            <option value="@option.Value" selected="@(option.Value == Model.SelectFilter.Value ? "selected" : null)">@option.Text</option>
+                                            <button type="button"
+                                                    class="complex-table-select-option"
+                                                    role="option"
+                                                    aria-selected="@(option.Value == Model.SelectFilter.Value ? "true" : "false")"
+                                                    data-complex-table-select-option
+                                                    data-value="@option.Value">@option.Text</button>
                                         }
-                                    </select>
-                                    <img src="~/icons/angle-down.svg" alt="" aria-hidden="true" />
+                                    </div>
                                 </div>
                             </div>
                         }

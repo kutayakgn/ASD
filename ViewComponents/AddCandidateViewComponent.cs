@@ -35,15 +35,51 @@ public sealed class AddCandidateViewComponent(AfifeContext context) : ViewCompon
             {
                 CategoryCode = category.CategoryCode,
                 CategoryName = category.CategoryName,
-                MultiCandidate = category.MultiCandidate
+                MultiCandidate = category.MultiCandidate,
+                HasRoleAndPhoto = category.HasRoleAndPhoto
             })
             .ToListAsync(cancellationToken);
+
+        var replacementRows = playId.HasValue
+            ? await context.PlayAwardCategories
+                .AsNoTracking()
+                .Where(candidate =>
+                    candidate.PlayId == playId.Value &&
+                    candidate.IsPublished &&
+                    candidate.IsCurrent &&
+                    candidate.AwardCategoryCode != 1001)
+                .OrderBy(candidate => candidate.Candidate)
+                .Select(candidate => new
+                {
+                    candidate.Id,
+                    CategoryCode = candidate.AwardCategoryCode,
+                    CandidateName = candidate.Candidate,
+                    candidate.Role,
+                    candidate.RoleCode
+                })
+                .ToListAsync(cancellationToken)
+            : [];
+
+        var replacementCandidates = replacementRows
+            .Select(candidate => new AddCandidateReplacementOptionViewModel
+            {
+                Id = candidate.Id,
+                CategoryCode = candidate.CategoryCode,
+                CandidateName = candidate.CandidateName,
+                Role = candidate.Role,
+                RoleCode = candidate.RoleCode,
+                DisplayName = string.IsNullOrWhiteSpace(candidate.Role)
+                    ? candidate.CandidateName
+                    : $"{candidate.CandidateName} / {candidate.Role}"
+            })
+            .ToArray();
 
         return View(new AddCandidateViewModel
         {
             Input = new AddCandidateInputModel { PlayId = playId },
             Plays = plays,
             AwardCategories = categories,
+            ReplacementCandidates = replacementCandidates,
             LockPlay = playId.HasValue,
             FormAction = formAction ?? string.Empty
         });

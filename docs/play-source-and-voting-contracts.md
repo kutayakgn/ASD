@@ -50,6 +50,8 @@ Admin kaynakli oyunlarda bu atama oy kullanma yetkisi olusturmaz.
 
 ## Uygulama ve veritabani kurallari
 
+- `RecordType = 0` oyunlar soft-delete edilemez ve `IsPublished` degerleri
+  her zaman `1` olmalidir. Yalnizca `RecordType = 1` oyunlar soft-delete edilebilir.
 - Aday ve oylama ekranlari yalnizca `RecordType = 0` oyunlari listelemelidir.
 - Bilet ucreti akislari her iki `RecordType` degerini desteklemelidir.
 - `RecordType = 1` bir oyun icin `PlayAwardCategories`, `JuryVotes` veya

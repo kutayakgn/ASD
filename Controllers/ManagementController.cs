@@ -1,5 +1,6 @@
 using System.Data;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -15,7 +16,7 @@ using YKBAfife.Services.Exports;
 
 namespace YKBAfife.Controllers;
 
-public sealed class ManagementController(
+public sealed partial class ManagementController(
     AfifeContext context,
     IJuryReportService juryReportService,
     IArchiveComparisonReportService archiveComparisonReportService,
@@ -1147,19 +1148,49 @@ public sealed class ManagementController(
             .Select(status => new { status.StatusName, status.StatusColor })
             .SingleOrDefaultAsync(cancellationToken);
 
-        var groupNames = await (
+        var assignedJuries = await (
             from assignment in context.JuryAssignedPlays.AsNoTracking()
             join user in context.Users.AsNoTracking()
                 on assignment.JuryId equals user.Id
-            join juryGroup in context.Groups.AsNoTracking()
-                on user.GroupCode equals (int?)juryGroup.Code
             where assignment.PlayId == play.Id
                && assignment.IsPublished
-               && juryGroup.IsPublished
-            select juryGroup.GroupName)
+               && user.IsPublished
+               && user.RoleCode == 2
+            select new
+            {
+                user.Id,
+                user.GroupCode,
+                user.FirstName,
+                user.LastName,
+                user.Username
+            })
             .Distinct()
-            .OrderBy(groupName => groupName)
-            .ToListAsync(cancellationToken);
+            .ToArrayAsync(cancellationToken);
+
+        var assignedGroupCodes = assignedJuries
+            .Where(jury => jury.GroupCode.HasValue)
+            .Select(jury => jury.GroupCode!.Value)
+            .Distinct()
+            .ToArray();
+        var assignedGroupNames = await context.Groups
+            .AsNoTracking()
+            .Where(group => assignedGroupCodes.Contains(group.Code) && group.IsPublished)
+            .ToDictionaryAsync(group => group.Code, group => group.GroupName, cancellationToken);
+
+        var juryGroupInfo = assignedJuries
+            .Where(jury => jury.GroupCode.HasValue && assignedGroupNames.ContainsKey(jury.GroupCode.Value))
+            .Select(jury => assignedGroupNames[jury.GroupCode!.Value])
+            .Concat(assignedJuries
+                .Where(jury => !jury.GroupCode.HasValue || !assignedGroupNames.ContainsKey(jury.GroupCode.Value))
+                .Select(jury =>
+                {
+                    var fullName = $"{jury.FirstName} {jury.LastName}".Trim();
+                    return string.IsNullOrWhiteSpace(fullName) ? jury.Username : fullName;
+                }))
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.CurrentCultureIgnoreCase)
+            .OrderBy(value => value, StringComparer.CurrentCultureIgnoreCase)
+            .ToArray();
 
         var auditUserIds = new[] { play.CreatedBy, play.UpdatedBy }
             .Where(userId => userId.HasValue)
@@ -1191,7 +1222,7 @@ public sealed class ManagementController(
             TheaterName = play.TheaterName,
             JuriOylamaStatus = !play.RecordType && play.JuriOylamaStatus,
             KunyeGirisStatus = !play.RecordType && play.KunyeGirisStatus,
-            JuryGroupInfo = groupNames.Count == 0 ? "-" : string.Join(", ", groupNames),
+            JuryGroupInfo = juryGroupInfo.Length == 0 ? "-" : string.Join(", ", juryGroupInfo),
             PlayStatus = playStatus?.StatusName ?? "-",
             PlayStatusColor = NormalizeStatusColor(playStatus?.StatusColor),
             RecordType = play.RecordType,
@@ -1207,6 +1238,110 @@ public sealed class ManagementController(
             ReturnUrl = NormalizePlayReturnUrl(returnUrl),
             CandidatesTable = candidatesTable
         });
+    }
+    [HttpPost("oyunlar/{id:guid}/sil")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeletePlay(
+        Guid id,
+        [FromForm] string? returnUrl,
+        CancellationToken cancellationToken)
+    {
+        var play = await context.Plays.SingleOrDefaultAsync(
+            item => item.Id == id && item.IsPublished,
+            cancellationToken);
+        if (play is null) return NotFound();
+
+        var normalizedReturnUrl = NormalizePlayReturnUrl(returnUrl);
+        var playSlug = SlugHelper.Resolve(play.Slug, play.PlayName);
+        if (!play.RecordType)
+        {
+            TempData["GenericPopup.Type"] = "fail";
+            TempData["GenericPopup.Message"] = "Künye Giriş Sistemi kaynaklı oyunlar silinemez.";
+            return RedirectToAction(nameof(PlayDetails), new
+            {
+                slug = playSlug,
+                returnUrl = normalizedReturnUrl
+            });
+        }
+        var now = TurkeyTime.Now;
+        Guid? currentUserId = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)
+            ? userId
+            : null;
+
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            var candidateIds = await context.PlayAwardCategories
+                .AsNoTracking()
+                .Where(candidate => candidate.PlayId == play.Id && candidate.IsPublished)
+                .Select(candidate => candidate.Id)
+                .ToArrayAsync(cancellationToken);
+
+            await context.JuryVotes
+                .Where(vote => candidateIds.Contains(vote.PlayAwardCategoryId) && vote.IsPublished)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(vote => vote.IsPublished, false)
+                    .SetProperty(vote => vote.IsActive, false)
+                    .SetProperty(vote => vote.UpdatedAt, now)
+                    .SetProperty(vote => vote.UpdatedBy, currentUserId), cancellationToken);
+
+            await context.PlayAwardCategories
+                .Where(candidate => candidate.PlayId == play.Id && candidate.IsPublished)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(candidate => candidate.IsPublished, false)
+                    .SetProperty(candidate => candidate.IsActive, false)
+                    .SetProperty(candidate => candidate.UpdatedAt, now)
+                    .SetProperty(candidate => candidate.UpdatedBy, currentUserId), cancellationToken);
+
+            await context.JuryAssignedPlays
+                .Where(assignment => assignment.PlayId == play.Id && assignment.IsPublished)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(assignment => assignment.IsPublished, false)
+                    .SetProperty(assignment => assignment.UpdatedAt, now)
+                    .SetProperty(assignment => assignment.UpdatedBy, currentUserId), cancellationToken);
+
+            await context.JuryGameTicketFees
+                .Where(fee => fee.PlayId == play.Id && fee.IsPublished)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(fee => fee.IsPublished, false)
+                    .SetProperty(fee => fee.UpdatedAt, now)
+                    .SetProperty(fee => fee.UpdatedBy, currentUserId), cancellationToken);
+
+            await context.Blacklists
+                .Where(blacklist => blacklist.PlayId == play.Id && blacklist.IsPublished)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(blacklist => blacklist.IsPublished, false), cancellationToken);
+
+            play.IsPublished = false;
+            play.UpdatedAt = now;
+            play.UpdatedBy = currentUserId;
+            await context.SaveChangesAsync(cancellationToken);
+            await activityLogger.LogAsync(
+                UserActivityTypes.PlaySoftDeleted,
+                true,
+                currentUserId,
+                User.Identity?.Name,
+                currentUserId,
+                details: $"Oyun ve ilişkili kayıtları soft-delete edildi. PlayId: {play.Id}, Oyun: {play.PlayName}",
+                cancellationToken: cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            logger.LogError(exception, "Oyun soft-delete işlemi tamamlanamadı. PlayId: {PlayId}", play.Id);
+            TempData["GenericPopup.Type"] = "fail";
+            TempData["GenericPopup.Message"] = "Oyun silinemedi. Lütfen tekrar deneyiniz.";
+            return RedirectToAction(nameof(PlayDetails), new
+            {
+                slug = playSlug,
+                returnUrl = normalizedReturnUrl
+            });
+        }
+
+        TempData["GenericPopup.Type"] = "success";
+        TempData["GenericPopup.Message"] = "Oyun başarıyla silindi.";
+        return LocalRedirect(normalizedReturnUrl);
     }
     [HttpPost("oyunlar/adaylar/tablo")]
     [ValidateAntiForgeryToken]
@@ -1293,6 +1428,18 @@ public sealed class ManagementController(
         candidate.UpdatedBy = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)
             ? userId
             : null;
+        if (candidate.PhotoImageId.HasValue)
+        {
+            var photo = await context.Images.SingleOrDefaultAsync(
+                image => image.Id == candidate.PhotoImageId.Value && image.IsPublished,
+                cancellationToken);
+            if (photo is not null)
+            {
+                photo.IsPublished = false;
+                photo.UpdatedAt = candidate.UpdatedAt;
+                photo.UpdatedBy = candidate.UpdatedBy;
+            }
+        }
         try
         {
             await context.SaveChangesAsync(cancellationToken);
@@ -1322,35 +1469,8 @@ public sealed class ManagementController(
     }
 
     [HttpGet("adaylar/{id:guid}")]
-    public async Task<IActionResult> CandidateDetails(Guid id, CancellationToken cancellationToken)
-    {
-        var data = await (
-            from candidate in context.PlayAwardCategories.AsNoTracking()
-            join play in context.Plays.AsNoTracking() on candidate.PlayId equals play.Id
-            join category in context.AwardCategories.AsNoTracking()
-                on candidate.AwardCategoryCode equals category.CategoryCode
-            where candidate.Id == id && candidate.IsPublished && play.IsPublished && category.IsPublished
-            select new
-            {
-                Candidate = candidate,
-                Play = play,
-                CategoryName = category.CategoryName
-            }).SingleOrDefaultAsync(cancellationToken);
-        if (data is null) return NotFound();
-
-        return View(new CandidateDetailsViewModel
-        {
-            Id = data.Candidate.Id,
-            PlayName = data.Play.PlayName,
-            PlaySlug = SlugHelper.Resolve(data.Play.Slug, data.Play.PlayName),
-            CategoryName = data.CategoryName,
-            Candidate = data.Candidate.Candidate,
-            Role = data.Candidate.Role ?? "-",
-            CurrentState = data.Candidate.IsCurrent ? "Yeni Aday" : "Eski Aday",
-            Status = data.Candidate.IsActive ? "Aktif" : "Aktif Değil",
-            CreatedAt = data.Candidate.CreatedAt
-        });
-    }
+    public Task<IActionResult> CandidateDetails(Guid id, CancellationToken cancellationToken) =>
+        CandidateDetailsCoreAsync(id, cancellationToken);
 
     [HttpPost("oyunlar/{id:guid}/tum-oylari-yazdir")]
     [ValidateAntiForgeryToken]
@@ -1414,12 +1534,11 @@ public sealed class ManagementController(
         [Bind(Prefix = "Input")] AddCandidateInputModel input,
         CancellationToken cancellationToken)
     {
-        var requestedPlayId = input.PlayId;
-        var play = requestedPlayId.HasValue
+        var play = input.PlayId.HasValue
             ? await context.Plays
                 .AsNoTracking()
                 .SingleOrDefaultAsync(
-                    item => item.Id == requestedPlayId.Value && item.IsPublished && !item.RecordType,
+                    item => item.Id == input.PlayId.Value && item.IsPublished && !item.RecordType,
                     cancellationToken)
             : null;
 
@@ -1435,8 +1554,7 @@ public sealed class ManagementController(
         var isChangeMode = string.Equals(input.Mode, "change", StringComparison.Ordinal);
         if (!isChangeMode && !string.Equals(input.Mode, "new", StringComparison.Ordinal))
         {
-            TempData["CandidateError"] = "Geçerli bir aday işlem türü seçiniz.";
-            return RedirectToCandidateSection(slug);
+            return RedirectToCandidateSectionWithPopup(slug, "fail", "Geçerli bir aday işlem türü seçiniz.");
         }
 
         var category = input.AwardCategoryCode.HasValue
@@ -1450,22 +1568,52 @@ public sealed class ManagementController(
             : null;
         if (category is null)
         {
-            TempData["CandidateError"] = "Geçerli bir ödül kategorisi seçiniz.";
-            return RedirectToCandidateSection(slug);
+            return RedirectToCandidateSectionWithPopup(slug, "fail", "Geçerli bir ödül kategorisi seçiniz.");
         }
 
-        if (input.Candidate.Length is < 2 or > 250 ||
-            input.Role?.Length > 200 ||
-            !input.IsActive.HasValue)
+        if (input.Candidate.Length is < 2 or > 250)
         {
-            TempData["CandidateError"] = "Adı soyadı en az 2 karakter olmalı ve statü seçilmelidir.";
-            return RedirectToCandidateSection(slug);
+            return RedirectToCandidateSectionWithPopup(slug, "fail", "Adı Soyadı alanı 2 ile 250 karakter arasında olmalıdır.");
         }
 
-        if (category.MultiCandidate && input.Role is null)
+        if (!input.IsActive.HasValue)
         {
-            TempData["CandidateError"] = "Bu kategori birden fazla aday desteklediği için rol alanı zorunludur.";
-            return RedirectToCandidateSection(slug);
+            return RedirectToCandidateSectionWithPopup(slug, "fail", "Statü seçimi zorunludur.");
+        }
+
+        if (category.HasRoleAndPhoto && input.Role is null && !isChangeMode)
+        {
+            return RedirectToCandidateSectionWithPopup(slug, "fail", "Rol Adı alanı zorunludur.");
+        }
+
+        if (input.Role?.Length > 200)
+        {
+            return RedirectToCandidateSectionWithPopup(slug, "fail", "Rol Adı en fazla 200 karakter olabilir.");
+        }
+
+        byte[]? photoData = null;
+        string? photoContentType = null;
+        string? photoFileName = null;
+        if (category.HasRoleAndPhoto && input.Photo is not null)
+        {
+            const long maximumPhotoSize = 5 * 1024 * 1024;
+            if (input.Photo.Length == 0 || input.Photo.Length > maximumPhotoSize)
+            {
+                return RedirectToCandidateSectionWithPopup(slug, "fail", "Fotoğraf boyutu 5 MB'dan küçük olmalıdır.");
+            }
+
+            await using var photoStream = new MemoryStream();
+            await input.Photo.CopyToAsync(photoStream, cancellationToken);
+            photoData = photoStream.ToArray();
+            photoContentType = input.Photo.ContentType.Trim().ToLowerInvariant();
+            photoFileName = Path.GetFileName(input.Photo.FileName);
+            if (!IsSupportedPhoto(photoData, photoContentType))
+            {
+                return RedirectToCandidateSectionWithPopup(
+                    slug,
+                    "fail",
+                    "Yalnızca JPEG, PNG veya WebP formatında fotoğraf yükleyebilirsiniz.");
+            }
         }
 
         if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId))
@@ -1476,125 +1624,195 @@ public sealed class ManagementController(
         await using var transaction = await context.Database.BeginTransactionAsync(
             IsolationLevel.Serializable,
             cancellationToken);
-
-        var candidateTextComparer = StringComparer.Create(
-            new System.Globalization.CultureInfo("tr-TR"),
-            true);
-        var categoryCandidates = await context.PlayAwardCategories
-            .Where(item => item.PlayId == play.Id && item.AwardCategoryCode == category.CategoryCode && item.IsPublished)
-            .OrderByDescending(item => item.IsCurrent)
-            .ThenByDescending(item => item.UpdatedAt ?? item.CreatedAt)
-            .ThenByDescending(item => item.Id)
-            .ToListAsync(cancellationToken);
-        var roleCandidates = category.MultiCandidate
-            ? categoryCandidates
-                .Where(item => candidateTextComparer.Equals(item.Role?.Trim(), input.Role))
-                .ToList()
-            : categoryCandidates;
-
-        int roleCode;
-        if (isChangeMode)
+        try
         {
-            var currentCandidates = roleCandidates.Where(item => item.IsCurrent).ToArray();
-            if (currentCandidates.Length == 0)
-            {
-                await transaction.RollbackAsync(cancellationToken);
-                TempData["CandidateError"] = category.MultiCandidate
-                    ? "Değiştirilecek güncel rol bulunamadı. Rol adını kontrol ediniz."
-                    : "Bu kategori için değiştirilecek güncel aday bulunamadı.";
-                return RedirectToCandidateSection(slug);
-            }
+            var publishedPlayCandidates = await context.PlayAwardCategories
+                .Where(item => item.PlayId == play.Id && item.IsPublished)
+                .OrderByDescending(item => item.IsCurrent)
+                .ThenByDescending(item => item.UpdatedAt ?? item.CreatedAt)
+                .ThenByDescending(item => item.Id)
+                .ToListAsync(cancellationToken);
+            var categoryCandidates = publishedPlayCandidates
+                .Where(item => item.AwardCategoryCode == category.CategoryCode)
+                .ToArray();
+            var candidateTextComparer = StringComparer.Create(
+                new System.Globalization.CultureInfo("tr-TR"),
+                true);
 
-            roleCode = currentCandidates[0].RoleCode;
-            foreach (var currentCandidate in currentCandidates)
+            int roleCode;
+            string? role;
+            if (isChangeMode)
             {
-                currentCandidate.IsCurrent = false;
-                currentCandidate.UpdatedAt = TurkeyTime.Now;
-                currentCandidate.UpdatedBy = currentUserId;
-            }
-        }
-        else
-        {
-            if (roleCandidates.Count > 0)
-            {
-                await transaction.RollbackAsync(cancellationToken);
-                TempData["CandidateError"] = category.MultiCandidate
-                    ? "Bu rol daha önce oluşturulmuş. Aynı rol için Aday/Rol Değişimi seçeneğini kullanınız."
-                    : "Bu kategori için bir aday kaydı mevcut. Aday/Rol Değişimi seçeneğini kullanınız.";
-                return RedirectToCandidateSection(slug);
-            }
-
-            if (category.MultiCandidate)
-            {
-                var maximumRoleCode = categoryCandidates.Count == 0
-                    ? 0
-                    : categoryCandidates.Max(item => item.RoleCode);
-                if (maximumRoleCode == int.MaxValue)
+                if (!input.ReplacedCandidateId.HasValue)
                 {
                     await transaction.RollbackAsync(cancellationToken);
-                    TempData["CandidateError"] = "Bu kategori için yeni rol kodu üretilemedi.";
-                    return RedirectToCandidateSection(slug);
+                    return RedirectToCandidateSectionWithPopup(
+                        slug,
+                        "fail",
+                        "Değişimi yapılacak aday/rol seçimi zorunludur.");
                 }
 
-                roleCode = Math.Max(0, maximumRoleCode) + 1;
+                var replacedCandidate = categoryCandidates.SingleOrDefault(item =>
+                    item.Id == input.ReplacedCandidateId.Value && item.IsCurrent);
+                if (replacedCandidate is null)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    return RedirectToCandidateSectionWithPopup(
+                        slug,
+                        "fail",
+                        "Değişimi yapılacak güncel aday/rol bulunamadı.");
+                }
+
+                roleCode = replacedCandidate.RoleCode;
+                role = replacedCandidate.Role;
+                if (category.HasRoleAndPhoto && string.IsNullOrWhiteSpace(role))
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    return RedirectToCandidateSectionWithPopup(
+                        slug,
+                        "fail",
+                        "Seçilen adayın rol bilgisi eksik olduğu için değişim yapılamadı.");
+                }
+
+                var duplicateReplacement = categoryCandidates.Any(item =>
+                    item.RoleCode == roleCode &&
+                    candidateTextComparer.Equals(item.Candidate.Trim(), input.Candidate));
+                if (duplicateReplacement)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    return RedirectToCandidateSectionWithPopup(
+                        slug,
+                        "fail",
+                        "Aynı aday bu kategori ve rol için daha önce kaydedilmiş.");
+                }
+
+                replacedCandidate.IsCurrent = false;
+                replacedCandidate.UpdatedAt = TurkeyTime.Now;
+                replacedCandidate.UpdatedBy = currentUserId;
+            }
+            else if (category.MultiCandidate)
+            {
+                role = input.Role;
+                var roleAlreadyExists = publishedPlayCandidates.Any(item =>
+                    candidateTextComparer.Equals(item.Role?.Trim(), role));
+                if (roleAlreadyExists)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    return RedirectToCandidateSectionWithPopup(
+                        slug,
+                        "fail",
+                        RoleDuplicateMessage);
+                }
+
+                var usedRoleCodes = publishedPlayCandidates
+                    .Where(item => item.RoleCode > 0)
+                    .Select(item => item.RoleCode)
+                    .ToHashSet();
+                roleCode = GenerateUniqueRoleCode(usedRoleCodes);
             }
             else
             {
+                if (categoryCandidates.Length > 0)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    return RedirectToCandidateSectionWithPopup(
+                        slug,
+                        "fail",
+                        "Bu kategori için bir aday kaydı mevcut. Aday/Rol Değişimi seçeneğini kullanınız.");
+                }
+
+                role = null;
                 roleCode = 0;
-                input.Role = null;
             }
-        }
 
-        var duplicateCandidate = roleCandidates.Any(item =>
-            candidateTextComparer.Equals(item.Candidate.Trim(), input.Candidate));
-        if (duplicateCandidate)
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            TempData["CandidateError"] = "Aynı aday bu kategori ve rol için daha önce kaydedilmiş.";
-            return RedirectToCandidateSection(slug);
-        }
+            Guid? photoImageId = null;
+            var now = TurkeyTime.Now;
+            if (photoData is not null && photoContentType is not null && photoFileName is not null)
+            {
+                photoImageId = Guid.NewGuid();
+                context.Images.Add(new Image
+                {
+                    Id = photoImageId.Value,
+                    FileName = photoFileName,
+                    ContentType = photoContentType,
+                    ImageData = photoData,
+                    CreatedAt = now,
+                    CreatedBy = currentUserId,
+                    IsPublished = true
+                });
+            }
 
-        context.PlayAwardCategories.Add(new PlayAwardCategory
-        {
-            Id = Guid.NewGuid(),
-            PlayId = play.Id,
-            CreatedAt = TurkeyTime.Now,
-            CreatedBy = currentUserId,
-            IsPublished = true,
-            IsActive = input.IsActive.Value,
-            Candidate = input.Candidate,
-            AwardCategoryCode = category.CategoryCode,
-            IsCurrent = true,
-            Role = category.MultiCandidate ? input.Role : null,
-            RoleCode = roleCode
-        });
+            context.PlayAwardCategories.Add(new PlayAwardCategory
+            {
+                Id = Guid.NewGuid(),
+                PlayId = play.Id,
+                PhotoImageId = photoImageId,
+                CreatedAt = now,
+                CreatedBy = currentUserId,
+                IsPublished = true,
+                IsActive = input.IsActive.Value,
+                Candidate = input.Candidate,
+                AwardCategoryCode = category.CategoryCode,
+                IsCurrent = true,
+                Role = role,
+                RoleCode = roleCode
+            });
 
-        try
-        {
             await context.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
         }
-        catch (DbUpdateException exception)
+        catch (Exception exception) when (exception is not OperationCanceledException)
         {
             await transaction.RollbackAsync(cancellationToken);
             logger.LogWarning(
                 exception,
-                "Aday kaydı kategori/rol kurallarına uymadığı için oluşturulamadı. PlayId: {PlayId}, CategoryCode: {CategoryCode}",
+                "Aday kaydı oluşturulamadı. PlayId: {PlayId}, CategoryCode: {CategoryCode}",
                 play.Id,
                 category.CategoryCode);
-            TempData["CandidateError"] = "Aday kaydı kategori ve rol kurallarına uymadığı için oluşturulamadı.";
-            return RedirectToCandidateSection(slug);
+            return RedirectToCandidateSectionWithPopup(
+                slug,
+                "fail",
+                "Aday kaydı oluşturulamadı. Kategori ve rol bilgilerini kontrol ederek tekrar deneyiniz.");
         }
 
-        TempData["CandidateSuccess"] = isChangeMode
-            ? "Aday/rol değişimi başarıyla kaydedildi. Eski aday geçmişte korunmuştur."
+        var successMessage = isChangeMode
+            ? "Aday / Rol değişimi başarıyla kaydedildi."
             : "Aday başarıyla eklendi.";
+        return RedirectToCandidateSectionWithPopup(slug, "success", successMessage);
+    }
+
+    private IActionResult RedirectToCandidateSectionWithPopup(string slug, string type, string message)
+    {
+        TempData["GenericPopup.Type"] = type;
+        TempData["GenericPopup.Message"] = message;
         return RedirectToCandidateSection(slug);
     }
+
     private IActionResult RedirectToCandidateSection(string slug)
     {
         var detailsUrl = Url.Action(nameof(PlayDetails), new { slug }) ?? $"/oyunlar/{slug}";
         return Redirect(detailsUrl + "#aday-ekle");
+    }
+
+    private static int GenerateUniqueRoleCode(IReadOnlySet<int> usedRoleCodes)
+    {
+        const int maximumRoleCode = 9999;
+        if (usedRoleCodes.Count >= maximumRoleCode)
+        {
+            throw new InvalidOperationException("Bu oyun için kullanılabilir rol kodu kalmadı.");
+        }
+
+        var randomStart = RandomNumberGenerator.GetInt32(1, maximumRoleCode + 1);
+        for (var offset = 0; offset < maximumRoleCode; offset++)
+        {
+            var candidateCode = 1 + ((randomStart - 1 + offset) % maximumRoleCode);
+            if (!usedRoleCodes.Contains(candidateCode))
+            {
+                return candidateCode;
+            }
+        }
+
+        throw new InvalidOperationException("Benzersiz rol kodu üretilemedi.");
     }
 
     private static string NormalizeStatusColor(string? color)
@@ -1651,7 +1869,11 @@ public sealed class ManagementController(
     }
 
     [HttpGet("oylama-gecmisi")]
-    public async Task<IActionResult> VotingHistory(Guid? playId, CancellationToken cancellationToken)
+    public async Task<IActionResult> VotingHistory(
+        Guid? playId,
+        bool fromPlayDetails,
+        string? returnUrl,
+        CancellationToken cancellationToken)
     {
         if (!playId.HasValue)
         {
@@ -1661,7 +1883,7 @@ public sealed class ManagementController(
         var play = await context.Plays
             .AsNoTracking()
             .Where(item => item.Id == playId.Value && item.IsPublished && !item.RecordType)
-            .Select(item => new { item.Id, item.PlayName })
+            .Select(item => new { item.Id, item.PlayName, item.Slug })
             .SingleOrDefaultAsync(cancellationToken);
         if (play is null) return NotFound();
 
@@ -1669,7 +1891,14 @@ public sealed class ManagementController(
         {
             PlayId = play.Id,
             PlayName = play.PlayName,
-            LockPlay = true
+            LockPlay = true,
+            PlayDetailsUrl = fromPlayDetails
+                ? Url.Action(nameof(PlayDetails), new
+                {
+                    slug = SlugHelper.Resolve(play.Slug, play.PlayName),
+                    returnUrl = NormalizePlayReturnUrl(returnUrl)
+                })
+                : null
         });
     }
 
@@ -2147,6 +2376,7 @@ public sealed class ManagementController(
                 {
                     Key = group.Key,
                     Name = name,
+                    CanSelectAll = !string.Equals(group.Key, "ungrouped", StringComparison.Ordinal),
                     Juries = group
                         .Select(jury => new AddPlayJuryOptionViewModel
                         {
@@ -2186,8 +2416,8 @@ public sealed class ManagementController(
         bool includeCurrentState,
         bool isCurrent)
     {
-        var roleText = string.IsNullOrWhiteSpace(role) ? string.Empty : $" ({role.Trim()})";
-        var stateText = includeCurrentState ? (isCurrent ? " / Aktif Oyuncu" : " / Eski Oyuncu") : string.Empty;
+        var roleText = string.IsNullOrWhiteSpace(role) ? string.Empty : $" / {role.Trim()}";
+        var stateText = includeCurrentState ? (isCurrent ? " - Aktif Oyuncu" : " - Eski Oyuncu") : string.Empty;
         return $"{candidate.Trim()}{roleText}{stateText}";
     }
     private bool IsAjaxRequest() =>
