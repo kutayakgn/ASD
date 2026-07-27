@@ -13,4 +13,5 @@ public class Log
     public string EventType { get; set; } = null!;
     public string Message { get; set; } = null!;
     public DateTime? CreatedDate { get; set; }
+    public bool IsPublished { get; set; }
 }

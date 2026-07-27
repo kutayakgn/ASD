@@ -65,7 +65,7 @@ BEGIN TRY
             FOREIGN KEY ([PlayAwardCategoryId])
             REFERENCES [dbo].[PlayAwardCategories] ([Id])
             ON UPDATE CASCADE
-            ON DELETE CASCADE;
+            ON DELETE NO ACTION;
 
     IF OBJECT_ID(N'[dbo].[FK_JuryVotes_Users]', N'F') IS NULL
         ALTER TABLE [dbo].[JuryVotes] WITH CHECK

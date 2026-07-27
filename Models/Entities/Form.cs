@@ -34,4 +34,5 @@ public class Form
     public string? Choreography { get; set; }
     public bool Active { get; set; }
     public bool? Deleted { get; set; }
+    public bool IsPublished { get; set; }
 }

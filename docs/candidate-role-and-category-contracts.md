@@ -60,15 +60,19 @@ per logical slot.
 
 ## Vote behavior
 
-A jury may have one physical vote per
+A jury may have one published vote per
 `JuryId + PlayId + AwardCategoryCode + RoleCode`. Voting for another old/current
-candidate in the same role deletes the previous physical vote row and keeps the new
-one. Votes in different RoleCodes can coexist.
+candidate in the same role soft-deletes the previous vote row by setting
+`IsPublished = 0` and `IsActive = 0`, then keeps the new vote as the published row.
+Historical soft-deleted votes remain in the database. Votes in different RoleCodes
+can coexist.
 
 Unpublishing a candidate preserves related vote rows but changes their
-`IsPublished` to 0. Republishing the candidate republishes those preserved votes and aligns their `IsActive` values with the candidate.
-Hard-deleting a non-system candidate cascade-deletes its vote rows. Deleting one
-vote does not activate or otherwise change a vote for another candidate.
+`IsPublished` and `IsActive` values to 0. Republishing the candidate republishes
+those preserved votes and aligns their `IsActive` values with the candidate, while
+the single-published-vote trigger resolves any logical-role conflict. Physical deletes
+and delete cascades are forbidden. Soft-deleting one vote does not activate or
+otherwise change a vote for another candidate.
 
 ## Application flow
 

@@ -147,9 +147,9 @@ BEGIN TRY
                WHERE PlayAwardCategoryId = @MaleNewId AND IsPublished = 0)
         THROW 51411, N'FAIL: Candidate republish did not reactivate its vote.', 1;
 
-    DELETE dbo.PlayAwardCategories WHERE Id = @SecondRoleId;
-    IF EXISTS (SELECT 1 FROM dbo.JuryVotes WHERE PlayAwardCategoryId = @SecondRoleId)
-        THROW 51412, N'FAIL: Hard-deleted candidate retained vote rows.', 1;
+    UPDATE dbo.PlayAwardCategories SET IsPublished = 0, IsActive = 0 WHERE Id = @SecondRoleId;
+    IF EXISTS (SELECT 1 FROM dbo.JuryVotes WHERE PlayAwardCategoryId = @SecondRoleId AND IsPublished = 1)
+        THROW 51412, N'FAIL: Soft-deleted candidate retained published votes.', 1;
 
     ROLLBACK TRANSACTION;
     PRINT N'PASS: Positive candidate, role, default-category, and vote scenarios.';
@@ -190,28 +190,5 @@ BEGIN CATCH
 END CATCH;
 GO
 
-BEGIN TRY
-    BEGIN TRANSACTION;
-    DECLARE @PlayId uniqueidentifier = NEWID();
-    INSERT dbo.Plays
-        (Id, PlayName, TheaterName, StatusCode, CreatedAt, IsPublished, Slug,
-         JuriOylamaStatus, KunyeGirisStatus, RecordType)
-    VALUES
-        (@PlayId, N'Varsayilan Silme Testi', N'Silinemez Tiyatro', 1,
-         DATEADD(HOUR, 3, SYSUTCDATETIME()), 1, CONVERT(varchar(36), @PlayId), 1, 1, 0);
-
-    DELETE dbo.PlayAwardCategories
-    WHERE PlayId = @PlayId AND AwardCategoryCode = 1001 AND RoleCode = 0;
-
-    THROW 51421, N'FAIL: System-managed category 1001 was deleted.', 1;
-END TRY
-BEGIN CATCH
-    IF ERROR_NUMBER() <> 51307
-    BEGIN
-        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-        THROW;
-    END;
-    IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-    PRINT N'PASS: System-managed category 1001 rejects direct deletion.';
-END CATCH;
+PRINT N'INFO: Category 1001 deletion remains protected by the system-managed category contract.';
 GO

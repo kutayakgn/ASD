@@ -3,25 +3,31 @@
 - Treat `AwardCategories.CategoryCode` and `PlayStatuses.StatusCode` as shared,
   immutable integration contracts. Do not renumber, delete, repurpose, or reseed
   their canonical rows from migrations, application startup, or test-data scripts.
+- Read `docs/soft-delete-contract.md` before changing any delete action, entity,
+  relationship, migration, trigger, cleanup, test-data, or restore behavior.
 - Read `docs/reference-data-contracts.md` before changing award-category,
   play-status, candidate, voting, or seed-data behavior.
 - Read `docs/play-source-and-voting-contracts.md` before changing `RecordType`,
   play visibility, jury voting, ticket-fee, assignment, or blacklist behavior.
+- No application or SQL path may physically delete a database row. Every table
+  uses `IsPublished`: `1` is non-deleted and `0` is soft-deleted. All foreign keys
+  use `ON DELETE NO ACTION`; delete cascades are forbidden.
+- Normal queries must exclude `IsPublished = 0`. Restores must be explicit and
+  must revalidate uniqueness and domain invariants before setting it back to `1`.
 - `Plays.RecordType` is immutable provenance: `0` means Kunye Giris and `1`
   means AfifeAdmin. It is not a visibility or activation flag.
 - `KunyeGirisStatus` and `JuriOylamaStatus` are editable only for `RecordType = 0`.
   Both must remain false for `RecordType = 1`.
 - Candidates and votes are allowed only for `RecordType = 0`; ticket fees and
   jury assignments are allowed for both source types.
-- For each `JuryId + PlayId + AwardCategoryCode + RoleCode` group, `JuryVotes`
-  may contain only one physical row regardless of `IsPublished`. Recording a vote
-  for another old/current candidate must delete the previous candidate vote row.
-- `IsPublished` is the soft-delete flag for candidates and votes. Normal queries
-  must exclude rows where it is false.
+- For each `JuryId + PlayId + AwardCategoryCode + RoleCode` group, only one
+  published `JuryVotes` row may exist. Recording a vote for another old/current
+  candidate soft-deletes the previous vote row and preserves its history.
 - `PlayAwardCategories.IsActive` controls candidate availability and
   `JuryVotes.IsActive` controls vote calculation eligibility. Candidate activity
   changes synchronize non-deleted vote activity in both directions.
-- Hard-deleting a candidate must cascade-delete all of its `JuryVotes` rows.
+- Soft-deleting a candidate must preserve and soft-delete its `JuryVotes` rows.
+  Physical candidate and vote deletion is forbidden.
 - Do not use `IsPublished` as an activity toggle. Candidate status controls must
   update `PlayAwardCategories.IsActive`.
 - Read `docs/candidate-role-and-category-contracts.md` before changing category

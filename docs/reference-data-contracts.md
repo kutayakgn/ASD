@@ -58,7 +58,7 @@ to `RecordType = 1` until those candidate records are removed.
 
 Run `sql/enforce-admin-play-status-rules.sql` to normalize existing records and
 enforce these rules with database check constraints.
-Run `sql/enforce-admin-play-candidate-rules.sql` to remove invalid candidate/vote
+Run `sql/enforce-admin-play-candidate-rules.sql` to soft-delete invalid candidate/vote
 records and install the cross-table enforcement triggers.
 
 ## Candidate multiplicity and role history
@@ -78,8 +78,10 @@ a candidate preserves its physical row and soft-deletes linked votes. Republishi
 candidate republishes those preserved votes and aligns their `IsActive` values with the candidate.
 
 The logical vote identity remains
-`JuryId + PlayId + AwardCategoryCode + RoleCode`. Only one physical vote may exist
-for that group. Voting for another old/current candidate deletes the previous physical
-vote and keeps the new row.
+`JuryId + PlayId + AwardCategoryCode + RoleCode`. Only one published vote may exist
+for that group. Voting for another old/current candidate soft-deletes the previous
+vote and preserves both physical rows as history.
 
-Run `sql/migrate-candidate-vote-active-soft-delete.sql` before using either application against the shared database. The legacy migration filename is retained as an identical, backward-compatible entry point; run either file, not both.
+The global rule for every table is documented in `soft-delete-contract.md`. Run
+`sql/enforce-global-soft-delete.sql` after the earlier candidate migration so all
+foreign keys and direct SQL operations follow the same no-hard-delete contract.

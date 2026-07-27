@@ -19,4 +19,5 @@ public class Config
     public DateTime UpdatedAt { get; set; }
     [Column("updated_by")]
     public Guid? UpdatedBy { get; set; }
+    public bool IsPublished { get; set; }
 }

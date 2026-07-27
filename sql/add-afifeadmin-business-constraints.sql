@@ -35,7 +35,8 @@ BEGIN TRY
           AND [name] = N'UX_JuryAssignedPlays_PlayId_JuryId'
     )
         CREATE UNIQUE INDEX [UX_JuryAssignedPlays_PlayId_JuryId]
-            ON [dbo].[JuryAssignedPlays] ([PlayId], [JuryId]);
+            ON [dbo].[JuryAssignedPlays] ([PlayId], [JuryId])
+            WHERE [IsPublished] = 1;
 
     -- A ticket fee can be entered once per user and play.
     IF NOT EXISTS (
@@ -45,7 +46,8 @@ BEGIN TRY
           AND [name] = N'UX_JuryGameTicketFees_UserId_PlayId'
     )
         CREATE UNIQUE INDEX [UX_JuryGameTicketFees_UserId_PlayId]
-            ON [dbo].[JuryGameTicketFees] ([UserId], [PlayId]);
+            ON [dbo].[JuryGameTicketFees] ([UserId], [PlayId])
+            WHERE [IsPublished] = 1;
 
     -- A jury member can vote once for the same play award category record.
     IF NOT EXISTS (
@@ -55,7 +57,8 @@ BEGIN TRY
           AND [name] = N'UX_JuryVotes_JuryId_PlayAwardCategoryId'
     )
         CREATE UNIQUE INDEX [UX_JuryVotes_JuryId_PlayAwardCategoryId]
-            ON [dbo].[JuryVotes] ([JuryId], [PlayAwardCategoryId]);
+            ON [dbo].[JuryVotes] ([JuryId], [PlayAwardCategoryId])
+            WHERE [IsPublished] = 1;
 
     -- The same candidate cannot be entered twice for a play/category/role.
     IF NOT EXISTS (
@@ -66,7 +69,8 @@ BEGIN TRY
     )
         CREATE UNIQUE INDEX [UX_PlayAwardCategories_Play_Category_Role_Candidate]
             ON [dbo].[PlayAwardCategories]
-               ([PlayId], [AwardCategoryCode], [RoleCode], [Candidate]);
+               ([PlayId], [AwardCategoryCode], [RoleCode], [Candidate])
+            WHERE [IsPublished] = 1;
 
     -- Only one current record is allowed for each play/category/role.
     IF NOT EXISTS (
@@ -78,7 +82,7 @@ BEGIN TRY
         CREATE UNIQUE INDEX [UX_PlayAwardCategories_Current_Play_Category_Role]
             ON [dbo].[PlayAwardCategories]
                ([PlayId], [AwardCategoryCode], [RoleCode], [IsCurrent])
-            WHERE [IsCurrent] = 1;
+            WHERE [IsCurrent] = 1 AND [IsPublished] = 1;
 
     -- RecordType 0 represents Kunye giris, 1 represents Admin giris.
     IF COL_LENGTH(N'[dbo].[Plays]', N'RecordType') IS NULL

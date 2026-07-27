@@ -29,7 +29,7 @@ IF NOT EXISTS (
 BEGIN
     CREATE UNIQUE INDEX [UX_Users_Admin_Username]
         ON [dbo].[Users] ([Username])
-        WHERE [RoleCode] = 1;
+        WHERE [RoleCode] = 1 AND [IsPublished] = 1;
 END;
 GO
 
@@ -40,6 +40,6 @@ IF NOT EXISTS (
 BEGIN
     CREATE UNIQUE INDEX [UX_Users_Admin_Email]
         ON [dbo].[Users] ([Email])
-        WHERE [RoleCode] = 1;
+        WHERE [RoleCode] = 1 AND [IsPublished] = 1;
 END;
 GO

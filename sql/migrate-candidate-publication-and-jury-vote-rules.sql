@@ -63,13 +63,15 @@ BEGIN TRY
         INNER JOIN dbo.PlayAwardCategories AS candidate
             ON candidate.Id = vote.PlayAwardCategoryId
     )
-    DELETE vote
+    UPDATE vote
+    SET vote.IsPublished = 0,
+        vote.IsActive = 0,
+        vote.UpdatedAt = DATEADD(HOUR, 3, SYSUTCDATETIME())
     FROM dbo.JuryVotes AS vote
     INNER JOIN RankedVotes AS ranked ON ranked.Id = vote.Id
     WHERE ranked.VoteOrder > 1;
 
-    -- A physical candidate delete is exceptional, but when it occurs its votes
-    -- must be removed atomically. UI delete operations remain soft deletes.
+    -- Physical candidate deletion is forbidden; the FK preserves vote history.
     DECLARE @CandidateVoteForeignKey sysname;
     SELECT TOP (1) @CandidateVoteForeignKey = foreignKey.name
     FROM sys.foreign_keys AS foreignKey
@@ -88,7 +90,7 @@ BEGIN TRY
            SELECT 1
            FROM sys.foreign_keys
            WHERE name = @CandidateVoteForeignKey
-             AND delete_referential_action = 1
+             AND delete_referential_action = 0
              AND update_referential_action = 1
        )
     BEGIN
@@ -107,7 +109,7 @@ BEGIN TRY
             FOREIGN KEY (PlayAwardCategoryId)
             REFERENCES dbo.PlayAwardCategories (Id)
             ON UPDATE CASCADE
-            ON DELETE CASCADE;
+            ON DELETE NO ACTION;
     END;
     COMMIT TRANSACTION;
 END TRY
@@ -179,7 +181,10 @@ BEGIN
     WHERE (candidate.IsPublished = 0 AND vote.IsPublished = 1)
        OR (candidate.IsActive = 0 AND vote.IsActive = 1);
 
-    DELETE vote
+    UPDATE vote
+    SET vote.IsPublished = 0,
+        vote.IsActive = 0,
+        vote.UpdatedAt = DATEADD(HOUR, 3, SYSUTCDATETIME())
     FROM dbo.JuryVotes AS vote
     INNER JOIN dbo.PlayAwardCategories AS candidate
         ON candidate.Id = vote.PlayAwardCategoryId
@@ -188,7 +193,8 @@ BEGIN
        AND affected.PlayId = candidate.PlayId
        AND affected.AwardCategoryCode = candidate.AwardCategoryCode
        AND affected.RoleCode = candidate.RoleCode
-    WHERE vote.Id <> affected.WinnerVoteId;
+    WHERE vote.Id <> affected.WinnerVoteId
+      AND vote.IsPublished = 1;
 END;
 GO
 
@@ -262,7 +268,10 @@ BEGIN
            AND affected.AwardCategoryCode = candidate.AwardCategoryCode
            AND affected.RoleCode = candidate.RoleCode
     )
-    DELETE vote
+    UPDATE vote
+    SET vote.IsPublished = 0,
+        vote.IsActive = 0,
+        vote.UpdatedAt = DATEADD(HOUR, 3, SYSUTCDATETIME())
     FROM dbo.JuryVotes AS vote
     INNER JOIN RankedVotes AS ranked ON ranked.Id = vote.Id
     WHERE ranked.VoteOrder > 1;

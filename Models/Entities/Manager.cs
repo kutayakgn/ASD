@@ -13,4 +13,5 @@ public class Manager
     public string Password { get; set; } = null!;
     public DateTime? CreatedDate { get; set; }
     public DateTime? UpdatedDate { get; set; }
+    public bool IsPublished { get; set; }
 }

@@ -98,7 +98,7 @@ BEGIN TRY
         FOREIGN KEY ([PlayAwardCategoryId])
         REFERENCES [dbo].[PlayAwardCategories] ([Id])
         ON UPDATE CASCADE
-        ON DELETE CASCADE;
+        ON DELETE NO ACTION;
 
     ALTER TABLE [dbo].[JuryVotes] WITH CHECK
         ADD CONSTRAINT [FK_JuryVotes_Users]

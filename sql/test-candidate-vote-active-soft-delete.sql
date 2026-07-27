@@ -88,12 +88,19 @@ BEGIN TRY
         ORDER BY candidate.Id
     );
 
-    DELETE dbo.PlayAwardCategories WHERE Id = @CandidateId;
-    IF EXISTS (SELECT 1 FROM dbo.JuryVotes WHERE PlayAwardCategoryId = @CandidateId)
-        THROW 51606, N'FAIL: Candidate hard-delete retained vote rows.', 1;
+    UPDATE dbo.PlayAwardCategories
+    SET IsPublished = 0, IsActive = 0
+    WHERE Id = @CandidateId;
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.PlayAwardCategories WHERE Id = @CandidateId)
+        THROW 51606, N'FAIL: Candidate soft-delete removed the physical candidate row.', 1;
+    IF EXISTS (SELECT 1 FROM dbo.JuryVotes WHERE PlayAwardCategoryId = @CandidateId AND IsPublished = 1)
+        THROW 51607, N'FAIL: Candidate soft-delete retained a published vote.', 1;
+    IF NOT EXISTS (SELECT 1 FROM dbo.JuryVotes WHERE PlayAwardCategoryId = @CandidateId)
+        THROW 51608, N'FAIL: Candidate soft-delete removed physical vote history.', 1;
 
     ROLLBACK TRANSACTION;
-    PRINT N'PASS: Physical candidate delete cascades physical vote deletion.';
+    PRINT N'PASS: Candidate and vote rows are retained as soft-deleted history.';
 END TRY
 BEGIN CATCH
     IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;

@@ -16,27 +16,37 @@ GO
 BEGIN TRY
     BEGIN TRANSACTION;
 
-    -- Admin-created plays cannot participate in candidate voting. Remove votes
-    -- explicitly so this cleanup does not depend on the current FK delete action.
-    DELETE vote
+    -- Invalid dependent rows are retained as soft-deleted history.
+    UPDATE vote
+    SET vote.[IsPublished] = 0,
+        vote.[IsActive] = 0,
+        vote.[UpdatedAt] = DATEADD(HOUR, 3, SYSUTCDATETIME())
     FROM [dbo].[JuryVotes] AS vote
     INNER JOIN [dbo].[PlayAwardCategories] AS candidate
         ON candidate.[Id] = vote.[PlayAwardCategoryId]
     INNER JOIN [dbo].[Plays] AS play
         ON play.[Id] = candidate.[PlayId]
-    WHERE play.[RecordType] = 1;
+    WHERE play.[RecordType] = 1
+      AND (vote.[IsPublished] = 1 OR vote.[IsActive] = 1);
 
-    DELETE candidate
+    UPDATE candidate
+    SET candidate.[IsPublished] = 0,
+        candidate.[IsActive] = 0,
+        candidate.[UpdatedAt] = DATEADD(HOUR, 3, SYSUTCDATETIME())
     FROM [dbo].[PlayAwardCategories] AS candidate
     INNER JOIN [dbo].[Plays] AS play
         ON play.[Id] = candidate.[PlayId]
-    WHERE play.[RecordType] = 1;
+    WHERE play.[RecordType] = 1
+      AND (candidate.[IsPublished] = 1 OR candidate.[IsActive] = 1);
 
-    DELETE blacklist
+    UPDATE blacklist
+    SET blacklist.[IsPublished] = 0,
+        blacklist.[UpdatedAt] = DATEADD(HOUR, 3, SYSUTCDATETIME())
     FROM [dbo].[Blacklist] AS blacklist
     INNER JOIN [dbo].[Plays] AS play
         ON play.[Id] = blacklist.[PlayId]
-    WHERE play.[RecordType] = 1;
+    WHERE play.[RecordType] = 1
+      AND blacklist.[IsPublished] = 1;
 
     COMMIT TRANSACTION;
 END TRY

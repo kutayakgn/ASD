@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using System.Linq.Expressions;
 using YKBAfife.Models.Entities;
 
 namespace YKBAfife.Data;
@@ -20,6 +21,10 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
     public DbSet<JuryAssignedPlay> JuryAssignedPlays => Set<JuryAssignedPlay>();
     public DbSet<AwardCategory> AwardCategories => Set<AwardCategory>();
     public DbSet<Blacklist> Blacklists => Set<Blacklist>();
+    public DbSet<Config> Configs => Set<Config>();
+    public DbSet<Log> Logs => Set<Log>();
+    public DbSet<Manager> Managers => Set<Manager>();
+    public DbSet<Role> Roles => Set<Role>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -83,7 +88,7 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
             entity.HasMany(x => x.JuryVotes)
                 .WithOne(x => x.PlayAwardCategory)
                 .HasForeignKey(x => x.PlayAwardCategoryId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<Announcement>(entity =>
@@ -104,6 +109,26 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
             entity.ToTable("Form", "dbo");
         });
 
+        modelBuilder.Entity<Config>(entity =>
+        {
+            entity.ToTable("Configs", "dbo");
+        });
+
+        modelBuilder.Entity<Log>(entity =>
+        {
+            entity.ToTable("Log", "dbo");
+        });
+
+        modelBuilder.Entity<Manager>(entity =>
+        {
+            entity.ToTable("Manager", "dbo");
+        });
+
+        modelBuilder.Entity<Role>(entity =>
+        {
+            entity.ToTable("Roles", "dbo");
+            entity.Ignore(x => x.Users);
+        });
         modelBuilder.Entity<Group>(entity =>
         {
             entity.ToTable("Group", "dbo");
@@ -160,5 +185,63 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
                 .HasForeignKey(x => x.CreatedBy)
                 .OnDelete(DeleteBehavior.NoAction);
         });
+        ApplyPublishedQueryFilters(modelBuilder);
+    }
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        ConvertDeletesToSoftDeletes();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(
+        bool acceptAllChangesOnSuccess,
+        CancellationToken cancellationToken = default)
+    {
+        ConvertDeletesToSoftDeletes();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    private static void ApplyPublishedQueryFilters(ModelBuilder modelBuilder)
+    {
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            var isPublishedProperty = entityType.FindProperty("IsPublished");
+            if (isPublishedProperty?.ClrType != typeof(bool))
+            {
+                continue;
+            }
+
+            var parameter = Expression.Parameter(entityType.ClrType, "entity");
+            var body = Expression.Equal(
+                Expression.Property(parameter, "IsPublished"),
+                Expression.Constant(true));
+
+            entityType.SetQueryFilter(Expression.Lambda(body, parameter));
+        }
+    }
+
+    private void ConvertDeletesToSoftDeletes()
+    {
+        foreach (var entry in ChangeTracker.Entries()
+                     .Where(entry => entry.State == EntityState.Deleted)
+                     .ToArray())
+        {
+            var isPublishedProperty = entry.Metadata.FindProperty("IsPublished");
+            if (isPublishedProperty?.ClrType != typeof(bool))
+            {
+                throw new InvalidOperationException(
+                    $"{entry.Metadata.ClrType.Name} cannot be deleted because it has no IsPublished soft-delete property.");
+            }
+
+            entry.State = EntityState.Modified;
+            entry.Property("IsPublished").CurrentValue = false;
+
+            var isActiveProperty = entry.Metadata.FindProperty("IsActive");
+            if (isActiveProperty?.ClrType == typeof(bool))
+            {
+                entry.Property("IsActive").CurrentValue = false;
+            }
+        }
     }
 }
