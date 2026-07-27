@@ -12,7 +12,7 @@
 }
 
 <section class="play-details-page">
-    <a asp-controller="Management" asp-action="Plays" class="play-details-back" data-play-details-back>
+    <a href="@Model.ReturnUrl" class="play-details-back">
         <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
         <span>Oyunlar'a Dön</span>
     </a>
@@ -34,6 +34,7 @@
             <a asp-controller="Management"
                asp-action="EditPlay"
                asp-route-slug="@Model.Slug"
+               asp-route-returnUrl="@Model.ReturnUrl"
                class="play-detail-action play-detail-action-primary">Oyunu Düzenle</a>
         </div>
     </header>
@@ -101,7 +102,3 @@
         }
     }
 </section>
-
-@section Scripts {
-    <script src="~/js/play-details.js" asp-append-version="true"></script>
-}

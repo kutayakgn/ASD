@@ -64,6 +64,7 @@ public sealed class ComplexTableRowViewModel
     public string EditModalUrl { get; init; } = string.Empty;
     public string EditAccessibleLabel { get; init; } = string.Empty;
     public string DeleteUrl { get; init; } = string.Empty;
+    public bool DeleteOnRowClick { get; init; }
     public string DeleteConfirmMessage { get; init; } = string.Empty;
     public string DeleteAccessibleLabel { get; init; } = string.Empty;
     public string NavigationUrl { get; init; } = string.Empty;

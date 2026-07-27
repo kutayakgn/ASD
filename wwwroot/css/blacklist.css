@@ -80,12 +80,12 @@
     border: 0;
 }
 
-.complex-table-delete-button:hover,
-.complex-table-delete-button:focus-visible {
-    background: #fff1f1;
-    outline: 2px solid #b31d1d;
-    outline-offset: -2px;
-}
+    .complex-table-delete-button:hover,
+    .complex-table-delete-button:focus-visible {
+        margin-top: -12px;
+        padding-top: 20px;
+        cursor:pointer;
+    }
 
 .complex-table-delete-button img {
     width: 20px;

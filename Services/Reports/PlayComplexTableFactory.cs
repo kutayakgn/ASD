@@ -26,7 +26,7 @@ public static class PlayComplexTableFactory
         var rows = report.Rows.Select(row =>
         {
             var slug = SlugHelper.Resolve(row.Slug, row.PlayName);
-            var detailsUrl = $"/oyunlar/{Uri.EscapeDataString(slug)}";
+            var detailsUrl = $"/oyunlar/{Uri.EscapeDataString(slug)}?returnUrl=%2Foyunlar";
             var encodedPlayName = HtmlEncoder.Default.Encode(row.PlayName);
             var playNameContent = BuildPlayNameContent(row, encodedPlayName);
             return new ComplexTableRowViewModel
@@ -133,7 +133,8 @@ public static class PlayComplexTableFactory
             var links = string.Join(", ", row.SimilarPlays.Select(similarPlay =>
             {
                 var slug = SlugHelper.Resolve(similarPlay.Slug, similarPlay.PlayName);
-                var href = HtmlEncoder.Default.Encode($"/oyunlar/{Uri.EscapeDataString(slug)}");
+                var href = HtmlEncoder.Default.Encode(
+                    $"/oyunlar/{Uri.EscapeDataString(slug)}?returnUrl=%2Foyunlar");
                 var name = HtmlEncoder.Default.Encode(similarPlay.PlayName);
                 return $"<a href=\"{href}\">{name}</a>";
             }));

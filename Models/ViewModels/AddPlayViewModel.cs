@@ -31,6 +31,7 @@ public sealed class EditPlayViewModel : PlayFormViewModel
 {
     public Guid Id { get; set; }
     public string Slug { get; set; } = string.Empty;
+    public string ReturnUrl { get; set; } = "/oyunlar";
     public bool RecordType { get; set; }
     public bool JuriOylamaStatus { get; set; }
     public bool KunyeGirisStatus { get; set; }

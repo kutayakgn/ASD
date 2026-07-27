@@ -1,5 +1,5 @@
 (() => {
-    const submitDelete = (trigger, url) => {
+    const submitDelete = async (trigger, url) => {
         const section = trigger.closest("[data-complex-table]");
         const token = section?.querySelector('input[name="__RequestVerificationToken"]')?.value;
         if (!url || !token) {
@@ -7,16 +7,38 @@
             return;
         }
 
-        const form = document.createElement("form");
-        form.method = "post";
-        form.action = url;
-        const tokenInput = document.createElement("input");
-        tokenInput.type = "hidden";
-        tokenInput.name = "__RequestVerificationToken";
-        tokenInput.value = token;
-        form.appendChild(tokenInput);
-        document.body.appendChild(form);
-        form.submit();
+        const formData = new FormData();
+        formData.set("__RequestVerificationToken", token);
+        trigger.disabled = true;
+        trigger.setAttribute("aria-busy", "true");
+
+        try {
+            const response = await fetch(url, {
+                method: "POST",
+                body: formData,
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+            });
+            if (response.redirected) {
+                window.location.assign(response.url);
+                return;
+            }
+
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok || result.success === false) {
+                throw new Error(result.message || "Silme işlemi tamamlanamadı.");
+            }
+
+            if (result.refreshTable === true && section) {
+                section.dispatchEvent(new CustomEvent("complex-table:update", { bubbles: true }));
+            }
+            window.genericPopup?.success(result.message || "Kayıt silindi.");
+        } catch (error) {
+            console.error(error);
+            window.genericPopup?.fail(error.message || "Silme işlemi tamamlanamadı.");
+        } finally {
+            trigger.disabled = false;
+            trigger.removeAttribute("aria-busy");
+        }
     };
 
     const requestDelete = (trigger, url, message) => {

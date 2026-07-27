@@ -18,5 +18,6 @@ public sealed class PlayDetailsViewModel
     public DateTime? UpdatedAt { get; init; }
     public string? UpdatedByName { get; init; }
     public string Slug { get; init; } = string.Empty;
+    public string ReturnUrl { get; init; } = "/oyunlar";
     public ComplexTableViewModel? CandidatesTable { get; init; }
 }

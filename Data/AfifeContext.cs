@@ -57,7 +57,7 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
         });
         modelBuilder.Entity<Play>(entity =>
         {
-            entity.ToTable("Plays", "dbo");
+            entity.ToTable("Plays", "dbo", table => table.UseSqlOutputClause(false));
             entity.Property(x => x.RecordType)
                 .Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
             entity.Ignore(x => x.Status);
@@ -74,7 +74,7 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
 
         modelBuilder.Entity<PlayAwardCategory>(entity =>
         {
-            entity.ToTable("PlayAwardCategories", "dbo");
+            entity.ToTable("PlayAwardCategories", "dbo", table => table.UseSqlOutputClause(false));
             entity.Ignore(x => x.AwardCategory);
             entity.HasOne(x => x.PhotoImage)
                 .WithMany(x => x.CandidatePhotos)
@@ -130,7 +130,7 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
         });
         modelBuilder.Entity<JuryVote>(entity =>
         {
-            entity.ToTable("JuryVotes", "dbo");
+            entity.ToTable("JuryVotes", "dbo", table => table.UseSqlOutputClause(false));
             entity.Ignore(x => x.Jury);
         });
 
@@ -143,7 +143,7 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
 
         modelBuilder.Entity<Blacklist>(entity =>
         {
-            entity.ToTable("Blacklist", "dbo");
+            entity.ToTable("Blacklist", "dbo", table => table.UseSqlOutputClause(false));
             entity.HasIndex(x => new { x.JuryId, x.PlayId })
                 .IsUnique()
                 .HasFilter("[IsPublished] = 1");

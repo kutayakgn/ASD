@@ -853,7 +853,10 @@ public sealed class ManagementController(
         return RedirectToAction(nameof(AddPlay));
     }
     [HttpGet("oyunlar/{slug}/duzenle")]
-    public async Task<IActionResult> EditPlay(string slug, CancellationToken cancellationToken)
+    public async Task<IActionResult> EditPlay(
+        string slug,
+        string? returnUrl,
+        CancellationToken cancellationToken)
     {
         var play = await context.Plays.AsNoTracking()
             .SingleOrDefaultAsync(item => item.IsPublished && item.Slug == slug, cancellationToken);
@@ -874,6 +877,7 @@ public sealed class ManagementController(
         {
             Id = play.Id,
             Slug = SlugHelper.Resolve(play.Slug, play.PlayName),
+            ReturnUrl = NormalizePlayReturnUrl(returnUrl),
             PlayName = play.PlayName,
             TheaterName = play.TheaterName,
             StatusCode = play.StatusCode,
@@ -901,7 +905,15 @@ public sealed class ManagementController(
             item => item.Id == model.Id && item.IsPublished,
             cancellationToken);
         if (play is null) return NotFound();
+        if (!string.Equals(
+                SlugHelper.Resolve(play.Slug, play.PlayName),
+                slug,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return NotFound();
+        }
 
+        model.ReturnUrl = NormalizePlayReturnUrl(model.ReturnUrl);
         model.RecordType = play.RecordType;
         model.Slug = SlugHelper.Resolve(play.Slug, play.PlayName);
         model.PlayName = model.PlayName?.Trim() ?? string.Empty;
@@ -1017,7 +1029,7 @@ public sealed class ManagementController(
             await transaction.CommitAsync(cancellationToken);
             TempData["GenericPopup.Type"] = "success";
             TempData["GenericPopup.Message"] = "Oyun başarıyla güncellendi.";
-            return RedirectToAction(nameof(PlayDetails), new { slug = newSlug });
+            return RedirectToAction(nameof(PlayDetails), new { slug = newSlug, returnUrl = model.ReturnUrl });
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -1101,7 +1113,10 @@ public sealed class ManagementController(
         return Json(new { isActive, refreshTable = false });
     }
     [HttpGet("oyunlar/{slug}")]
-    public async Task<IActionResult> PlayDetails(string slug, CancellationToken cancellationToken)
+    public async Task<IActionResult> PlayDetails(
+        string slug,
+        string? returnUrl,
+        CancellationToken cancellationToken)
     {
         var play = await context.Plays
             .AsNoTracking()
@@ -1189,6 +1204,7 @@ public sealed class ManagementController(
                 ? updater
                 : null,
             Slug = SlugHelper.Resolve(play.Slug, play.PlayName),
+            ReturnUrl = NormalizePlayReturnUrl(returnUrl),
             CandidatesTable = candidatesTable
         });
     }
@@ -1220,14 +1236,29 @@ public sealed class ManagementController(
             item => item.Id == id && item.IsPublished,
             cancellationToken);
         if (candidate is null) return NotFound();
+        if (candidate.AwardCategoryCode == 1001)
+        {
+            return BadRequest(new
+            {
+                message = "Sistem tarafından yönetilen oyun kategorisinin statüsü değiştirilemez."
+            });
+        }
 
         candidate.IsActive = isActive;
         candidate.UpdatedAt = TurkeyTime.Now;
         candidate.UpdatedBy = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)
             ? userId
             : null;
-        await context.SaveChangesAsync(cancellationToken);
-        return Json(new { isActive, refreshTable = false });
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken);
+            return Json(new { isActive, refreshTable = false });
+        }
+        catch (DbUpdateException exception)
+        {
+            logger.LogError(exception, "Aday statüsü güncellenemedi. CandidateId: {CandidateId}", id);
+            return Conflict(new { message = "Aday statüsü güncellenemedi. Lütfen tekrar deneyiniz." });
+        }
     }
 
     [HttpPost("adaylar/{id:guid}/sil")]
@@ -1237,11 +1268,22 @@ public sealed class ManagementController(
         var candidate = await context.PlayAwardCategories
             .Include(item => item.Play)
             .SingleOrDefaultAsync(item => item.Id == id && item.IsPublished, cancellationToken);
-        if (candidate is null) return NotFound();
+        if (candidate is null)
+        {
+            return IsAjaxRequest()
+                ? NotFound(new { message = "Aday kaydı bulunamadı." })
+                : NotFound();
+        }
         if (candidate.AwardCategoryCode == 1001)
         {
+            const string protectedCategoryMessage = "Sistem tarafından yönetilen oyun kategorisi silinemez.";
+            if (IsAjaxRequest())
+            {
+                return BadRequest(new { message = protectedCategoryMessage });
+            }
+
             TempData["GenericPopup.Type"] = "fail";
-            TempData["GenericPopup.Message"] = "Sistem tarafından yönetilen oyun kategorisi silinemez.";
+            TempData["GenericPopup.Message"] = protectedCategoryMessage;
             return RedirectToAction(nameof(PlayDetails), new { slug = SlugHelper.Resolve(candidate.Play.Slug, candidate.Play.PlayName) });
         }
 
@@ -1251,7 +1293,29 @@ public sealed class ManagementController(
         candidate.UpdatedBy = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)
             ? userId
             : null;
-        await context.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException exception)
+        {
+            logger.LogError(exception, "Aday kaydı silinemedi. CandidateId: {CandidateId}", id);
+            const string deleteErrorMessage = "Aday kaydı silinemedi. Lütfen tekrar deneyiniz.";
+            if (IsAjaxRequest())
+            {
+                return Conflict(new { message = deleteErrorMessage });
+            }
+
+            TempData["GenericPopup.Type"] = "fail";
+            TempData["GenericPopup.Message"] = deleteErrorMessage;
+            return RedirectToAction(nameof(PlayDetails), new { slug = SlugHelper.Resolve(candidate.Play.Slug, candidate.Play.PlayName) });
+        }
+
+        if (IsAjaxRequest())
+        {
+            return Json(new { success = true, message = "Aday kaydı silindi.", refreshTable = true });
+        }
+
         TempData["GenericPopup.Type"] = "success";
         TempData["GenericPopup.Message"] = "Aday kaydı silindi.";
         return RedirectToAction(nameof(PlayDetails), new { slug = SlugHelper.Resolve(candidate.Play.Slug, candidate.Play.PlayName) });
@@ -1260,25 +1324,32 @@ public sealed class ManagementController(
     [HttpGet("adaylar/{id:guid}")]
     public async Task<IActionResult> CandidateDetails(Guid id, CancellationToken cancellationToken)
     {
-        var model = await (
+        var data = await (
             from candidate in context.PlayAwardCategories.AsNoTracking()
             join play in context.Plays.AsNoTracking() on candidate.PlayId equals play.Id
             join category in context.AwardCategories.AsNoTracking()
                 on candidate.AwardCategoryCode equals category.CategoryCode
-            where candidate.Id == id && candidate.IsPublished && play.IsPublished
-            select new CandidateDetailsViewModel
+            where candidate.Id == id && candidate.IsPublished && play.IsPublished && category.IsPublished
+            select new
             {
-                Id = candidate.Id,
-                PlayName = play.PlayName,
-                PlaySlug = play.Slug,
-                CategoryName = category.CategoryName,
-                Candidate = candidate.Candidate,
-                Role = candidate.Role ?? "-",
-                CurrentState = candidate.IsCurrent ? "Yeni Aday" : "Eski Aday",
-                Status = candidate.IsActive ? "Aktif" : "Aktif Değil",
-                CreatedAt = candidate.CreatedAt
+                Candidate = candidate,
+                Play = play,
+                CategoryName = category.CategoryName
             }).SingleOrDefaultAsync(cancellationToken);
-        return model is null ? NotFound() : View(model);
+        if (data is null) return NotFound();
+
+        return View(new CandidateDetailsViewModel
+        {
+            Id = data.Candidate.Id,
+            PlayName = data.Play.PlayName,
+            PlaySlug = SlugHelper.Resolve(data.Play.Slug, data.Play.PlayName),
+            CategoryName = data.CategoryName,
+            Candidate = data.Candidate.Candidate,
+            Role = data.Candidate.Role ?? "-",
+            CurrentState = data.Candidate.IsCurrent ? "Yeni Aday" : "Eski Aday",
+            Status = data.Candidate.IsActive ? "Aktif" : "Aktif Değil",
+            CreatedAt = data.Candidate.CreatedAt
+        });
     }
 
     [HttpPost("oyunlar/{id:guid}/tum-oylari-yazdir")]
@@ -1301,6 +1372,8 @@ public sealed class ManagementController(
             where candidate.PlayId == id
                && vote.IsPublished
                && candidate.IsPublished
+               && category.IsPublished
+               && jury.IsPublished
             orderby jury.FirstName, jury.LastName, category.CategoryCode, candidate.RoleCode
             select new PlayVoteExportRowViewModel
             {
@@ -1618,7 +1691,7 @@ public sealed class ManagementController(
             from candidate in context.PlayAwardCategories.AsNoTracking()
             join category in context.AwardCategories.AsNoTracking()
                 on candidate.AwardCategoryCode equals category.CategoryCode
-            where candidate.PlayId == playId && candidate.IsPublished && candidate.IsActive && category.IsPublished
+            where candidate.PlayId == playId && candidate.IsPublished && category.IsPublished
             select new
             {
                 candidate.Id,
@@ -1631,8 +1704,7 @@ public sealed class ManagementController(
                 HasVote = context.JuryVotes.AsNoTracking().Any(vote =>
                     vote.JuryId == juryId &&
                     vote.PlayAwardCategoryId == candidate.Id &&
-                    vote.IsPublished &&
-                    vote.IsActive)
+                    vote.IsPublished)
             })
             .ToArrayAsync(cancellationToken);
 
@@ -1701,16 +1773,14 @@ public sealed class ManagementController(
                 item.JuryId == juryId &&
                 item.PlayAwardCategoryId == playAwardCategoryId &&
                 item.IsPublished &&
-                item.IsActive &&
                 context.PlayAwardCategories.Any(candidate =>
                     candidate.Id == item.PlayAwardCategoryId &&
                     candidate.PlayId == playId &&
-                    candidate.IsPublished &&
-                    candidate.IsActive),
+                    candidate.IsPublished),
                 cancellationToken);
         if (vote is null)
         {
-            return BadRequest(new { success = false, message = "S\u0131f\u0131rlanabilecek aktif bir oy bulunamad\u0131." });
+            return BadRequest(new { success = false, message = "S\u0131f\u0131rlanabilecek bir oy bulunamad\u0131." });
         }
         if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId))
         {
@@ -2120,6 +2190,11 @@ public sealed class ManagementController(
         var stateText = includeCurrentState ? (isCurrent ? " / Aktif Oyuncu" : " / Eski Oyuncu") : string.Empty;
         return $"{candidate.Trim()}{roleText}{stateText}";
     }
+    private bool IsAjaxRequest() =>
+        string.Equals(Request.Headers.XRequestedWith, "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
+
+    private static string NormalizePlayReturnUrl(string? returnUrl) =>
+        string.Equals(returnUrl, "/", StringComparison.Ordinal) ? "/" : "/oyunlar";
     private ViewResult Page(string title, string description) =>
         View("Page", new ManagementPageViewModel(title, description));
 

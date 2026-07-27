@@ -95,6 +95,7 @@ public static class CandidateComplexTableFactory
                 {
                     ToggleUrl = $"/adaylar/{row.Id:D}/status",
                     ToggleChecked = row.IsActive,
+                    ToggleDisabled = row.CategoryCode == 1001,
                     AccessibleLabel = $"{row.Candidate} statüsünü değiştir",
                     CssClass = "candidate-status-cell"
                 }

@@ -34,7 +34,7 @@ public static class PlayWatchComplexTableFactory
                 new ComplexTableCellViewModel
                 {
                     Content = row.PlayName,
-                    Link = $"/oyunlar/{Uri.EscapeDataString(SlugHelper.Resolve(row.Slug, row.PlayName))}",
+                    Link = $"/oyunlar/{Uri.EscapeDataString(SlugHelper.Resolve(row.Slug, row.PlayName))}?returnUrl=%2F",
                     AccessibleLabel = $"{row.PlayName} oyun detayını aç"
                 },
                 new ComplexTableCellViewModel

@@ -205,14 +205,17 @@
                     {
                         foreach (var row in activeTab.Rows)
                         {
-                            var isInteractiveRow = !string.IsNullOrWhiteSpace(row.Link) || !string.IsNullOrWhiteSpace(row.ModalUrl) || !string.IsNullOrWhiteSpace(row.DeleteUrl);
+                            var hasRowDelete = row.DeleteOnRowClick && !string.IsNullOrWhiteSpace(row.DeleteUrl);
+                            var isInteractiveRow = !string.IsNullOrWhiteSpace(row.Link) ||
+                                !string.IsNullOrWhiteSpace(row.ModalUrl) ||
+                                hasRowDelete;
                             <tr id="@row.Id" class="@(isInteractiveRow ? "complex-table-linked-row" : string.Empty)"
                                 data-row-link="@row.Link"
                                 data-row-modal-url="@row.ModalUrl"
-                                data-row-delete-url="@row.DeleteUrl"
+                                data-row-delete-url="@(hasRowDelete ? row.DeleteUrl : null)"
                                 data-delete-confirm-message="@row.DeleteConfirmMessage"
                                 tabindex="@(isInteractiveRow ? "0" : null)"
-                                role="@(!string.IsNullOrWhiteSpace(row.ModalUrl) || !string.IsNullOrWhiteSpace(row.DeleteUrl) ? "button" : !string.IsNullOrWhiteSpace(row.Link) ? "link" : null)">
+                                role="@(!string.IsNullOrWhiteSpace(row.ModalUrl) || hasRowDelete ? "button" : !string.IsNullOrWhiteSpace(row.Link) ? "link" : null)">
                                 @for (var index = 0; index < activeTab.Columns.Count; index++)
                                 {
                                     var cell = index < row.Cells.Count ? row.Cells[index] : null;

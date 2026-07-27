@@ -3,7 +3,10 @@
     ViewData["Title"] = "Oyunu Düzenle";
 }
 <section class="play-details-page add-jury-page add-play-page" aria-labelledby="edit-play-title">
-    <a asp-action="PlayDetails" asp-route-slug="@Model.Slug" class="play-details-back">
+    <a asp-action="PlayDetails"
+       asp-route-slug="@Model.Slug"
+       asp-route-returnUrl="@Model.ReturnUrl"
+       class="play-details-back">
         <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
         <span>Oyun Detaya Dön</span>
     </a>
@@ -16,6 +19,7 @@
         @Html.AntiForgeryToken()
         <input asp-for="Id" type="hidden" />
         <input asp-for="RecordType" type="hidden" />
+        <input asp-for="ReturnUrl" type="hidden" />
         <input asp-for="ConfirmSimilarPlay" type="hidden" data-confirm-similar-play />
         <div asp-validation-summary="ModelOnly" class="add-jury-validation-summary" role="alert"></div>
 
@@ -41,7 +45,10 @@
             <input value="@Model.RecordTypeDisplay" disabled aria-disabled="true" />
         </div>
         <div class="add-jury-actions">
-            <a asp-action="PlayDetails" asp-route-slug="@Model.Slug" class="add-jury-cancel">İptal</a>
+            <a asp-action="PlayDetails"
+               asp-route-slug="@Model.Slug"
+               asp-route-returnUrl="@Model.ReturnUrl"
+               class="add-jury-cancel">İptal</a>
             <button type="submit" class="add-jury-submit">Kaydet</button>
         </div>
     </form>

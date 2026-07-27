@@ -28,8 +28,10 @@
                 body: formData,
                 headers: { "X-Requested-With": "XMLHttpRequest" }
             });
-            if (!response.ok) throw new Error(`Status update failed (${response.status}).`);
-            const result = await response.json();
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(result.message || `Statü güncellenemedi (${response.status}).`);
+            }
             const isActive = result.isActive === true;
             remainDisabled = result.isDisabled === true;
             toggle.setAttribute("aria-checked", String(isActive));
