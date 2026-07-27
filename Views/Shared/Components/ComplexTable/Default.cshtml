@@ -335,7 +335,10 @@
 
                 @if (!string.IsNullOrWhiteSpace(Model.ExportActionName))
                 {
-                    <form method="post" action="@Url.Action(Model.ExportActionName, Model.ExportControllerName)" class="complex-table-export-form">
+                    <form method="post"
+                          action="@Url.Action(Model.ExportActionName, Model.ExportControllerName)"
+                          class="complex-table-export-form"
+                          data-excel-export>
                         @Html.AntiForgeryToken()
                         @foreach (var routeValue in Model.AdditionalRouteValues)
                         {
@@ -347,7 +350,7 @@
                         <input type="hidden" name="sortDirection" value="@activeTab.SortDirection" />
                         <input type="hidden" name="page" value="1" />
                         <button type="submit" class="excel-export-button" disabled="@(!Model.IsExportEnabled)" aria-disabled="@(!Model.IsExportEnabled ? "true" : "false")">
-                            <span aria-hidden="true">↗</span> @Model.ExportButtonText
+                            <span aria-hidden="true"><img src="/icons/printer.svg" /></span> @Model.ExportButtonText
                         </button>
                     </form>
                 }

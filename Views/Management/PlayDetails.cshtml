@@ -22,7 +22,11 @@
         <div class="play-details-actions">
             @if (!Model.RecordType)
             {
-                <form asp-action="ExportPlayVotes" asp-route-id="@Model.Id" method="post" class="play-detail-action-form">
+                <form asp-action="ExportPlayVotes"
+                      asp-route-id="@Model.Id"
+                      method="post"
+                      class="play-detail-action-form"
+                      data-excel-export>
                     @Html.AntiForgeryToken()
                     <button type="submit" class="play-detail-action play-detail-action-secondary">Tüm Oyları Yazdır</button>
                 </form>

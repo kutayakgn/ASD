@@ -433,7 +433,7 @@ body {
 }
 .play-status-value { display: inline-flex; align-items: center; gap: 8px; }
 .play-status-dot { width: 10px; height: 10px; flex: 0 0 10px; border-radius: 50%; }
-.play-details-divider { height: 1px; margin: 32px 0; background: #d8d4ca; }
+.play-details-divider { height: 1px; margin: 24px 0 24px 0; background: #d8d4ca; }
 .add-candidate { font-family: Outfit; }
 .add-candidate-header h2 { margin: 0 0 24px; font-family: LimeLight; font-size: 28px; font-weight: 400; line-height: 36px; }
 .add-candidate-mode-group, .add-candidate-status { display: flex; margin: 0; padding: 0; border: 0; gap: 24px; }

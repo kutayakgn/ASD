@@ -61,7 +61,7 @@ p {
     align-items: center;
     justify-content: space-between;
     gap: 24px;
-    padding: 34px 16px 16px 16px;
+    padding: 32px 16px 16px 16px;
 }
 
     .complex-table-heading h2 {
@@ -309,6 +309,12 @@ tr {
     font-weight: 600;
     text-decoration: none;
     transition: background .3s ease-in-out;
+}
+.excel-export-button img {
+   width:12px;
+   height:12px;
+   margin:0;
+   padding:0;
 }
 
     .excel-export-button:not(:disabled):hover {
@@ -769,4 +775,8 @@ tr {
     height: 16px;
     pointer-events: none;
     transform: translateY(-50%);
+}
+
+#adaylar .complex-table-heading {
+    padding: 0px 16px 16px 16px;
 }
