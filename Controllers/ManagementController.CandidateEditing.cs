@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using YKBAfife.Helpers;
 using YKBAfife.Models.Entities;
 using YKBAfife.Models.ViewModels;
+using YKBAfife.Services.Audit;
 
 namespace YKBAfife.Controllers;
 
@@ -17,6 +18,7 @@ public sealed partial class ManagementController
         return model is null ? NotFound() : View(model);
     }
 
+    [AdminMutationAudit]
     [HttpPost("adaylar/{id:guid}/duzenle")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> EditCandidate(

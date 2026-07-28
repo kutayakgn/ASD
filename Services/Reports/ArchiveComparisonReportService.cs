@@ -1,90 +1,57 @@
 using Microsoft.EntityFrameworkCore;
 using YKBAfife.Data;
+using YKBAfife.Models.Entities;
 using YKBAfife.Models.ViewModels;
 
 namespace YKBAfife.Services.Reports;
 
 public sealed class ArchiveComparisonReportService(AfifeContext context) : IArchiveComparisonReportService
 {
-    private const int FirstSeasonStartYear = 2014;
-
     public async Task<ArchiveComparisonTableViewModel> GetPageAsync(
         ArchiveComparisonTableQuery query,
         CancellationToken cancellationToken = default)
     {
         var normalized = Normalize(query);
-        var latestSeasonStartYear = DateTime.Today.Month >= 9
-            ? DateTime.Today.Year
-            : DateTime.Today.Year - 1;
-        var totalCount = Math.Max(0, latestSeasonStartYear - FirstSeasonStartYear + 1);
-
-        var rangeStart = new DateTime(FirstSeasonStartYear, 9, 1);
-        var rangeEnd = new DateTime(latestSeasonStartYear + 1, 5, 1);
-        var playAggregates = await context.Plays
+        var seasons = context.Seasons
             .AsNoTracking()
-            .Where(play => play.IsPublished
-                && play.CreatedAt.HasValue
-                && play.CreatedAt.Value >= rangeStart
-                && play.CreatedAt.Value < rangeEnd
-                && (play.CreatedAt.Value.Month >= 9 || play.CreatedAt.Value.Month < 5))
-            .GroupBy(play => play.CreatedAt!.Value.Month >= 9
-                ? play.CreatedAt.Value.Year
-                : play.CreatedAt.Value.Year - 1)
-            .Select(group => new
-            {
-                StartYear = group.Key,
-                PlayCount = group.Count(),
-                ActivePlayCount = group.Count(play => play.StatusCode == 1)
-            })
-            .ToDictionaryAsync(row => row.StartYear, cancellationToken);
+            .Where(season => season.IsPublished);
 
-        var voteAggregates = await (
-            from vote in context.JuryVotes.AsNoTracking()
-            join category in context.PlayAwardCategories.AsNoTracking()
-                on vote.PlayAwardCategoryId equals category.Id
-            join play in context.Plays.AsNoTracking()
-                on category.PlayId equals play.Id
-            where vote.IsPublished
-                && vote.IsActive
-                && category.IsPublished
-                && category.IsActive
-                && play.IsPublished
-                && play.CreatedAt.HasValue
-                && play.CreatedAt.Value >= rangeStart
-                && play.CreatedAt.Value < rangeEnd
-                && (play.CreatedAt.Value.Month >= 9 || play.CreatedAt.Value.Month < 5)
-            group vote by play.CreatedAt!.Value.Month >= 9
-                ? play.CreatedAt.Value.Year
-                : play.CreatedAt.Value.Year - 1
-            into seasonVotes
-            select new
-            {
-                StartYear = seasonVotes.Key,
-                VoteCount = seasonVotes.Count()
-            })
-            .ToDictionaryAsync(row => row.StartYear, row => row.VoteCount, cancellationToken);
-
-        var seasons = Enumerable.Range(FirstSeasonStartYear, totalCount)
-            .Select((startYear, index) => new ArchiveComparisonRowViewModel
-            {
-                SeasonNumber = index + 1,
-                StartYear = startYear,
-                PlayCount = playAggregates.TryGetValue(startYear, out var playAggregate)
-                    ? playAggregate.PlayCount
-                    : 0,
-                ActivePlayCount = playAggregates.TryGetValue(startYear, out playAggregate)
-                    ? playAggregate.ActivePlayCount
-                    : 0,
-                VoteCount = voteAggregates.GetValueOrDefault(startYear)
-            });
-
-        var sortedSeasons = ApplySorting(seasons, normalized);
-        var totalPages = Math.Max(1, (int)Math.Ceiling(totalCount / (double)ArchiveComparisonTableViewModel.PageSize));
+        var totalCount = await seasons.CountAsync(cancellationToken);
+        var totalPages = Math.Max(
+            1,
+            (int)Math.Ceiling(totalCount / (double)ArchiveComparisonTableViewModel.PageSize));
         var currentPage = Math.Min(normalized.Page, totalPages);
-        var rows = sortedSeasons
+        var firstSeasonStartDate = await seasons
+            .Select(season => (DateOnly?)season.SeasonStartDate)
+            .MinAsync(cancellationToken);
+
+        var pageRows = await ApplySorting(seasons, normalized)
             .Skip((currentPage - 1) * ArchiveComparisonTableViewModel.PageSize)
             .Take(ArchiveComparisonTableViewModel.PageSize)
-            .ToArray();
+            .Select(season => new
+            {
+                season.Id,
+                season.SeasonStartDate,
+                season.SeasonEndDate,
+                season.PlayCount,
+                season.ActivePlayCount,
+                season.VoteCount
+            })
+            .ToArrayAsync(cancellationToken);
+
+        var firstSeasonYear = firstSeasonStartDate?.Year;
+        var rows = pageRows.Select(season => new ArchiveComparisonRowViewModel
+        {
+            Id = season.Id,
+            SeasonNumber = firstSeasonYear.HasValue
+                ? season.SeasonStartDate.Year - firstSeasonYear.Value + 1
+                : 1,
+            SeasonStartDate = season.SeasonStartDate,
+            SeasonEndDate = season.SeasonEndDate,
+            PlayCount = season.PlayCount,
+            ActivePlayCount = season.ActivePlayCount,
+            VoteCount = season.VoteCount
+        }).ToArray();
 
         return new ArchiveComparisonTableViewModel
         {
@@ -96,25 +63,31 @@ public sealed class ArchiveComparisonReportService(AfifeContext context) : IArch
         };
     }
 
-    private static IOrderedEnumerable<ArchiveComparisonRowViewModel> ApplySorting(
-        IEnumerable<ArchiveComparisonRowViewModel> rows,
+    private static IOrderedQueryable<Season> ApplySorting(
+        IQueryable<Season> seasons,
         ArchiveComparisonTableQuery query)
     {
         var descending = query.SortDirection == "desc";
         return query.SortBy switch
         {
             ArchiveComparisonSortColumns.PlayCount => descending
-                ? rows.OrderByDescending(row => row.PlayCount).ThenBy(row => row.SeasonNumber)
-                : rows.OrderBy(row => row.PlayCount).ThenBy(row => row.SeasonNumber),
+                ? seasons.OrderByDescending(season => season.PlayCount)
+                    .ThenByDescending(season => season.SeasonStartDate)
+                : seasons.OrderBy(season => season.PlayCount)
+                    .ThenByDescending(season => season.SeasonStartDate),
             ArchiveComparisonSortColumns.ActivePlayCount => descending
-                ? rows.OrderByDescending(row => row.ActivePlayCount).ThenBy(row => row.SeasonNumber)
-                : rows.OrderBy(row => row.ActivePlayCount).ThenBy(row => row.SeasonNumber),
+                ? seasons.OrderByDescending(season => season.ActivePlayCount)
+                    .ThenByDescending(season => season.SeasonStartDate)
+                : seasons.OrderBy(season => season.ActivePlayCount)
+                    .ThenByDescending(season => season.SeasonStartDate),
             ArchiveComparisonSortColumns.VoteCount => descending
-                ? rows.OrderByDescending(row => row.VoteCount).ThenBy(row => row.SeasonNumber)
-                : rows.OrderBy(row => row.VoteCount).ThenBy(row => row.SeasonNumber),
+                ? seasons.OrderByDescending(season => season.VoteCount)
+                    .ThenByDescending(season => season.SeasonStartDate)
+                : seasons.OrderBy(season => season.VoteCount)
+                    .ThenByDescending(season => season.SeasonStartDate),
             _ => descending
-                ? rows.OrderByDescending(row => row.SeasonNumber)
-                : rows.OrderBy(row => row.SeasonNumber)
+                ? seasons.OrderByDescending(season => season.SeasonStartDate)
+                : seasons.OrderBy(season => season.SeasonStartDate)
         };
     }
 
@@ -133,9 +106,9 @@ public sealed class ArchiveComparisonReportService(AfifeContext context) : IArch
             SortBy = allowedSortColumns.Contains(query.SortBy)
                 ? query.SortBy
                 : ArchiveComparisonSortColumns.Season,
-            SortDirection = string.Equals(query.SortDirection, "desc", StringComparison.OrdinalIgnoreCase)
-                ? "desc"
-                : "asc",
+            SortDirection = string.Equals(query.SortDirection, "asc", StringComparison.OrdinalIgnoreCase)
+                ? "asc"
+                : "desc",
             Page = Math.Max(1, query.Page)
         };
     }

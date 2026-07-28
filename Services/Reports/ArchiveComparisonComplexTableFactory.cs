@@ -40,7 +40,7 @@ public static class ArchiveComparisonComplexTableFactory
                 Columns = Columns,
                 Rows = report.Rows.Select(row => new ComplexTableRowViewModel
                 {
-                    Id = $"season-{row.StartYear}",
+                    Id = $"season-{row.Id:N}",
                     Cells =
                     [
                         Cell(row.SeasonName),

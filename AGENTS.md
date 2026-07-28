@@ -48,5 +48,15 @@
   replacement must reuse the role's stable `RoleCode`; do not generate a new code.
 - AwardCategories.HasRoleAndPhoto controls required role input and optional
   candidate-photo input; category 1001 is never user-selectable.
+- Read `docs/season-statistics-contract.md` before changing season dates, archive
+  comparison counts, or `Plays`/`JuryVotes` statistics triggers.
+- Read `docs/admin-audit-contract.md` before changing controllers, write actions,
+  database tables, triggers, procedures, authentication logs, or audit behavior.
+- All business-table DML and failed mutation attempts must be traceable through
+  `AdminLogs`; do not log page visits or duplicate successful actions. Keep
+  login/logout/password and similar security events in `UsersLog`.
+- Every new business table requires re-running `sql/create-admin-audit-logging.sql`
+  after creation. Every new state-changing MVC endpoint requires
+  `[AdminMutationAudit]`; read-only and export endpoints must not use it.
 - Award-category placeholder assets are resolved by the stable convention
   `wwwroot/images/awardCategoryPlaceholder/{CategoryCode}.svg`.

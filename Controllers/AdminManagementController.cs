@@ -41,6 +41,7 @@ public sealed class AdminManagementController(
         });
     }
 
+    [AdminMutationAudit]
     [HttpPost("admin-yonetimi/{id:guid}/status")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UpdateStatus(
@@ -59,21 +60,10 @@ public sealed class AdminManagementController(
             cancellationToken);
         if (admin is null) return NotFound();
 
-        var oldValue = admin.IsActive;
         admin.IsActive = isActive;
         admin.UpdatedAt = TurkeyTime.Now;
         admin.UpdatedBy = currentUserId;
         await context.SaveChangesAsync(cancellationToken);
-        await activityLogger.LogAsync(
-            UserActivityTypes.UserUpdated,
-            true,
-            admin.Id,
-            admin.Username,
-            currentUserId,
-            details: "Admin aktiflik durumu g\u00fcncellendi.",
-            oldValue: oldValue.ToString(),
-            newValue: isActive.ToString(),
-            cancellationToken: cancellationToken);
         return Json(new { isActive = admin.IsActive });
     }
 
@@ -90,6 +80,7 @@ public sealed class AdminManagementController(
         return View(model);
     }
 
+    [AdminMutationAudit]
     [HttpPost("admin-yonetimi/ekle")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Add(AddAdminViewModel model, CancellationToken cancellationToken)
@@ -147,14 +138,6 @@ public sealed class AdminManagementController(
                 model,
                 "KullanÄ±cÄ± adÄ± veya e-posta adresi baÅŸka bir admin tarafÄ±ndan kullanÄ±lÄ±yor.");
         }
-        await activityLogger.LogAsync(
-            UserActivityTypes.UserCreated,
-            true,
-            adminId,
-            model.Username,
-            currentUserId,
-            details: "Yeni admin kullan\u0131c\u0131s\u0131 olu\u015fturuldu.",
-            cancellationToken: cancellationToken);
 
         TempData["GenericPopup.Type"] = "success";
         TempData["GenericPopup.Message"] = "Admin ba\u015far\u0131yla kaydedildi.";
@@ -221,6 +204,7 @@ public sealed class AdminManagementController(
         return model is null ? NotFound() : View(model);
     }
 
+    [AdminMutationAudit]
     [HttpPost("admin-yonetimi/{id:guid}/duzenle")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(
@@ -258,6 +242,8 @@ public sealed class AdminManagementController(
             return RedirectEditWithFailure(id, "Bu e-posta adresi ba\u015fka bir admin taraf\u0131ndan kullan\u0131l\u0131yor.");
         }
 
+        var oldEmail = admin.Email;
+        var passwordChanged = !string.IsNullOrWhiteSpace(model.Password);
         var currentFullName = (admin.FirstName + " " + admin.LastName).Trim();
         var requestedIsActive = isCurrentAdmin ? admin.IsActive : model.IsActive.GetValueOrDefault();
         var hasChanges = !string.Equals(admin.Username, model.Username, StringComparison.Ordinal) ||
@@ -291,14 +277,32 @@ public sealed class AdminManagementController(
         {
             return RedirectEditWithFailure(id, "Kullan\u0131c\u0131 ad\u0131 veya e-posta adresi ba\u015fka bir admin taraf\u0131ndan kullan\u0131l\u0131yor.");
         }
-        await activityLogger.LogAsync(
-            UserActivityTypes.UserUpdated,
-            true,
-            admin.Id,
-            admin.Username,
-            currentUserId,
-            details: "Admin bilgileri g\u00fcncellendi.",
-            cancellationToken: cancellationToken);
+
+        if (!string.Equals(oldEmail, admin.Email, StringComparison.OrdinalIgnoreCase))
+        {
+            await activityLogger.LogAsync(
+                UserActivityTypes.EmailChanged,
+                true,
+                admin.Id,
+                admin.Username,
+                currentUserId,
+                details: "Admin e-posta adresi g\u00fcncellendi.",
+                oldValue: oldEmail,
+                newValue: admin.Email,
+                cancellationToken: cancellationToken);
+        }
+
+        if (passwordChanged)
+        {
+            await activityLogger.LogAsync(
+                UserActivityTypes.PasswordChanged,
+                true,
+                admin.Id,
+                admin.Username,
+                currentUserId,
+                details: "Admin \u015fifresi y\u00f6netici taraf\u0131ndan de\u011fi\u015ftirildi.",
+                cancellationToken: cancellationToken);
+        }
 
         TempData["GenericPopup.Type"] = "success";
         TempData["GenericPopup.Message"] = "Admin ba\u015far\u0131yla g\u00fcncellendi.";
@@ -306,6 +310,7 @@ public sealed class AdminManagementController(
         return RedirectToAction(nameof(Edit), new { id });
     }
 
+    [AdminMutationAudit]
     [HttpPost("admin-yonetimi/{id:guid}/sil")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
@@ -327,14 +332,6 @@ public sealed class AdminManagementController(
         admin.UpdatedAt = TurkeyTime.Now;
         admin.UpdatedBy = currentUserId;
         await context.SaveChangesAsync(cancellationToken);
-        await activityLogger.LogAsync(
-            UserActivityTypes.UserSoftDeleted,
-            true,
-            admin.Id,
-            admin.Username,
-            currentUserId,
-            details: "Admin kullan\u0131c\u0131s\u0131 yay\u0131ndan kald\u0131r\u0131ld\u0131.",
-            cancellationToken: cancellationToken);
         TempData["GenericPopup.Type"] = "success";
         TempData["GenericPopup.Message"] = "Admin ba\u015far\u0131yla silindi.";
         return RedirectToAction(nameof(Index));

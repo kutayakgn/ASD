@@ -1,93 +1,92 @@
 @model YKBAfife.Models.Components.HeaderViewModel
 @{
-    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
-    var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
-    var isManagementPage = string.Equals(currentController, "Management", StringComparison.OrdinalIgnoreCase);
-    var isAdminManagementPage = string.Equals(currentController, "AdminManagement", StringComparison.OrdinalIgnoreCase);
-    var otherActions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-    {
-        "Editors",
-        "VotingHistory",
-        "TicketSales",
-        "PlayDates",
-        "Blacklists",
-        "VotingSettings",
-        "ArchiveComparison"
-    };
+	var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+	var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+	var isManagementPage = string.Equals(currentController, "Management", StringComparison.OrdinalIgnoreCase);
+	var isAdminManagementPage = string.Equals(currentController, "AdminManagement", StringComparison.OrdinalIgnoreCase);
+	var otherActions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+	{
+		"Editors",
+		"VotingHistory",
+		"TicketSales",
+		"PlayDates",
+		"Blacklists",
+		"VotingSettings",
+		"ArchiveComparison"
+	};
 
-    string ActiveClass(params string[] actions) =>
-        isManagementPage && currentAction is not null && actions.Contains(currentAction, StringComparer.OrdinalIgnoreCase)
-            ? " active"
-            : string.Empty;
+	string ActiveClass(params string[] actions) =>
+		isManagementPage && currentAction is not null && actions.Contains(currentAction, StringComparer.OrdinalIgnoreCase)
+			? " active"
+			: string.Empty;
 
-    var isOtherActive = isAdminManagementPage ||
-        (isManagementPage && currentAction is not null && otherActions.Contains(currentAction));
+	var isOtherActive = isAdminManagementPage ||
+		(isManagementPage && currentAction is not null && otherActions.Contains(currentAction));
 }
 
 <header class="admin-header">
-    <nav class="navbar navbar-expand-xl admin-navbar" aria-label="Ana menü">
-        <div class="header-white-bar">
-            <img src="~/icons/28-years.svg" alt="Afife 28. yıl" />
-            @if (User.Identity?.IsAuthenticated == true)
-            {
-                <div class="dropdown admin-user-dropdown">
-                    <button class="admin-user-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <span>@Model.UserFullName</span>
-                        <svg class="admin-user-angle" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-                            <path d="M3.5 6 8 10.5 12.5 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end admin-user-menu">
-                        <li>
-                            <form asp-controller="Account" asp-action="Logout" method="post">
-                                @Html.AntiForgeryToken()
-                                <button type="submit" class="dropdown-item admin-user-logout">Çıkış Yap</button>
-                            </form>
-                        </li>
-                    </ul>
-                </div>
-            }
-        </div>
-        <div class="container-fluid admin-nav-container@(Model.ShowNavigation ? string.Empty : " navigation-hidden")">
-            <a class="navbar-brand admin-logo" asp-controller="Home" asp-action="Index" aria-label="Afife Anasayfa">
-                <img src="~/icons/afife-icon.svg" alt="Afife" />
-            </a>
-            @if (Model.ShowNavigation)
-            {
-            <button class="navbar-toggler admin-menu-toggle" type="button"
-                    aria-controls="adminNavigation" aria-expanded="false" aria-label="Menüyü aç"
-                    data-mobile-nav-toggle>
-                <span></span><span></span><span></span>
-            </button>
-            <div class="admin-mobile-nav-backdrop" data-mobile-nav-dismiss hidden></div>
-            <div class="navbar-collapse admin-navigation" id="adminNavigation" aria-hidden="true">
-                <div class="admin-mobile-nav-header">
-                    <span>Menü</span>
-                    <button type="button" class="admin-mobile-nav-close" aria-label="Menüyü kapat" data-mobile-nav-dismiss>×</button>
-                </div>
-                <ul class="navbar-nav ms-auto align-items-xl-center admin-menu">
-                    <li class="nav-item"><a class="nav-link@(string.Equals(currentController, "Home", StringComparison.OrdinalIgnoreCase) && string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase) ? " active" : string.Empty)" asp-controller="Home" asp-action="Index">Anasayfa</a></li>
-                    <li class="nav-item"><a class="nav-link@(ActiveClass("Juries", "AddJury", "JuryDetails", "EditJury"))" asp-controller="Management" asp-action="Juries">Jüriler</a></li>
-                    <li class="nav-item"><a class="nav-link@(ActiveClass("Plays", "PlayDetails", "AddPlay", "EditPlay", "CandidateDetails", "EditCandidate"))" asp-controller="Management" asp-action="Plays">Oyunlar</a></li>
-                    <li class="nav-item"><a class="nav-link@(ActiveClass("Rankings"))" asp-controller="Management" asp-action="Rankings">Sıralamalar</a></li>
-                    <li class="nav-item dropdown admin-other-menu">
-                        <button class="nav-link dropdown-toggle admin-dropdown-toggle@(isOtherActive ? " active" : string.Empty)" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <span>Diğer</span>
-                            <img class="admin-dropdown-angle" src="~/icons/angle-down-solid-full-white.svg" alt="" aria-hidden="true" />
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end admin-dropdown-menu">
-                            <li><a class="dropdown-item@(isAdminManagementPage ? " active" : string.Empty)" asp-controller="AdminManagement" asp-action="Index">Admin Y&#246;netimi</a></li>
-                            <li><a class="dropdown-item@(ActiveClass("VotingHistory"))" asp-controller="Management" asp-action="VotingHistory">Oylama Geçmişi</a></li>
-                            <li><a class="dropdown-item@(ActiveClass("TicketSales"))" asp-controller="Management" asp-action="TicketSales">Bilet Satışları</a></li>
-                            <li><a class="dropdown-item@(ActiveClass("PlayDates"))" asp-controller="Management" asp-action="PlayDates">Oyun Tarihleri</a></li>
-                            <li><a class="dropdown-item@(ActiveClass("Blacklists"))" asp-controller="Management" asp-action="Blacklists">Blacklists</a></li>
-                            <li><a class="dropdown-item@(ActiveClass("VotingSettings"))" asp-controller="Management" asp-action="VotingSettings">Oylama Ayarları</a></li>
-                            <li><a class="dropdown-item@(ActiveClass("ArchiveComparison"))" asp-controller="Management" asp-action="ArchiveComparison">Arşiv Karşılaştırma</a></li>
-                        </ul>
-                    </li>
-                </ul>
-            </div>
-            }
-        </div>
-    </nav>
+	<nav class="navbar navbar-expand-xl admin-navbar" aria-label="Ana menü">
+		<div class="header-white-bar">
+			<img src="~/icons/28-years.svg" alt="Afife 28. yıl" />
+			@if (User.Identity?.IsAuthenticated == true)
+			{
+				<div class="dropdown admin-user-dropdown">
+					<button class="admin-user-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+						<span>@Model.UserFullName</span>
+						<svg class="admin-user-angle" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+							<path d="M3.5 6 8 10.5 12.5 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+						</svg>
+					</button>
+					<ul class="dropdown-menu dropdown-menu-end admin-user-menu">
+						<li>
+							<form asp-controller="Account" asp-action="Logout" method="post">
+								@Html.AntiForgeryToken()
+								<button type="submit" class="dropdown-item admin-user-logout">Çıkış Yap</button>
+							</form>
+						</li>
+					</ul>
+				</div>
+			}
+		</div>
+		<div class="container-fluid admin-nav-container@(Model.ShowNavigation ? string.Empty : " navigation-hidden")">
+			<a class="navbar-brand admin-logo" asp-controller="Home" asp-action="Index" aria-label="Afife Anasayfa">
+				<img src="~/icons/afife-icon.svg" alt="Afife" />
+			</a>
+			@if (Model.ShowNavigation)
+			{
+				<button class="navbar-toggler admin-menu-toggle" type="button"
+						aria-controls="adminNavigation" aria-expanded="false" aria-label="Menüyü aç"
+						data-mobile-nav-toggle>
+					<span></span><span></span><span></span>
+				</button>
+				<div class="admin-mobile-nav-backdrop" data-mobile-nav-dismiss hidden></div>
+				<div class="navbar-collapse admin-navigation" id="adminNavigation" aria-hidden="true">
+					<div class="admin-mobile-nav-header">
+						<span>Menü</span>
+						<button type="button" class="admin-mobile-nav-close" aria-label="Menüyü kapat" data-mobile-nav-dismiss>×</button>
+					</div>
+					<ul class="navbar-nav ms-auto align-items-xl-center admin-menu">
+						<li class="nav-item"><a class="nav-link@(string.Equals(currentController, "Home", StringComparison.OrdinalIgnoreCase) && string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase) ? " active" : string.Empty)" asp-controller="Home" asp-action="Index">Anasayfa</a></li>
+						<li class="nav-item"><a class="nav-link@(ActiveClass("Juries", "AddJury", "JuryDetails", "EditJury"))" asp-controller="Management" asp-action="Juries">Jüriler</a></li>
+						<li class="nav-item"><a class="nav-link@(ActiveClass("Plays", "PlayDetails", "AddPlay", "EditPlay", "CandidateDetails", "EditCandidate"))" asp-controller="Management" asp-action="Plays">Oyunlar</a></li>
+						<li class="nav-item"><a class="nav-link@(ActiveClass("Rankings"))" asp-controller="Management" asp-action="Rankings">Sıralamalar</a></li>
+						<li class="nav-item dropdown admin-other-menu">
+							<button class="nav-link dropdown-toggle admin-dropdown-toggle@(isOtherActive ? " active" : string.Empty)" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+								<span>Diğer</span>
+								<img class="admin-dropdown-angle" src="~/icons/angle-down-solid-full-white.svg" alt="" aria-hidden="true" />
+							</button>
+							<ul class="dropdown-menu dropdown-menu-end admin-dropdown-menu">
+								<li><a class="dropdown-item@(isAdminManagementPage ? " active" : string.Empty)" asp-controller="AdminManagement" asp-action="Index">Admin Yönetimi</a></li>
+								<li><a class="dropdown-item@(ActiveClass("ArchiveComparison"))" asp-controller="Management" asp-action="ArchiveComparison">Arşiv Karşılaştırma</a></li>
+								<li><a class="dropdown-item@(ActiveClass("TicketSales"))" asp-controller="Management" asp-action="TicketSales">Bilet Satışları</a></li>
+								<li><a class="dropdown-item@(ActiveClass("Blacklists"))" asp-controller="Management" asp-action="Blacklists">Blacklists</a></li>
+								<li><a class="dropdown-item@(ActiveClass("VotingHistory"))" asp-controller="Management" asp-action="VotingHistory">Oylama Geçmişi</a></li>
+								<li><a class="dropdown-item@(ActiveClass("VotingSettings"))" asp-controller="Management" asp-action="VotingSettings">Diğer Ayarlar</a></li>
+							</ul>
+						</li>
+					</ul>
+				</div>
+			}
+		</div>
+	</nav>
 </header>

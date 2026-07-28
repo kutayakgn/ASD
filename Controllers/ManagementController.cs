@@ -196,6 +196,7 @@ public sealed partial class ManagementController(
             : File(photo.ImageData, photo.ContentType);
     }
 
+    [AdminMutationAudit]
     [HttpPost("juriler/{id:guid}/sil")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteJury(Guid id, CancellationToken cancellationToken)
@@ -218,14 +219,7 @@ public sealed partial class ManagementController(
         jury.UpdatedAt = TurkeyTime.Now;
         jury.UpdatedBy = currentUserId;
         await context.SaveChangesAsync(cancellationToken);
-        await activityLogger.LogAsync(
-            UserActivityTypes.UserSoftDeleted,
-            true,
-            jury.Id,
-            jury.Username,
-            currentUserId,
-            details: "J\u00fcri kayd\u0131 fiziksel olarak silinmeden yay\u0131ndan kald\u0131r\u0131ld\u0131.",
-            cancellationToken: cancellationToken);
+
 
         TempData["GenericPopup.Type"] = "success";
         TempData["GenericPopup.Message"] = "J\u00fcri ba\u015far\u0131yla silindi.";
@@ -263,6 +257,7 @@ public sealed partial class ManagementController(
         return View(jury);
     }
 
+    [AdminMutationAudit]
     [HttpPost("juriler/{id:guid}/duzenle")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> EditJury(
@@ -399,14 +394,7 @@ public sealed partial class ManagementController(
         }
 
         await context.SaveChangesAsync(cancellationToken);
-        await activityLogger.LogAsync(
-            UserActivityTypes.UserUpdated,
-            true,
-            jury.Id,
-            jury.Username,
-            currentUserId,
-            details: "J\u00fcri kullan\u0131c\u0131 bilgileri g\u00fcncellendi.",
-            cancellationToken: cancellationToken);
+
 
         if (!string.Equals(oldEmail, jury.Email, StringComparison.OrdinalIgnoreCase))
         {
@@ -442,6 +430,7 @@ public sealed partial class ManagementController(
     [HttpGet("juri-ekle")]
     public IActionResult AddJury() => View(new AddJuryViewModel());
 
+    [AdminMutationAudit]
     [HttpPost("juri-ekle")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> AddJury(
@@ -557,14 +546,7 @@ public sealed partial class ManagementController(
         });
 
         await context.SaveChangesAsync(cancellationToken);
-        await activityLogger.LogAsync(
-            UserActivityTypes.UserCreated,
-            true,
-            juryId,
-            model.Username,
-            currentUserId,
-            details: "Yeni j\u00fcri kullan\u0131c\u0131s\u0131 olu\u015fturuldu.",
-            cancellationToken: cancellationToken);
+
 
         TempData["GenericPopup.Type"] = "success";
         TempData["GenericPopup.Message"] = "J\u00FCri ba\u015Far\u0131yla kaydedildi.";
@@ -643,6 +625,7 @@ public sealed partial class ManagementController(
         return ViewComponent("ComplexTable", new { model = PlayComplexTableFactory.Create(report) });
     }
 
+    [AdminMutationAudit]
     [HttpPost("oyunlar/{id:guid}/juri-oylama-status")]
     [ValidateAntiForgeryToken]
     public Task<IActionResult> UpdateJuryVotingStatus(
@@ -651,6 +634,7 @@ public sealed partial class ManagementController(
         CancellationToken cancellationToken) =>
         UpdatePlayStatus(id, isActive, true, cancellationToken);
 
+    [AdminMutationAudit]
     [HttpPost("oyunlar/{id:guid}/kunye-giris-status")]
     [ValidateAntiForgeryToken]
     public Task<IActionResult> UpdateKunyeGirisStatus(
@@ -706,6 +690,7 @@ public sealed partial class ManagementController(
         });
     }
 
+    [AdminMutationAudit]
     [HttpPost("oyunlar/ekle")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> AddPlay(
@@ -895,6 +880,7 @@ public sealed partial class ManagementController(
         return View(model);
     }
 
+    [AdminMutationAudit]
     [HttpPost("oyunlar/{slug}/duzenle")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> EditPlay(
@@ -1239,6 +1225,7 @@ public sealed partial class ManagementController(
             CandidatesTable = candidatesTable
         });
     }
+    [AdminMutationAudit]
     [HttpPost("oyunlar/{id:guid}/sil")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeletePlay(
@@ -1316,14 +1303,7 @@ public sealed partial class ManagementController(
             play.UpdatedAt = now;
             play.UpdatedBy = currentUserId;
             await context.SaveChangesAsync(cancellationToken);
-            await activityLogger.LogAsync(
-                UserActivityTypes.PlaySoftDeleted,
-                true,
-                currentUserId,
-                User.Identity?.Name,
-                currentUserId,
-                details: $"Oyun ve ilişkili kayıtları soft-delete edildi. PlayId: {play.Id}, Oyun: {play.PlayName}",
-                cancellationToken: cancellationToken);
+
             await transaction.CommitAsync(cancellationToken);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
@@ -1360,6 +1340,7 @@ public sealed partial class ManagementController(
         return ViewComponent("ComplexTable", new { model = CandidateComplexTableFactory.Create(report) });
     }
 
+    [AdminMutationAudit]
     [HttpPost("adaylar/{id:guid}/status")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UpdateCandidateStatus(
@@ -1396,6 +1377,7 @@ public sealed partial class ManagementController(
         }
     }
 
+    [AdminMutationAudit]
     [HttpPost("adaylar/{id:guid}/sil")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteCandidate(Guid id, CancellationToken cancellationToken)
@@ -1527,6 +1509,7 @@ public sealed partial class ManagementController(
         return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             $"{SlugHelper.Create(play.PlayName)}-adaylar.xlsx");
     }
+    [AdminMutationAudit]
     [HttpPost("oyunlar/{slug}/aday-ekle")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> AddCandidate(
@@ -1989,6 +1972,7 @@ public sealed partial class ManagementController(
         });
     }
 
+    [AdminMutationAudit]
     [HttpPost("oylama-gecmisi/oylamayi-sifirla")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ResetJuryVote(
@@ -2020,13 +2004,7 @@ public sealed partial class ManagementController(
         vote.UpdatedAt = TurkeyTime.Now;
         vote.UpdatedBy = currentUserId;
         await context.SaveChangesAsync(cancellationToken);
-        await activityLogger.LogAsync(
-            UserActivityTypes.JuryVoteReset,
-            true,
-            juryId,
-            actorUserId: currentUserId,
-            details: $"J\u00fcri oyu s\u0131f\u0131rland\u0131. PlayId: {playId}, PlayAwardCategoryId: {playAwardCategoryId}",
-            cancellationToken: cancellationToken);
+
 
         return Json(new { success = true, message = "Oylama ba\u015far\u0131yla s\u0131f\u0131rland\u0131." });
     }
@@ -2062,6 +2040,7 @@ public sealed partial class ManagementController(
         return model is null ? NotFound() : PartialView("_EditTicketFeeModal", model);
     }
 
+    [AdminMutationAudit]
     [HttpPost("bilet-satislari/{id:guid}/duzenle")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UpdateTicketFee(Guid id, [Bind("Id,TicketFee")] EditTicketFeeViewModel model, CancellationToken cancellationToken)
@@ -2097,15 +2076,6 @@ public sealed partial class ManagementController(
         ticket.UpdatedBy = currentUserId;
         await context.SaveChangesAsync(cancellationToken);
 
-        await activityLogger.LogAsync(
-            UserActivityTypes.TicketFeeChanged,
-            true,
-            ticket.UserId,
-            actorUserId: currentUserId,
-            details: "Jüri oyun bilet ücreti güncellendi.",
-            oldValue: oldValue.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            newValue: ticket.TicketFee.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            cancellationToken: cancellationToken);
 
         TempData["GenericPopup.Type"] = "success";
         TempData["GenericPopup.Message"] = "Bilet ücreti başarıyla güncellendi.";
@@ -2151,6 +2121,7 @@ public sealed partial class ManagementController(
         return View(model);
     }
 
+    [AdminMutationAudit]
     [HttpPost("blacklists/ekle")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> AddBlacklist(AddBlacklistViewModel model, CancellationToken cancellationToken)
@@ -2198,13 +2169,7 @@ public sealed partial class ManagementController(
             IsPublished = true
         });
         await context.SaveChangesAsync(cancellationToken);
-        await activityLogger.LogAsync(
-            UserActivityTypes.BlacklistCreated,
-            true,
-            model.JuryId,
-            actorUserId: currentUserId,
-            details: $"Blacklist kaydı oluşturuldu. PlayId: {model.PlayId}",
-            cancellationToken: cancellationToken);
+
 
         TempData["GenericPopup.Type"] = "success";
         TempData["GenericPopup.Message"] = "Blacklist kaydı başarıyla eklendi.";
@@ -2212,6 +2177,7 @@ public sealed partial class ManagementController(
         return RedirectToAction(nameof(AddBlacklist));
     }
 
+    [AdminMutationAudit]
     [HttpPost("blacklists/{id:guid}/sil")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteBlacklist(Guid id, CancellationToken cancellationToken)
@@ -2222,13 +2188,7 @@ public sealed partial class ManagementController(
 
         blacklist.IsPublished = false;
         await context.SaveChangesAsync(cancellationToken);
-        await activityLogger.LogAsync(
-            UserActivityTypes.BlacklistSoftDeleted,
-            true,
-            blacklist.JuryId,
-            actorUserId: currentUserId,
-            details: $"Blacklist kaydı yayından kaldırıldı. PlayId: {blacklist.PlayId}",
-            cancellationToken: cancellationToken);
+
 
         TempData["GenericPopup.Type"] = "success";
         TempData["GenericPopup.Message"] = "Blacklist kaydı başarıyla silindi.";

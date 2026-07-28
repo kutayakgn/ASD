@@ -13,13 +13,22 @@ builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
 
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    options.Filters.Add<AdminActionAuditFilter>();
+});
 
 var connectionString = builder.Configuration.GetConnectionString("AfifeAdmin")
     ?? throw new InvalidOperationException("Connection string 'AfifeAdmin' was not found.");
 
-builder.Services.AddDbContext<AfifeContext>(options => options.UseSqlServer(connectionString));
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<AdminAuditConnectionInterceptor>();
+builder.Services.AddScoped<AdminActionAuditFilter>();
+builder.Services.AddScoped<IAdminActionAuditLogger, AdminActionAuditLogger>();
+builder.Services.AddDbContext<AfifeContext>((serviceProvider, options) =>
+    options
+        .UseSqlServer(connectionString)
+        .AddInterceptors(serviceProvider.GetRequiredService<AdminAuditConnectionInterceptor>()));
 builder.Services.AddScoped<IUserActivityLogger, UserActivityLogger>();
 builder.Services.AddScoped<IAdminAuthenticationService, AdminAuthenticationService>();
 builder.Services.AddScoped<IPlayWatchReportService, PlayWatchReportService>();

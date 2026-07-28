@@ -9,7 +9,9 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
 {
     public DbSet<User> Users => Set<User>();
     public DbSet<UserLog> UserLogs => Set<UserLog>();
+    public DbSet<AdminLog> AdminLogs => Set<AdminLog>();
     public DbSet<Play> Plays => Set<Play>();
+    public DbSet<Season> Seasons => Set<Season>();
     public DbSet<PlayAwardCategory> PlayAwardCategories => Set<PlayAwardCategory>();
     public DbSet<JuryVote> JuryVotes => Set<JuryVote>();
     public DbSet<JuryGameTicketFee> JuryGameTicketFees => Set<JuryGameTicketFee>();
@@ -65,6 +67,34 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
             entity.Property(x => x.FailureReason).HasMaxLength(500);
             entity.HasIndex(x => new { x.UserId, x.EventType, x.OccurredAt });
             entity.HasIndex(x => new { x.Username, x.OccurredAt });
+        });
+        modelBuilder.Entity<AdminLog>(entity =>
+        {
+            entity.ToTable("AdminLogs", "dbo");
+            entity.Property(x => x.Username).HasMaxLength(100);
+            entity.Property(x => x.OperationName).HasMaxLength(256);
+            entity.Property(x => x.OperationType).HasMaxLength(30);
+            entity.Property(x => x.SchemaName).HasMaxLength(128);
+            entity.Property(x => x.TableName).HasMaxLength(128);
+            entity.Property(x => x.IpAddress).HasMaxLength(64);
+            entity.Property(x => x.UserAgent).HasMaxLength(1000);
+            entity.Property(x => x.Application).HasMaxLength(100);
+            entity.Property(x => x.HttpMethod).HasMaxLength(16);
+            entity.Property(x => x.RequestPath).HasMaxLength(2048);
+            entity.Property(x => x.ControllerName).HasMaxLength(128);
+            entity.Property(x => x.ActionName).HasMaxLength(128);
+            entity.Property(x => x.Source).HasMaxLength(50);
+            entity.Property(x => x.FailureReason).HasMaxLength(2000);
+            entity.HasIndex(x => new { x.UserId, x.OccurredAt });
+            entity.HasIndex(x => new { x.TableName, x.OccurredAt });
+            entity.HasIndex(x => x.CorrelationId);
+        });
+        modelBuilder.Entity<Season>(entity =>
+        {
+            entity.ToTable("Seasons", "dbo");
+            entity.HasIndex(season => new { season.SeasonStartDate, season.SeasonEndDate })
+                .IsUnique()
+                .HasFilter("[IsPublished] = 1");
         });
         modelBuilder.Entity<Play>(entity =>
         {
@@ -212,6 +242,7 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
                 .HasForeignKey(x => x.CreatedBy)
                 .OnDelete(DeleteBehavior.NoAction);
         });
+        DisableSqlOutputClauseForAuditedTables(modelBuilder);
         ApplyPublishedQueryFilters(modelBuilder);
     }
 
@@ -227,6 +258,14 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
     {
         ApplyPersistenceRules();
         return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    private static void DisableSqlOutputClauseForAuditedTables(ModelBuilder modelBuilder)
+    {
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            entityType.UseSqlOutputClause(false);
+        }
     }
 
     private static void ApplyPublishedQueryFilters(ModelBuilder modelBuilder)

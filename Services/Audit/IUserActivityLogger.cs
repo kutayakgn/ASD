@@ -23,12 +23,4 @@ public static class UserActivityTypes
     public const string PasswordChanged = "PasswordChanged";
     public const string PasswordChangeFailed = "PasswordChangeFailed";
     public const string EmailChanged = "EmailChanged";
-    public const string UserCreated = "UserCreated";
-    public const string UserUpdated = "UserUpdated";
-    public const string UserSoftDeleted = "UserSoftDeleted";
-    public const string TicketFeeChanged = "TicketFeeChanged";
-    public const string BlacklistCreated = "BlacklistCreated";
-    public const string BlacklistSoftDeleted = "BlacklistSoftDeleted";
-    public const string JuryVoteReset = "JuryVoteReset";
-    public const string PlaySoftDeleted = "PlaySoftDeleted";
 }
