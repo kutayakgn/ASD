@@ -25,11 +25,23 @@ public sealed class ExcelExporter : IExcelExporter
         titleCell.Style.Font.FontColor = XLColor.White;
         titleCell.Style.Fill.BackgroundColor = XLColor.FromHtml("#17223B");
 
+        for (var metadataIndex = 0; metadataIndex < document.MetadataLines.Count; metadataIndex++)
+        {
+            var metadataRow = metadataIndex + 2;
+            worksheet.Cell(metadataRow, 1).Value = document.MetadataLines[metadataIndex];
+            if (columnCount > 1) worksheet.Range(metadataRow, 1, metadataRow, columnCount).Merge();
+            worksheet.Cell(metadataRow, 1).Style.Font.Italic = true;
+            worksheet.Cell(metadataRow, 1).Style.Font.FontColor = XLColor.FromHtml("#4B5563");
+            worksheet.Cell(metadataRow, 1).Style.Fill.BackgroundColor = XLColor.FromHtml("#F4F2ED");
+        }
+
+        var headerRow = document.MetadataLines.Count + 3;
+        var firstDataRow = headerRow + 1;
         for (var columnIndex = 0; columnIndex < columnCount; columnIndex++)
         {
             var column = document.Columns[columnIndex];
             var excelColumn = columnIndex + 1;
-            worksheet.Cell(3, excelColumn).Value = column.Header;
+            worksheet.Cell(headerRow, excelColumn).Value = column.Header;
             worksheet.Column(excelColumn).Width = column.Width;
             worksheet.Column(excelColumn).Style.Alignment.Horizontal = ToClosedXmlAlignment(column.Alignment);
         }
@@ -39,15 +51,15 @@ public sealed class ExcelExporter : IExcelExporter
             var row = document.Rows[rowIndex];
             for (var columnIndex = 0; columnIndex < columnCount; columnIndex++)
             {
-                SetCellValue(worksheet.Cell(rowIndex + 4, columnIndex + 1), row[columnIndex].Value);
+                SetCellValue(worksheet.Cell(rowIndex + firstDataRow, columnIndex + 1), row[columnIndex].Value);
             }
         }
 
-        var lastDataRow = Math.Max(4, document.Rows.Count + 3);
-        var table = worksheet.Range(3, 1, lastDataRow, columnCount)
+        var lastDataRow = Math.Max(firstDataRow, document.Rows.Count + headerRow);
+        var table = worksheet.Range(headerRow, 1, lastDataRow, columnCount)
             .CreateTable(SanitizeTableName(document.TableName));
         table.Theme = XLTableTheme.TableStyleMedium2;
-        worksheet.SheetView.FreezeRows(3);
+        worksheet.SheetView.FreezeRows(headerRow);
         for (var footerIndex = 0; footerIndex < document.FooterLines.Count; footerIndex++)
         {
             var footerRow = lastDataRow + 2 + footerIndex;

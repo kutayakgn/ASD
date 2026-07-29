@@ -152,6 +152,14 @@ p {
     overflow-x: auto;
     padding: 0px;
 }
+#ranking-votes-table .jury-voting-table-wrapper {
+    overflow-x: auto;
+    padding: 0px;
+}
+#ranking-votes-table .complex-table-summary-wrapper {
+    overflow-x: auto;
+    padding: 0px;
+}
 tr {
     border: none;
 }

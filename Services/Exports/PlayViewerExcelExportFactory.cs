@@ -14,6 +14,7 @@ public static class PlayViewerExcelExportFactory
             WorksheetName = "İzleyen Jüriler",
             TableName = "OyunuIzleyenJuriler",
             Title = $"{playName} - İzleyen Jüri Üyeleri",
+            MetadataLines = ExcelExportMetadata.Create(filters: [$"Oyun = {playName}" ]),
             Columns = [new ExcelExportColumn { Header = "Jüri Adı Soyadı", Width = 34 }],
             Rows = viewers
                 .Select(viewer => (IReadOnlyList<ExcelExportCell>)

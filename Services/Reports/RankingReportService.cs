@@ -56,6 +56,7 @@ public sealed class RankingReportService(AfifeContext context) : IRankingReportS
                 NumberOfActiveVote = ranking.NumberOfActiveVote,
                 ArithmeticMean = ranking.ArithmeticMean,
                 TrimmedMean = ranking.TrimmedMean,
+                ArithmeticVariance = ranking.ArithmeticVariance,
                 ConfidenceValue = ranking.ConfidenceValue
             };
 
@@ -74,7 +75,12 @@ public sealed class RankingReportService(AfifeContext context) : IRankingReportS
             CategoryName = row.CategoryName,
             DisplayName = selectedCategory.HasRoleAndPhoto ? row.CandidateName : row.TheaterName,
             PlayName = row.PlayName,
+            TotalScore = row.ArithmeticMean.HasValue
+                ? Convert.ToInt32(Math.Round(row.ArithmeticMean.Value * row.NumberOfActiveVote))
+                : 0,
             ViewCount = row.NumberOfActiveVote,
+            Variance = row.ArithmeticVariance,
+            ConfidenceValue = row.ConfidenceValue,
             MetricValue = normalized.RankingType switch
             {
                 RankingTypes.Arithmetic => row.ArithmeticMean,
@@ -97,6 +103,77 @@ public sealed class RankingReportService(AfifeContext context) : IRankingReportS
         };
     }
 
+    public async Task<RankingVoteTableViewModel> GetVotesPageAsync(
+        RankingVoteTableQuery query,
+        CancellationToken cancellationToken = default) =>
+        await BuildVotesAsync(query, currentPageOnly: true, cancellationToken);
+
+    public async Task<RankingVoteTableViewModel> GetVotesExportAsync(
+        RankingVoteTableQuery query,
+        CancellationToken cancellationToken = default) =>
+        await BuildVotesAsync(
+            query,
+            currentPageOnly: false,
+            cancellationToken);
+
+    private async Task<RankingVoteTableViewModel> BuildVotesAsync(
+        RankingVoteTableQuery query,
+        bool currentPageOnly,
+        CancellationToken cancellationToken)
+    {
+        var contextData = await (
+            from candidate in context.PlayAwardCategories.AsNoTracking()
+            join play in context.Plays.AsNoTracking() on candidate.PlayId equals play.Id
+            where candidate.Id == query.PlayAwardCategoryId
+            select new { play.PlayName })
+            .SingleOrDefaultAsync(cancellationToken);
+        if (contextData is null)
+        {
+            return new RankingVoteTableViewModel { PlayAwardCategoryId = query.PlayAwardCategoryId };
+        }
+
+        var votes =
+            from vote in context.JuryVotes.AsNoTracking()
+            join jury in context.Users.AsNoTracking() on vote.JuryId equals jury.Id
+            where vote.PlayAwardCategoryId == query.PlayAwardCategoryId && vote.IsActive
+            select new RankingVoteRowViewModel
+            {
+                VoteId = vote.Id,
+                JuryFullName = (jury.FirstName + " " + jury.LastName).Trim(),
+                Score = vote.Score
+            };
+        var sortBy = query.SortBy == RankingVoteSortColumns.Score
+            ? RankingVoteSortColumns.Score
+            : RankingVoteSortColumns.JuryName;
+        var direction = string.Equals(query.SortDirection, "desc", StringComparison.OrdinalIgnoreCase)
+            ? "desc"
+            : "asc";
+        var ordered = sortBy == RankingVoteSortColumns.Score
+            ? direction == "desc"
+                ? votes.OrderByDescending(row => row.Score).ThenBy(row => row.JuryFullName)
+                : votes.OrderBy(row => row.Score).ThenBy(row => row.JuryFullName)
+            : direction == "desc"
+                ? votes.OrderByDescending(row => row.JuryFullName).ThenByDescending(row => row.Score)
+                : votes.OrderBy(row => row.JuryFullName).ThenByDescending(row => row.Score);
+        var totalCount = await votes.CountAsync(cancellationToken);
+        var totalPages = Math.Max(1, (int)Math.Ceiling(totalCount / (double)RankingVoteTableViewModel.PageSize));
+        var currentPage = Math.Min(Math.Max(1, query.Page), totalPages);
+        var rows = currentPageOnly
+            ? await ordered.Skip((currentPage - 1) * RankingVoteTableViewModel.PageSize)
+                .Take(RankingVoteTableViewModel.PageSize).ToArrayAsync(cancellationToken)
+            : await ordered.ToArrayAsync(cancellationToken);
+
+        return new RankingVoteTableViewModel
+        {
+            PlayAwardCategoryId = query.PlayAwardCategoryId,
+            PlayName = contextData.PlayName,
+            SortBy = sortBy,
+            SortDirection = direction,
+            CurrentPage = currentPage,
+            TotalCount = totalCount,
+            Rows = rows
+        };
+    }
     private static IOrderedQueryable<RankingData> ApplyOrdering(
         IQueryable<RankingData> source,
         string rankingType) => rankingType switch
@@ -162,6 +239,7 @@ public sealed class RankingReportService(AfifeContext context) : IRankingReportS
         public int NumberOfActiveVote { get; init; }
         public double? ArithmeticMean { get; init; }
         public double? TrimmedMean { get; init; }
+        public double? ArithmeticVariance { get; init; }
         public int? ConfidenceValue { get; init; }
     }
 }

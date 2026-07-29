@@ -21,15 +21,9 @@ public static class RankingComplexTableFactory
         var activeRows = report.Rows.Select(row => new ComplexTableRowViewModel
         {
             Id = $"ranking-{row.PlayAwardCategoryId:N}",
-            Cells =
-            [
-                Cell(row.Position),
-                Cell(row.CategoryName),
-                Cell(row.DisplayName),
-                Cell(row.PlayName),
-                Cell(row.ViewCount),
-                MetricCell(row.MetricValue, report.RankingType)
-            ]
+            Icon = ConfidenceIcon(row.ConfidenceValue),
+            IconAccessibleLabel = row.ConfidenceValue.HasValue ? $"Güven puanı {row.ConfidenceValue}/4" : "Güven puanı yok",
+            Cells = CreateCells(row, report.RankingType)
         }).ToArray();
 
         return new ComplexTableViewModel
@@ -40,7 +34,9 @@ public static class RankingComplexTableFactory
             DataActionName = "RankingsTable",
             CurrentTabKey = report.Tab,
             ShowSearch = false,
-            MinimumTableWidth = 980,
+            MinimumTableWidth = 1080,
+            IsIconColActive = report.RankingType == RankingTypes.Confidence,
+            IconColumnWidth = 48,
             ExportControllerName = "Management",
             IsExportEnabled = report.TotalCount > 0,
             SelectFilters = CreateFilters(report),
@@ -76,33 +72,66 @@ public static class RankingComplexTableFactory
     }
 
     private static IReadOnlyList<ComplexTableColumnViewModel> CreateColumns(
-        RankingTableViewModel report) =>
-    [
-        new() { Title = "Sıra", Key = "position", ColWidth = 7, IsSortable = false },
-        new() { Title = "Kategori", Key = "category", ColWidth = 18, IsSortable = false },
-        new()
+        RankingTableViewModel report)
+    {
+        var columns = new List<ComplexTableColumnViewModel>
         {
-            Title = report.CategoryHasRoleAndPhoto ? "Adı Soyadı" : "Tiyatro Adı",
-            Key = "displayName",
-            ColWidth = 22,
-            IsSortable = false
-        },
-        new() { Title = "Oyun Adı", Key = "play", ColWidth = 22, IsSortable = false },
-        new() { Title = "İzlenme Sayısı", Key = "viewCount", ColWidth = 12, IsSortable = false },
-        new()
-        {
-            Title = report.RankingType switch
+            new() { Title = "Sıra", Key = "position", ColWidth = 7, IsSortable = false },
+            new() { Title = "Kategori", Key = "category", ColWidth = 17, IsSortable = false },
+            new()
             {
-                RankingTypes.Arithmetic => "Aritmetik Ortalama",
-                RankingTypes.Confidence => "Güven Puanı",
-                _ => "Trim Ortalama"
+                Title = report.CategoryHasRoleAndPhoto ? "Adı Soyadı" : "Tiyatro Adı",
+                Key = "displayName", ColWidth = 21, IsSortable = false
             },
-            Key = "metric",
-            ColWidth = 19,
-            IsSortable = false
+            new() { Title = "Oyun Adı", Key = "play", ColWidth = 21, IsSortable = false },
+            new() { Title = "İzlenme Sayısı", Key = "viewCount", ColWidth = 12, IsSortable = false }
+        };
+        if (report.RankingType != RankingTypes.Trimmed)
+        {
+            columns.Add(new ComplexTableColumnViewModel
+            {
+                Title = "Varyans", Key = "variance", ColWidth = 10, IsSortable = false
+            });
+            columns.Add(new ComplexTableColumnViewModel
+            {
+                Title = report.RankingType == RankingTypes.Confidence ? "Güven Puanı" : "Aritmetik Ortalama",
+                Key = "metric", ColWidth = 12, IsSortable = false
+            });
         }
-    ];
+        else
+        {
+            columns.Add(new ComplexTableColumnViewModel
+            {
+                Title = "Trim Ortalama", Key = "metric", ColWidth = 22, IsSortable = false
+            });
+        }
+        return columns;
+    }
 
+    private static IReadOnlyList<ComplexTableCellViewModel> CreateCells(
+        RankingRowViewModel row,
+        string rankingType)
+    {
+        var cells = new List<ComplexTableCellViewModel>
+        {
+            Cell(row.Position), Cell(row.CategoryName), Cell(row.DisplayName), Cell(row.PlayName),
+            new()
+            {
+                Content = row.ViewCount.ToString(CultureInfo.CurrentCulture),
+                ModalUrl = $"/siralamalar/{row.PlayAwardCategoryId}/oylar",
+                AccessibleLabel = $"{row.PlayName} oylarını görüntüle"
+            }
+        };
+        if (rankingType != RankingTypes.Trimmed)
+        {
+            cells.Add(new ComplexTableCellViewModel
+            {
+                Content = row.Variance?.ToString("0.000", CultureInfo.CurrentCulture) ?? "-"
+            });
+        }
+        cells.Add(MetricCell(row.MetricValue, rankingType));
+        return cells;
+    }
     private static IReadOnlyList<ComplexTableSelectFilterViewModel> CreateFilters(
         RankingTableViewModel report)
     {
@@ -161,11 +190,19 @@ public static class RankingComplexTableFactory
         Content = value.ToString(CultureInfo.CurrentCulture)
     };
 
+    private static string ConfidenceIcon(int? value) => value switch
+    {
+        4 or 3 => "/icons/confidence_success.svg",
+        2 => "/icons/confidence_flag.svg",
+        1 => "/icons/confidence_double_flag.svg",
+        _ => string.Empty
+    };
+
     private static ComplexTableCellViewModel MetricCell(double? value, string rankingType) => new()
     {
         Content = value.HasValue
             ? rankingType == RankingTypes.Confidence
-                ? Convert.ToInt32(value.Value).ToString(CultureInfo.CurrentCulture)
+                ? $"{Convert.ToInt32(value.Value)}/4"
                 : value.Value.ToString("0.00", CultureInfo.CurrentCulture)
             : "-"
     };

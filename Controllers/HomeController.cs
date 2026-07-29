@@ -44,7 +44,7 @@ public sealed class HomeController(
         var title = query.Tab == PlayWatchTabs.UnderFour
             ? "4'ten Az İzlenen Oyunlar"
             : "4 Kez ve Üzeri İzlenen Oyunlar";
-        var document = PlayWatchExcelExportFactory.Create(report, title);
+        var document = PlayWatchExcelExportFactory.Create(report, title, query);
         var content = excelExporter.Export(document);
         var fileName = $"oyun-izlenmeleri-{DateTime.Now:yyyyMMdd-HHmm}.xlsx";
 

@@ -1,15 +1,18 @@
 using YKBAfife.Models.Exports;
 using YKBAfife.Models.ViewModels;
+using YKBAfife.Services.Exports;
 
 namespace YKBAfife.Services.Reports;
 
 public static class BlacklistExcelExportFactory
 {
-    public static ExcelExportDocument Create(IReadOnlyList<BlacklistRowViewModel> rows) => new()
+    public static ExcelExportDocument Create(IReadOnlyList<BlacklistRowViewModel> rows, BlacklistTableQuery query) => new()
     {
         WorksheetName = "Blacklists",
         Title = "Blacklists",
         TableName = "BlacklistKayitlari",
+        MetadataLines = ExcelExportMetadata.Create(SortLabel(query.SortBy), query.SortDirection,
+            [ExcelExportMetadata.SearchFilter(query.Search)]),
         Columns =
         [
             new() { Header = "Jüri", Width = 28 },
@@ -25,5 +28,13 @@ public static class BlacklistExcelExportFactory
             new() { Value = row.CreatedByName }
         ]).ToArray(),
         FooterLines = [$"Toplam kayıt sayısı: {rows.Count}"]
+    };
+
+    private static string SortLabel(string value) => value switch
+    {
+        BlacklistSortColumns.Jury => "Jüri",
+        BlacklistSortColumns.Play => "Oyun",
+        BlacklistSortColumns.CreatedBy => "Ekleyen",
+        _ => "Eklenme Tarihi"
     };
 }

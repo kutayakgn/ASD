@@ -31,7 +31,10 @@ public sealed class RankingRowViewModel
     public string CategoryName { get; init; } = string.Empty;
     public string DisplayName { get; init; } = string.Empty;
     public string PlayName { get; init; } = string.Empty;
+    public int TotalScore { get; init; }
     public int ViewCount { get; init; }
+    public double? Variance { get; init; }
+    public int? ConfidenceValue { get; init; }
     public double? MetricValue { get; init; }
 }
 
@@ -65,4 +68,42 @@ public static class RankingTypes
     public const string Confidence = "confidence";
 
     public static readonly IReadOnlyList<string> All = [Trimmed, Arithmetic, Confidence];
+}
+public sealed class RankingVoteTableQuery
+{
+    public Guid PlayAwardCategoryId { get; set; }
+    public string SortBy { get; set; } = RankingVoteSortColumns.JuryName;
+    public string SortDirection { get; set; } = "asc";
+    public int Page { get; set; } = 1;
+}
+
+public sealed class RankingVoteTableViewModel
+{
+    public const int PageSize = 10;
+    public Guid PlayAwardCategoryId { get; init; }
+    public string PlayName { get; init; } = string.Empty;
+    public string SortBy { get; init; } = RankingVoteSortColumns.JuryName;
+    public string SortDirection { get; init; } = "asc";
+    public int CurrentPage { get; init; } = 1;
+    public int TotalCount { get; init; }
+    public IReadOnlyList<RankingVoteRowViewModel> Rows { get; init; } = [];
+}
+
+public sealed class RankingVoteRowViewModel
+{
+    public Guid VoteId { get; init; }
+    public string JuryFullName { get; init; } = string.Empty;
+    public int Score { get; init; }
+}
+
+public sealed class RankingVoteModalViewModel
+{
+    public string PlayName { get; init; } = string.Empty;
+    public ComplexTableViewModel Table { get; init; } = new();
+}
+
+public static class RankingVoteSortColumns
+{
+    public const string JuryName = "juryName";
+    public const string Score = "score";
 }

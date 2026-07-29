@@ -174,7 +174,7 @@ public sealed partial class ManagementController(
             return NotFound();
         }
 
-        var document = JuryWatchedPlayExcelExportFactory.Create(report);
+        var document = JuryWatchedPlayExcelExportFactory.Create(report, query);
         var content = excelExporter.Export(document);
         var fileName = $"juri-izlenmeleri-{DateTime.Now:yyyyMMdd-HHmm}.xlsx";
         return File(
@@ -1506,7 +1506,7 @@ public sealed partial class ManagementController(
         if (play is null) return NotFound();
 
         var rows = await candidateReportService.GetExportRowsAsync(query, cancellationToken);
-        var content = excelExporter.Export(CandidateExcelExportFactory.Create(play.PlayName, rows));
+        var content = excelExporter.Export(CandidateExcelExportFactory.Create(play.PlayName, rows, query));
         return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             $"{SlugHelper.Create(play.PlayName)}-adaylar.xlsx");
     }
@@ -1852,7 +1852,7 @@ public sealed partial class ManagementController(
             query,
             currentPageOnly,
             cancellationToken);
-        var content = excelExporter.Export(RankingExcelExportFactory.Create(report));
+        var content = excelExporter.Export(RankingExcelExportFactory.Create(report, currentPageOnly));
         var scope = currentPageOnly ? $"sayfa-{report.CurrentPage}" : "tum-tablo";
         return File(
             content,
@@ -1860,6 +1860,44 @@ public sealed partial class ManagementController(
             $"siralamalar-{scope}-{DateTime.Now:yyyyMMdd-HHmm}.xlsx");
     }
 
+    [HttpGet("siralamalar/{playAwardCategoryId:guid}/oylar")]
+    public async Task<IActionResult> RankingVotesModal(
+        Guid playAwardCategoryId,
+        CancellationToken cancellationToken)
+    {
+        var report = await rankingReportService.GetVotesPageAsync(
+            new RankingVoteTableQuery { PlayAwardCategoryId = playAwardCategoryId }, cancellationToken);
+        if (string.IsNullOrWhiteSpace(report.PlayName)) return NotFound();
+        return PartialView("_RankingVotesModal", new RankingVoteModalViewModel
+        {
+            PlayName = report.PlayName,
+            Table = RankingVoteComplexTableFactory.Create(report)
+        });
+    }
+
+    [HttpPost("siralamalar/oylar/tablo")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RankingVotesTable(
+        [FromForm] RankingVoteTableQuery query,
+        CancellationToken cancellationToken)
+    {
+        var report = await rankingReportService.GetVotesPageAsync(query, cancellationToken);
+        if (string.IsNullOrWhiteSpace(report.PlayName)) return NotFound();
+        return ViewComponent("ComplexTable", new { model = RankingVoteComplexTableFactory.Create(report) });
+    }
+
+    [HttpPost("siralamalar/oylar/excel")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ExportRankingVotes(
+        [FromForm] RankingVoteTableQuery query,
+        CancellationToken cancellationToken)
+    {
+        var report = await rankingReportService.GetVotesExportAsync(query, cancellationToken);
+        if (string.IsNullOrWhiteSpace(report.PlayName)) return NotFound();
+        var content = excelExporter.Export(RankingVoteExcelExportFactory.Create(report));
+        return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"juri-oylari-{DateTime.Now:yyyyMMdd-HHmm}.xlsx");
+    }
     [HttpGet("editorler")]
     public IActionResult Editors() => Page("Editörler", "Editör hesaplarını yönetin.");
 
@@ -2070,7 +2108,7 @@ public sealed partial class ManagementController(
     public async Task<IActionResult> ExportTicketSales([FromForm] TicketSalesTableQuery query, CancellationToken cancellationToken)
     {
         var rows = await ticketSalesReportService.GetExportRowsAsync(query, cancellationToken);
-        var content = excelExporter.Export(TicketSalesExcelExportFactory.Create(rows));
+        var content = excelExporter.Export(TicketSalesExcelExportFactory.Create(rows, query));
         return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"bilet-satislari-{DateTime.Today:yyyy-MM-dd}.xlsx");
     }
 
@@ -2146,7 +2184,7 @@ public sealed partial class ManagementController(
     public async Task<IActionResult> ExportBlacklists([FromForm] BlacklistTableQuery query, CancellationToken cancellationToken)
     {
         var rows = await blacklistReportService.GetExportRowsAsync(query, cancellationToken);
-        var content = excelExporter.Export(BlacklistExcelExportFactory.Create(rows));
+        var content = excelExporter.Export(BlacklistExcelExportFactory.Create(rows, query));
         return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"blacklists-{DateTime.Today:yyyy-MM-dd}.xlsx");
     }
 

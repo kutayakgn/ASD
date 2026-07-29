@@ -24,7 +24,8 @@
     {
         var actionColumnsWidth = (Model.IsEditableRows ? Model.EditColumnWidth : 0) +
             (Model.IsDeleteColActive ? Model.DeleteColumnWidth : 0) +
-            (Model.IsNavigationColActive ? Model.NavigationColumnWidth : 0);
+            (Model.IsNavigationColActive ? Model.NavigationColumnWidth : 0) +
+            (Model.IsIconColActive ? Model.IconColumnWidth : 0);
         if (actionColumnsWidth == 0)
         {
             return $"{percentage}%";
@@ -180,7 +181,7 @@
             </form>
 
         <div class="jury-voting-table-wrapper">
-            <table class="jury-voting-table" style="--complex-table-min-width: @(Model.MinimumTableWidth)px; --complex-table-edit-width: @(Model.EditColumnWidth)px; --complex-table-delete-width: @(Model.DeleteColumnWidth)px; --complex-table-navigation-width: @(Model.NavigationColumnWidth)px;">
+            <table class="jury-voting-table" style="--complex-table-min-width: @(Model.MinimumTableWidth)px; --complex-table-edit-width: @(Model.EditColumnWidth)px; --complex-table-delete-width: @(Model.DeleteColumnWidth)px; --complex-table-navigation-width: @(Model.NavigationColumnWidth)px; --complex-table-icon-width: @(Model.IconColumnWidth)px;">
                 <colgroup>
                     @foreach (var column in activeTab.Columns)
                     {
@@ -197,6 +198,10 @@
                     @if (Model.IsNavigationColActive)
                     {
                         <col class="complex-table-navigation-col" />
+                    }
+                    @if (Model.IsIconColActive)
+                    {
+                        <col class="complex-table-icon-col" />
                     }
                 </colgroup>
                 @if (Model.ShowColumnHeaders)
@@ -234,6 +239,10 @@
                         @if (Model.IsNavigationColActive)
                             {
                                 <th scope="col" class="complex-table-navigation-column"></th>
+                            }
+                        @if (Model.IsIconColActive)
+                            {
+                                <th scope="col" class="complex-table-icon-column"></th>
                             }
                         </tr>
                     </thead>
@@ -335,12 +344,22 @@
                                         }
                                     </td>
                                 }
+                                @if (Model.IsIconColActive)
+                                {
+                                    <td class="complex-table-icon-column">
+                                        @if (!string.IsNullOrWhiteSpace(row.Icon))
+                                        {
+                                            <img src="@row.Icon" alt="" aria-hidden="true" />
+                                            <span class="visually-hidden">@row.IconAccessibleLabel</span>
+                                        }
+                                    </td>
+                                }
                             </tr>
                         }
                     }
                     else
                     {
-                        <tr><td colspan="@(activeTab.Columns.Count + (Model.IsEditableRows ? 1 : 0) + (Model.IsDeleteColActive ? 1 : 0) + (Model.IsNavigationColActive ? 1 : 0))" class="complex-table-empty">@activeTab.EmptyMessage</td></tr>
+                        <tr><td colspan="@(activeTab.Columns.Count + (Model.IsEditableRows ? 1 : 0) + (Model.IsDeleteColActive ? 1 : 0) + (Model.IsNavigationColActive ? 1 : 0) + (Model.IsIconColActive ? 1 : 0))" class="complex-table-empty">@activeTab.EmptyMessage</td></tr>
                     }
                 </tbody>
             </table>

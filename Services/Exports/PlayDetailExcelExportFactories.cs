@@ -10,6 +10,7 @@ public static class PlayVoteExcelExportFactory
         WorksheetName = "Oyun Oyları",
         Title = $"{playName} - Tüm Oylar",
         TableName = "OyunJuriOylari",
+        MetadataLines = ExcelExportMetadata.Create("Jüri Adı", "asc", [$"Oyun = {playName}" ]),
         Columns =
         [
             new() { Header = "Jüri Adı", Width = 28 },
@@ -30,15 +31,18 @@ public static class PlayVoteExcelExportFactory
         ]).ToArray(),
         FooterLines = [$"Toplam oy sayısı: {rows.Count}"]
     };
+
 }
 
 public static class CandidateExcelExportFactory
 {
-    public static ExcelExportDocument Create(string playName, IReadOnlyList<CandidateTableRowViewModel> rows) => new()
+    public static ExcelExportDocument Create(string playName, IReadOnlyList<CandidateTableRowViewModel> rows, CandidateTableQuery query) => new()
     {
         WorksheetName = "Adaylar",
         Title = $"{playName} - Adaylar ve Kategorileri",
         TableName = "OyunAdaylari",
+        MetadataLines = ExcelExportMetadata.Create(CandidateSortLabel(query.SortBy), query.SortDirection,
+            [$"Oyun = {playName}", query.CategoryCode.HasValue ? $"Kategori = {rows.FirstOrDefault()?.CategoryName ?? query.CategoryCode.ToString()}" : "Kategori = Tümü"]),
         Columns =
         [
             new() { Header = "Ödül Kategorisi", Width = 42 },
@@ -58,5 +62,15 @@ public static class CandidateExcelExportFactory
             new() { Value = row.IsActive ? "Aktif" : "Aktif Değil" }
         ]).ToArray(),
         FooterLines = [$"Toplam aday sayısı: {rows.Count}"]
+    };
+
+    private static string CandidateSortLabel(string sortBy) => sortBy switch
+    {
+        CandidateSortColumns.Candidate => "Adı Soyadı",
+        CandidateSortColumns.Role => "Rol Adı",
+        CandidateSortColumns.Replacement => "Rol Değişimi",
+        CandidateSortColumns.CreatedAt => "Eklenme Tarihi",
+        CandidateSortColumns.Status => "Statü",
+        _ => "Ödül Kategorisi"
     };
 }

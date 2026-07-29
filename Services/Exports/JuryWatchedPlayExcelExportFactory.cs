@@ -5,11 +5,13 @@ namespace YKBAfife.Services.Exports;
 
 public static class JuryWatchedPlayExcelExportFactory
 {
-    public static ExcelExportDocument Create(JuryWatchedPlayExportViewModel report) => new()
+    public static ExcelExportDocument Create(JuryWatchedPlayExportViewModel report, JuryWatchedPlayTableQuery query) => new()
     {
         WorksheetName = "İzlenmeler",
         TableName = "JuriIzlenmeleri",
         Title = $"{report.JuryName} - İzlenmeler",
+        MetadataLines = ExcelExportMetadata.Create("Oyun Adı", query.SortDirection,
+            [$"Jüri = {report.JuryName}", ExcelExportMetadata.SearchFilter(query.Search)]),
         Columns =
         [
             new ExcelExportColumn { Header = "Oyun Adı", Width = 42 },

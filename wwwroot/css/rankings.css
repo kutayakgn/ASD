@@ -87,3 +87,42 @@
         width: 100%;
     }
 }
+.complex-table-icon-col,
+.complex-table-icon-column {
+    width: var(--complex-table-icon-width, 48px);
+}
+
+.jury-voting-table th.complex-table-icon-column,
+.jury-voting-table td.complex-table-icon-column {
+    padding: 8px;
+    text-align: center;
+}
+
+.complex-table-icon-column img {
+    display: block;
+    width: 18px;
+    height: 18px;
+    margin: 0 auto;
+}
+
+#ranking-votes-table .complex-table-summary {
+    flex-direction: row;
+    align-items: center;
+}
+
+.ranking-votes-modal .modal-dialog {
+    width: min(calc(100% - 32px), 760px);
+    max-width: 760px;
+}
+
+@media (max-width: 575.98px) {
+    .ranking-votes-modal .modal-dialog {
+        width: calc(100% - 20px);
+        margin: 10px;
+    }
+
+    #ranking-votes-table .complex-table-summary {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}

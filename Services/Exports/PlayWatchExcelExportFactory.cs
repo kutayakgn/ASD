@@ -5,7 +5,7 @@ namespace YKBAfife.Services.Exports;
 
 public static class PlayWatchExcelExportFactory
 {
-    public static ExcelExportDocument Create(PlayWatchExportViewModel report, string title)
+    public static ExcelExportDocument Create(PlayWatchExportViewModel report, string title, PlayWatchTableQuery query)
     {
         var juryColumns = BuildJuryColumns(report.Juries);
         var columns = new List<ExcelExportColumn>
@@ -47,6 +47,10 @@ public static class PlayWatchExcelExportFactory
             WorksheetName = "Oyun İzlenmeleri",
             TableName = "OyunIzlenmeRaporu",
             Title = title,
+            MetadataLines = ExcelExportMetadata.Create(
+                query.SortBy == PlayWatchSortColumns.PlayName ? "Oyun Adı" : "İzlenme Sayısı",
+                query.SortDirection,
+                [ExcelExportMetadata.SearchFilter(query.Search), $"Tablo = {title}" ]),
             Columns = columns,
             Rows = rows,
             FooterLines = [$"Toplam kayıt sayısı: {rows.Length}"]

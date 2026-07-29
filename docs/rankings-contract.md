@@ -49,7 +49,7 @@ views order descending by their selected mean with null metrics last. Confidence
 views order `ConfidenceValue` descending because `4` is the strongest confidence,
 then use `TrimmedMean` descending as the tie breaker. Candidate and play names
 provide deterministic final ordering. The visible sequence number is the row's
-position in this selected report ordering across server-side pages.
+position in this selected report ordering across server-side pages. Ranking exports include the active-vote total score before the vote count. Arithmetic and confidence reports also expose population variance. Confidence is rendered as `value/4`; vote drill-downs include only published, active votes and are paged server-side.
 ## Write ownership
 
 - `dbo.usp_RefreshRankings` is the only supported writer.

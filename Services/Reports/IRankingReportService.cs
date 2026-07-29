@@ -8,6 +8,14 @@ public interface IRankingReportService
         RankingTableQuery query,
         CancellationToken cancellationToken = default);
 
+    Task<RankingVoteTableViewModel> GetVotesPageAsync(
+        RankingVoteTableQuery query,
+        CancellationToken cancellationToken = default);
+
+    Task<RankingVoteTableViewModel> GetVotesExportAsync(
+        RankingVoteTableQuery query,
+        CancellationToken cancellationToken = default);
+
     Task<RankingTableViewModel> GetExportAsync(
         RankingTableQuery query,
         bool currentPageOnly,
