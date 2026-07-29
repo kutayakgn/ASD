@@ -36,7 +36,7 @@
         if (primaryButton) {
             primaryButton.setAttribute(
                 "aria-label",
-                hasPhoto ? "Y\u00fcklenen foto\u011fraf\u0131 kald\u0131r" : "Dosya ekle");
+                hasPhoto ? "Yüklenen fotoğrafı kaldır" : "Dosya ekle");
         }
         if (photoActions) photoActions.hidden = !hasPhoto;
     };

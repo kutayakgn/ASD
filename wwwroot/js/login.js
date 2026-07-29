@@ -9,6 +9,6 @@
         toggle.setAttribute("aria-pressed", String(!isVisible));
         toggle.setAttribute(
             "aria-label",
-            isVisible ? "\u015eifreyi g\u00f6ster" : "\u015eifreyi gizle");
+            isVisible ? "Şifreyi göster" : "Şifreyi gizle");
     });
 })();

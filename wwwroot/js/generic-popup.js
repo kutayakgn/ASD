@@ -29,10 +29,10 @@
         if (options.messageContent instanceof Node) {
             message.append(options.messageContent);
         } else {
-            message.textContent = options.message || "\u0130\u015flem tamamlanamad\u0131.";
+            message.textContent = options.message || "İşlem tamamlanamadı.";
         }
         confirmButton.textContent = options.confirmText || "Tamam";
-        cancelButton.textContent = options.cancelText || "\u0130ptal";
+        cancelButton.textContent = options.cancelText || "İptal";
         cancelButton.hidden = !options.showCancel;
         popup.hidden = false;
         document.body.classList.add("has-generic-popup");
@@ -76,9 +76,9 @@
         const submitter = event.submitter;
         show({
             type: "question",
-            message: form.dataset.confirmMessage || "\u0130\u015flemi ger\u00e7ekle\u015ftirmek istedi\u011finize emin misiniz?",
+            message: form.dataset.confirmMessage || "İşlemi gerçekleştirmek istediğinize emin misiniz?",
             confirmText: form.dataset.confirmText || "Evet",
-            cancelText: form.dataset.cancelText || "\u0130ptal",
+            cancelText: form.dataset.cancelText || "İptal",
             showCancel: true,
             returnFocus: submitter,
             onConfirm: () => {
@@ -95,7 +95,7 @@
             type: "question",
             message: messageText,
             confirmText: "Evet",
-            cancelText: "\u0130ptal",
+            cancelText: "İptal",
             showCancel: true,
             onConfirm
         }),

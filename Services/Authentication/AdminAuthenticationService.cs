@@ -42,7 +42,7 @@ public sealed class AdminAuthenticationService(
                 false,
                 user?.Id,
                 normalizedUsername,
-                failureReason: "Kullan\u0131c\u0131 ad\u0131 veya \u015fifre hatal\u0131.",
+                failureReason: "Kullanıcı adı veya şifre hatalı.",
                 cancellationToken: cancellationToken);
             return null;
         }
@@ -52,7 +52,7 @@ public sealed class AdminAuthenticationService(
             true,
             user.Id,
             user.Username,
-            details: "Y\u00f6netim paneline ba\u015far\u0131l\u0131 giri\u015f yap\u0131ld\u0131.",
+            details: "Yönetim paneline başarılı giriş yapıldı.",
             cancellationToken: cancellationToken);
 
         return new AuthenticatedAdmin(

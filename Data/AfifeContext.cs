@@ -12,6 +12,7 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
     public DbSet<AdminLog> AdminLogs => Set<AdminLog>();
     public DbSet<Play> Plays => Set<Play>();
     public DbSet<Season> Seasons => Set<Season>();
+    public DbSet<Ranking> Rankings => Set<Ranking>();
     public DbSet<PlayAwardCategory> PlayAwardCategories => Set<PlayAwardCategory>();
     public DbSet<JuryVote> JuryVotes => Set<JuryVote>();
     public DbSet<JuryGameTicketFee> JuryGameTicketFees => Set<JuryGameTicketFee>();
@@ -95,6 +96,24 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
             entity.HasIndex(season => new { season.SeasonStartDate, season.SeasonEndDate })
                 .IsUnique()
                 .HasFilter("[IsPublished] = 1");
+        });
+        modelBuilder.Entity<Ranking>(entity =>
+        {
+            entity.ToTable("Rankings", "dbo");
+            entity.Property(x => x.ArithmeticMean).HasColumnType("float");
+            entity.Property(x => x.TrimmedMean).HasColumnType("float");
+            entity.Property(x => x.ArithmeticVariance).HasColumnType("float");
+            entity.HasIndex(x => x.PlayAwardCategoryId)
+                .IsUnique();
+            entity.HasIndex(x => new { x.PlayId, x.IsPublished });
+            entity.HasOne(x => x.Play)
+                .WithMany()
+                .HasForeignKey(x => x.PlayId)
+                .OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(x => x.PlayAwardCategory)
+                .WithMany()
+                .HasForeignKey(x => x.PlayAwardCategoryId)
+                .OnDelete(DeleteBehavior.NoAction);
         });
         modelBuilder.Entity<Play>(entity =>
         {

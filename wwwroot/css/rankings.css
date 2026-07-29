@@ -1,0 +1,89 @@
+.rankings-page {
+    padding-bottom: 40px;
+}
+
+#rankings-table {
+    overflow: visible;
+}
+
+#rankings-table .complex-table-heading {
+    position: relative;
+    z-index: 10;
+}
+
+#rankings-table .complex-table-heading-tools {
+    width: min(100%, 820px);
+}
+
+#rankings-table .complex-table-select-filter {
+    min-width: 0;
+    flex: 1 1 220px;
+}
+
+#rankings-table .complex-table-select-filter:last-child {
+    flex: 0 0 150px;
+}
+
+#rankings-table .complex-table-summary {
+    justify-content: flex-end;
+}
+
+.complex-table-export-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.ranking-export-page {
+    color: #171717;
+    background: #fff;
+    border: 1px solid #171717;
+}
+
+.ranking-export-page img {
+    filter: invert(1);
+}
+
+.ranking-export-page:not(:disabled):hover {
+    color: #fff;
+}
+
+.ranking-export-page:not(:disabled):hover img {
+    filter: none;
+}
+
+@media (max-width: 960px) {
+    #rankings-table .complex-table-heading {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    #rankings-table .complex-table-heading-tools {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    #rankings-table .complex-table-select-filter,
+    #rankings-table .complex-table-select-filter:last-child {
+        flex: 1 1 calc(50% - 6px);
+    }
+}
+
+@media (max-width: 640px) {
+    #rankings-table .complex-table-select-filter,
+    #rankings-table .complex-table-select-filter:last-child {
+        flex-basis: 100%;
+    }
+
+    .complex-table-export-actions {
+        width: 100%;
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .complex-table-export-actions .complex-table-export-form,
+    .complex-table-export-actions .excel-export-button {
+        width: 100%;
+    }
+}

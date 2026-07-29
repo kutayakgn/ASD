@@ -52,7 +52,7 @@ public sealed class AdminManagementController(
         if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId)) return Challenge();
         if (id == currentUserId)
         {
-            return Conflict(new { message = "Kendi stat\u00fcn\u00fcz\u00fc de\u011fi\u015ftiremezsiniz." });
+            return Conflict(new { message = "Kendi statünüzü değiştiremezsiniz." });
         }
 
         var admin = await context.Users.SingleOrDefaultAsync(
@@ -98,14 +98,14 @@ public sealed class AdminManagementController(
                 user => user.RoleCode == 1 && user.Username == model.Username,
                 cancellationToken))
         {
-            return RedirectWithFailure(model, "Bu kullan\u0131c\u0131 ad\u0131 ba\u015fka bir admin taraf\u0131ndan kullan\u0131l\u0131yor.");
+            return RedirectWithFailure(model, "Bu kullanıcı adı başka bir admin tarafından kullanılıyor.");
         }
 
         if (await context.Users.AsNoTracking().AnyAsync(
                 user => user.RoleCode == 1 && user.Email == model.Email,
                 cancellationToken))
         {
-            return RedirectWithFailure(model, "Bu e-posta adresi ba\u015fka bir admin taraf\u0131ndan kullan\u0131l\u0131yor.");
+            return RedirectWithFailure(model, "Bu e-posta adresi başka bir admin tarafından kullanılıyor.");
         }
 
         if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId)) return Challenge();
@@ -140,7 +140,7 @@ public sealed class AdminManagementController(
         }
 
         TempData["GenericPopup.Type"] = "success";
-        TempData["GenericPopup.Message"] = "Admin ba\u015far\u0131yla kaydedildi.";
+        TempData["GenericPopup.Message"] = "Admin başarıyla kaydedildi.";
         TempData["GenericPopup.RedirectUrl"] = Url.Action(nameof(Index)) ?? "/admin-yonetimi";
         return RedirectToAction(nameof(Add));
     }
@@ -233,13 +233,13 @@ public sealed class AdminManagementController(
                 user => user.Id != id && user.RoleCode == 1 && user.Username == model.Username,
                 cancellationToken))
         {
-            return RedirectEditWithFailure(id, "Bu kullan\u0131c\u0131 ad\u0131 ba\u015fka bir admin taraf\u0131ndan kullan\u0131l\u0131yor.");
+            return RedirectEditWithFailure(id, "Bu kullanıcı adı başka bir admin tarafından kullanılıyor.");
         }
         if (await context.Users.AsNoTracking().AnyAsync(
                 user => user.Id != id && user.RoleCode == 1 && user.Email == model.Email,
                 cancellationToken))
         {
-            return RedirectEditWithFailure(id, "Bu e-posta adresi ba\u015fka bir admin taraf\u0131ndan kullan\u0131l\u0131yor.");
+            return RedirectEditWithFailure(id, "Bu e-posta adresi başka bir admin tarafından kullanılıyor.");
         }
 
         var oldEmail = admin.Email;
@@ -253,7 +253,7 @@ public sealed class AdminManagementController(
             !string.IsNullOrWhiteSpace(model.Password);
         if (!hasChanges)
         {
-            return RedirectEditWithFailure(id, "Herhangi bir de\u011fi\u015fiklik yapmad\u0131n\u0131z.");
+            return RedirectEditWithFailure(id, "Herhangi bir değişiklik yapmadınız.");
         }
 
         var fullNameParts = model.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -275,7 +275,7 @@ public sealed class AdminManagementController(
         }
         catch (DbUpdateException)
         {
-            return RedirectEditWithFailure(id, "Kullan\u0131c\u0131 ad\u0131 veya e-posta adresi ba\u015fka bir admin taraf\u0131ndan kullan\u0131l\u0131yor.");
+            return RedirectEditWithFailure(id, "Kullanıcı adı veya e-posta adresi başka bir admin tarafından kullanılıyor.");
         }
 
         if (!string.Equals(oldEmail, admin.Email, StringComparison.OrdinalIgnoreCase))
@@ -286,7 +286,7 @@ public sealed class AdminManagementController(
                 admin.Id,
                 admin.Username,
                 currentUserId,
-                details: "Admin e-posta adresi g\u00fcncellendi.",
+                details: "Admin e-posta adresi güncellendi.",
                 oldValue: oldEmail,
                 newValue: admin.Email,
                 cancellationToken: cancellationToken);
@@ -300,12 +300,12 @@ public sealed class AdminManagementController(
                 admin.Id,
                 admin.Username,
                 currentUserId,
-                details: "Admin \u015fifresi y\u00f6netici taraf\u0131ndan de\u011fi\u015ftirildi.",
+                details: "Admin şifresi yönetici tarafından değiştirildi.",
                 cancellationToken: cancellationToken);
         }
 
         TempData["GenericPopup.Type"] = "success";
-        TempData["GenericPopup.Message"] = "Admin ba\u015far\u0131yla g\u00fcncellendi.";
+        TempData["GenericPopup.Message"] = "Admin başarıyla güncellendi.";
         TempData["GenericPopup.RedirectUrl"] = Url.Action(nameof(Details), new { id }) ?? $"/admin-yonetimi/{id}";
         return RedirectToAction(nameof(Edit), new { id });
     }
@@ -319,7 +319,7 @@ public sealed class AdminManagementController(
         if (id == currentUserId)
         {
             TempData["GenericPopup.Type"] = "fail";
-            TempData["GenericPopup.Message"] = "Kendi admin kayd\u0131n\u0131z\u0131 silemezsiniz.";
+            TempData["GenericPopup.Message"] = "Kendi admin kaydınızı silemezsiniz.";
             return RedirectToAction(nameof(Details), new { id });
         }
         var admin = await context.Users.SingleOrDefaultAsync(
@@ -333,7 +333,7 @@ public sealed class AdminManagementController(
         admin.UpdatedBy = currentUserId;
         await context.SaveChangesAsync(cancellationToken);
         TempData["GenericPopup.Type"] = "success";
-        TempData["GenericPopup.Message"] = "Admin ba\u015far\u0131yla silindi.";
+        TempData["GenericPopup.Message"] = "Admin başarıyla silindi.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -364,7 +364,7 @@ public sealed class AdminManagementController(
             .ToArray();
         return messages.Length > 0
             ? string.Join(Environment.NewLine, messages)
-            : "Form alanlar\u0131n\u0131 kontrol ediniz.";
+            : "Form alanlarını kontrol ediniz.";
     }
 
     private static void Normalize(EditAdminViewModel model)

@@ -7,16 +7,16 @@ public sealed class AddCandidateInputModel
     [Required]
     public string Mode { get; set; } = "new";
 
-    [Required(ErrorMessage = "Oyun se\u00E7imi zorunludur.")]
+    [Required(ErrorMessage = "Oyun seçimi zorunludur.")]
     public Guid? PlayId { get; set; }
 
-    [Required(ErrorMessage = "\u00D6d\u00FCl kategorisi se\u00E7imi zorunludur.")]
+    [Required(ErrorMessage = "Ödül kategorisi seçimi zorunludur.")]
     public int? AwardCategoryCode { get; set; }
 
     public Guid? ReplacedCandidateId { get; set; }
 
-    [Required(ErrorMessage = "Aday\u0131n ad\u0131 ve soyad\u0131 zorunludur.")]
-    [StringLength(250, MinimumLength = 2, ErrorMessage = "Ad\u0131 soyad\u0131 en az 2 karakter olmal\u0131d\u0131r.")]
+    [Required(ErrorMessage = "Adayın adı ve soyadı zorunludur.")]
+    [StringLength(250, MinimumLength = 2, ErrorMessage = "Adı soyadı en az 2 karakter olmalıdır.")]
     public string Candidate { get; set; } = string.Empty;
 
     [StringLength(200)]
@@ -24,6 +24,6 @@ public sealed class AddCandidateInputModel
 
     public IFormFile? Photo { get; set; }
 
-    [Required(ErrorMessage = "Stat\u00FC se\u00E7imi zorunludur.")]
+    [Required(ErrorMessage = "Statü seçimi zorunludur.")]
     public bool? IsActive { get; set; } = true;
 }

@@ -1,0 +1,8 @@
+@model YKBAfife.Models.ViewModels.RankingsDashboardViewModel
+@{
+    ViewData["Title"] = "Sıralamalar";
+}
+
+<section class="rankings-page">
+    @await Component.InvokeAsync("ComplexTable", new { model = Model.Table })
+</section>

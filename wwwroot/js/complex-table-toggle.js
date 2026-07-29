@@ -10,7 +10,7 @@
         const token = section?.querySelector('input[name="__RequestVerificationToken"]')?.value;
         const url = toggle.dataset.complexTableToggleUrl;
         if (!token || !url) {
-            window.genericPopup?.fail("Stat\u00fc g\u00fcncelleme i\u015flemi ba\u015flat\u0131lamad\u0131.");
+            window.genericPopup?.fail("Statü güncelleme işlemi başlatılamadı.");
             return;
         }
 
@@ -41,7 +41,7 @@
             }
         } catch (error) {
             console.error(error);
-            window.genericPopup?.fail("Stat\u00fc g\u00fcncellenemedi. L\u00fctfen tekrar deneyiniz.");
+            window.genericPopup?.fail("Statü güncellenemedi. Lütfen tekrar deneyiniz.");
         } finally {
             toggle.disabled = remainDisabled;
             toggle.setAttribute("aria-disabled", String(remainDisabled));

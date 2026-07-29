@@ -14,6 +14,11 @@
     var startPage = activeTab is null ? 1 : Math.Max(1, activeTab.CurrentPage - 2);
     var endPage = activeTab is null ? 1 : Math.Min(activeTab.TotalPages, activeTab.CurrentPage + 2);
     var dataUrl = Url.Action(Model.DataActionName, Model.ControllerName);
+    var selectFilters = Model.SelectFilters.Count > 0
+        ? Model.SelectFilters
+        : Model.SelectFilter is null
+            ? []
+            : new[] { Model.SelectFilter };
 
     string ColumnWidth(int percentage)
     {
@@ -66,7 +71,7 @@
                     }
                 </div>
             }
-            @if (Model.ShowHeading || Model.ShowSearch || Model.SelectFilter is not null || activeTab.HeaderActions.Count > 0)
+            @if (Model.ShowHeading || Model.ShowSearch || selectFilters.Count > 0 || activeTab.HeaderActions.Count > 0)
             {
                 <div class="complex-table-heading">
                     @if (Model.ShowHeading)
@@ -74,38 +79,49 @@
                         <h2 id="@(Model.Id)-title">@activeTab.Title</h2>
                     }
                     <div class="complex-table-heading-tools">
-                        @if (Model.SelectFilter is not null)
+                        @foreach (var filter in selectFilters)
                         {
-                            var selectedFilterOption = Model.SelectFilter.Options.FirstOrDefault(option =>
-                                option.Value == Model.SelectFilter.Value) ?? Model.SelectFilter.Options.First();
+                            var selectedFilterOption = filter.Options.FirstOrDefault(option =>
+                                option.Value == filter.Value) ?? filter.Options.FirstOrDefault();
+                            if (selectedFilterOption is null)
+                            {
+                                continue;
+                            }
+
+                            var filterId = $"{Model.Id}-{filter.Name.ToLowerInvariant()}";
                             <div class="complex-table-select-filter @(Model.Id == "play-candidates-table" ? "play-candidates-table-select-filter" : string.Empty)">
-                                <label id="@(Model.Id)-select-filter-label">@Model.SelectFilter.Label</label>
+                                @if (filter.ShowLabel)
+                                {
+                                    <label id="@(filterId)-label">@filter.Label</label>
+                                }
                                 <div class="complex-table-select-filter-control" data-complex-table-select>
                                     <input type="hidden"
-                                           id="@(Model.Id)-select-filter"
-                                           name="@Model.SelectFilter.Name"
-                                           value="@Model.SelectFilter.Value"
+                                           id="@filterId"
+                                           name="@filter.Name"
+                                           value="@filter.Value"
                                            data-complex-table-filter />
                                     <button type="button"
                                             class="complex-table-select-trigger"
-                                            aria-labelledby="@(Model.Id)-select-filter-label @(Model.Id)-select-filter-value"
+                                            aria-label="@(!filter.ShowLabel ? filter.AccessibleLabel : null)"
+                                            aria-labelledby="@(filter.ShowLabel ? $"{filterId}-label {filterId}-value" : null)"
                                             aria-haspopup="listbox"
                                             aria-expanded="false"
                                             data-complex-table-select-trigger>
-                                        <span id="@(Model.Id)-select-filter-value" data-complex-table-select-label>@selectedFilterOption.Text</span>
+                                        <span id="@(filterId)-value" data-complex-table-select-label>@selectedFilterOption.Text</span>
                                         <img src="~/icons/angle-down.svg" alt="" aria-hidden="true" />
                                     </button>
                                     <div class="complex-table-select-menu"
                                          role="listbox"
-                                         aria-labelledby="@(Model.Id)-select-filter-label"
+                                         aria-label="@(!filter.ShowLabel ? filter.AccessibleLabel : null)"
+                                         aria-labelledby="@(filter.ShowLabel ? $"{filterId}-label" : null)"
                                          data-complex-table-select-menu
                                          hidden>
-                                        @foreach (var option in Model.SelectFilter.Options)
+                                        @foreach (var option in filter.Options)
                                         {
                                             <button type="button"
                                                     class="complex-table-select-option"
                                                     role="option"
-                                                    aria-selected="@(option.Value == Model.SelectFilter.Value ? "true" : "false")"
+                                                    aria-selected="@(option.Value == filter.Value ? "true" : "false")"
                                                     data-complex-table-select-option
                                                     data-value="@option.Value">@option.Text</button>
                                         }
@@ -332,52 +348,86 @@
 
        
 
-        @if (Model.SummaryContent.Count > 0 || !string.IsNullOrWhiteSpace(Model.ExportActionName))
+        @if (Model.SummaryContent.Count > 0 || Model.ExportActions.Count > 0 || !string.IsNullOrWhiteSpace(Model.ExportActionName))
         {
             <div class="complex-table-summary-wrapper">
                 <footer class="complex-table-summary">
-                @if (Model.SummaryContent.Count > 0)
-                {
-                    <p class="complex-table-summary-content">
-                        @foreach (var segment in Model.SummaryContent)
-                        {
-                            <span class="@segment.CssClass">
-                                @if (segment.IsEmphasized)
-                                {
-                                    <strong>@segment.Text</strong>
-                                }
-                                else
-                                {
-                                    @segment.Text
-                                }
-                            </span>
-                        }
-                    </p>
-                }
+                    @if (Model.SummaryContent.Count > 0)
+                    {
+                        <p class="complex-table-summary-content">
+                            @foreach (var segment in Model.SummaryContent)
+                            {
+                                <span class="@segment.CssClass">
+                                    @if (segment.IsEmphasized)
+                                    {
+                                        <strong>@segment.Text</strong>
+                                    }
+                                    else
+                                    {
+                                        @segment.Text
+                                    }
+                                </span>
+                            }
+                        </p>
+                    }
 
-                @if (!string.IsNullOrWhiteSpace(Model.ExportActionName))
-                {
-                    <form method="post"
-                          action="@Url.Action(Model.ExportActionName, Model.ExportControllerName)"
-                          class="complex-table-export-form"
-                          data-excel-export>
-                        @Html.AntiForgeryToken()
-                        @foreach (var routeValue in Model.AdditionalRouteValues)
-                        {
-                            <input type="hidden" name="@routeValue.Key" value="@routeValue.Value" />
-                        }
-                        <input type="hidden" name="tab" value="@activeTab.Key" />
-                        <input type="hidden" name="search" value="@activeTab.Search" />
-                        <input type="hidden" name="sortBy" value="@activeTab.SortBy" />
-                        <input type="hidden" name="sortDirection" value="@activeTab.SortDirection" />
-                        <input type="hidden" name="page" value="1" />
-                        <button type="submit" class="excel-export-button" disabled="@(!Model.IsExportEnabled)" aria-disabled="@(!Model.IsExportEnabled ? "true" : "false")">
-                            <span aria-hidden="true"><img src="/icons/printer.svg" /></span> @Model.ExportButtonText
-                        </button>
-                    </form>
-                }
-            </footer></div>
-            
+                    @if (Model.ExportActions.Count > 0)
+                    {
+                        <div class="complex-table-export-actions">
+                            @foreach (var exportAction in Model.ExportActions)
+                            {
+                                <form method="post"
+                                      action="@Url.Action(exportAction.ActionName, Model.ExportControllerName)"
+                                      class="complex-table-export-form"
+                                      data-excel-export>
+                                    @Html.AntiForgeryToken()
+                                    @foreach (var routeValue in Model.AdditionalRouteValues)
+                                    {
+                                        <input type="hidden" name="@routeValue.Key" value="@routeValue.Value" />
+                                    }
+                                    @foreach (var filter in selectFilters)
+                                    {
+                                        <input type="hidden" name="@filter.Name" value="@filter.Value" />
+                                    }
+                                    @foreach (var routeValue in exportAction.RouteValues)
+                                    {
+                                        <input type="hidden" name="@routeValue.Key" value="@routeValue.Value" />
+                                    }
+                                    <input type="hidden" name="tab" value="@activeTab.Key" />
+                                    <input type="hidden" name="search" value="@activeTab.Search" />
+                                    <input type="hidden" name="sortBy" value="@activeTab.SortBy" />
+                                    <input type="hidden" name="sortDirection" value="@activeTab.SortDirection" />
+                                    <input type="hidden" name="page" value="@activeTab.CurrentPage" />
+                                    <button type="submit" class="excel-export-button @exportAction.CssClass" disabled="@(!Model.IsExportEnabled)" aria-disabled="@(!Model.IsExportEnabled ? "true" : "false")">
+                                        <span aria-hidden="true"><img src="/icons/printer.svg" alt="" /></span> @exportAction.Text
+                                    </button>
+                                </form>
+                            }
+                        </div>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(Model.ExportActionName))
+                    {
+                        <form method="post"
+                              action="@Url.Action(Model.ExportActionName, Model.ExportControllerName)"
+                              class="complex-table-export-form"
+                              data-excel-export>
+                            @Html.AntiForgeryToken()
+                            @foreach (var routeValue in Model.AdditionalRouteValues)
+                            {
+                                <input type="hidden" name="@routeValue.Key" value="@routeValue.Value" />
+                            }
+                            <input type="hidden" name="tab" value="@activeTab.Key" />
+                            <input type="hidden" name="search" value="@activeTab.Search" />
+                            <input type="hidden" name="sortBy" value="@activeTab.SortBy" />
+                            <input type="hidden" name="sortDirection" value="@activeTab.SortDirection" />
+                            <input type="hidden" name="page" value="1" />
+                            <button type="submit" class="excel-export-button" disabled="@(!Model.IsExportEnabled)" aria-disabled="@(!Model.IsExportEnabled ? "true" : "false")">
+                                <span aria-hidden="true"><img src="/icons/printer.svg" alt="" /></span> @Model.ExportButtonText
+                            </button>
+                        </form>
+                    }
+                </footer>
+            </div>
         }
         @if (activeTab.TotalPages > 1)
         {

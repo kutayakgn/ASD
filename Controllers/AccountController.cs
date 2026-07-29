@@ -42,7 +42,7 @@ public sealed class AccountController(
 
         if (admin is null)
         {
-            ModelState.AddModelError(string.Empty, "Kullan\u0131c\u0131 ad\u0131 veya \u015fifre hatal\u0131.");
+            ModelState.AddModelError(string.Empty, "Kullanıcı adı veya şifre hatalı.");
             return View(model);
         }
 
@@ -88,7 +88,7 @@ public sealed class AccountController(
             userId,
             User.FindFirstValue("username"),
             userId,
-            details: "Kullan\u0131c\u0131 y\u00f6netim panelinden \u00e7\u0131k\u0131\u015f yapt\u0131.",
+            details: "Kullanıcı yönetim panelinden çıkış yaptı.",
             cancellationToken: cancellationToken);
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         return RedirectToAction(nameof(Login));

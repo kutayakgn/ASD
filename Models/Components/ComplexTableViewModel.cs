@@ -15,6 +15,8 @@ public sealed class ComplexTableViewModel
     public bool ShowHeading { get; init; } = true;
     public bool ShowSearch { get; init; } = true;
     public ComplexTableSelectFilterViewModel? SelectFilter { get; init; }
+    public IReadOnlyList<ComplexTableSelectFilterViewModel> SelectFilters { get; init; } = [];
+    public IReadOnlyList<ComplexTableExportActionViewModel> ExportActions { get; init; } = [];
     public bool ShowColumnHeaders { get; init; } = true;
     public bool IsEditableRows { get; init; }
     public bool IsDeleteColActive { get; init; }
@@ -104,6 +106,8 @@ public sealed class ComplexTableSelectFilterViewModel
 {
     public string Name { get; init; } = string.Empty;
     public string Label { get; init; } = string.Empty;
+    public string AccessibleLabel { get; init; } = string.Empty;
+    public bool ShowLabel { get; init; } = true;
     public string Value { get; init; } = string.Empty;
     public IReadOnlyList<ComplexTableSelectOptionViewModel> Options { get; init; } = [];
 }
@@ -112,4 +116,12 @@ public sealed class ComplexTableSelectOptionViewModel
 {
     public string Value { get; init; } = string.Empty;
     public string Text { get; init; } = string.Empty;
+}
+public sealed class ComplexTableExportActionViewModel
+{
+    public string ActionName { get; init; } = string.Empty;
+    public string Text { get; init; } = string.Empty;
+    public string CssClass { get; init; } = string.Empty;
+    public IReadOnlyDictionary<string, string?> RouteValues { get; init; } =
+        new Dictionary<string, string?>();
 }

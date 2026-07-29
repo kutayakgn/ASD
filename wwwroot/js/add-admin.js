@@ -8,10 +8,10 @@
     const validationMessage = (field) => {
         const name = fieldName(field);
         if (field.validity.valueMissing && name) {
-            return `${name} alan\u0131 zorunludur.`;
+            return `${name} alanı zorunludur.`;
         }
 
-        return field.dataset.failMessage || `${name || "Form alan\u0131"} ge\u00e7erli de\u011fildir.`;
+        return field.dataset.failMessage || `${name || "Form alanı"} geçerli değildir.`;
     };
 
     document.addEventListener("submit", (event) => {
@@ -41,7 +41,7 @@
             if (!changed) {
                 event.preventDefault();
                 event.stopImmediatePropagation();
-                window.genericPopup?.fail("Herhangi bir de\u011fi\u015fiklik yapmad\u0131n\u0131z.");
+                window.genericPopup?.fail("Herhangi bir değişiklik yapmadınız.");
             }
         }
     }, true);

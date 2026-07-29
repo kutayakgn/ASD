@@ -50,6 +50,9 @@
   candidate-photo input; category 1001 is never user-selectable.
 - Read `docs/season-statistics-contract.md` before changing season dates, archive
   comparison counts, or `Plays`/`JuryVotes` statistics triggers.
+- Read `docs/rankings-contract.md` before changing plays, candidates, votes,
+  ranking formulas, ranking triggers, or ranking reports. `Rankings` is a
+  database-managed projection and must never be written by application code.
 - Read `docs/admin-audit-contract.md` before changing controllers, write actions,
   database tables, triggers, procedures, authentication logs, or audit behavior.
 - All business-table DML and failed mutation attempts must be traceable through

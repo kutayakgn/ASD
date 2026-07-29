@@ -34,6 +34,7 @@ builder.Services.AddScoped<IAdminAuthenticationService, AdminAuthenticationServi
 builder.Services.AddScoped<IPlayWatchReportService, PlayWatchReportService>();
 builder.Services.AddScoped<IPlayReportService, PlayReportService>();
 builder.Services.AddScoped<ICandidateReportService, CandidateReportService>();
+builder.Services.AddScoped<IRankingReportService, RankingReportService>();
 builder.Services.AddScoped<IJuryReportService, JuryReportService>();
 builder.Services.AddScoped<IAdminReportService, AdminReportService>();
 builder.Services.AddScoped<IArchiveComparisonReportService, ArchiveComparisonReportService>();

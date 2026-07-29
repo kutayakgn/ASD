@@ -22,20 +22,20 @@ public static class AdminComplexTableFactory
             {
                 Id = $"admin-{row.UserId:N}",
                 NavigationUrl = detailsUrl,
-                NavigationAccessibleLabel = $"{row.FullName} detay\u0131na git",
+                NavigationAccessibleLabel = $"{row.FullName} detayına git",
                 Cells =
                 [
                     new()
                     {
                         Content = row.Username,
                         Link = detailsUrl,
-                        AccessibleLabel = $"{row.Username} admin detay\u0131na git"
+                        AccessibleLabel = $"{row.Username} admin detayına git"
                     },
                     new()
                     {
                         Content = row.FullName,
                         Link = detailsUrl,
-                        AccessibleLabel = $"{row.FullName} admin detay\u0131na git"
+                        AccessibleLabel = $"{row.FullName} admin detayına git"
                     },
                     new()
                     {
@@ -43,8 +43,8 @@ public static class AdminComplexTableFactory
                         ToggleChecked = row.IsActive,
                         ToggleDisabled = row.UserId == currentUserId,
                         AccessibleLabel = row.UserId == currentUserId
-                            ? $"{row.FullName} stat\u00fcs\u00fc de\u011fi\u015ftirilemez"
-                            : $"{row.FullName} stat\u00fcs\u00fcn\u00fc de\u011fi\u015ftir",
+                            ? $"{row.FullName} statüsü değiştirilemez"
+                            : $"{row.FullName} statüsünü değiştir",
                         CssClass = "admin-status-cell"
                     }
                 ]
@@ -66,14 +66,14 @@ public static class AdminComplexTableFactory
                 new()
                 {
                     Key = "admins",
-                    Title = "Admin Y\u00f6netimi",
+                    Title = "Admin Yönetimi",
                     Search = report.Search,
                     SortBy = report.SortBy,
                     SortDirection = report.SortDirection,
                     CurrentPage = report.CurrentPage,
                     PageSize = AdminTableViewModel.PageSize,
                     TotalCount = report.TotalCount,
-                    EmptyMessage = "Arama kriterlerine uygun admin bulunamad\u0131.",
+                    EmptyMessage = "Arama kriterlerine uygun admin bulunamadı.",
                     Columns = Columns,
                     Rows = rows,
                     HeaderActions = [new() { Icon= "/icons/plus.svg", Text = "Admin Ekle", Link = "/admin-yonetimi/ekle" }]
@@ -82,7 +82,7 @@ public static class AdminComplexTableFactory
             SummaryContent =
             [
                 new() { Text = report.TotalCount.ToString(CultureInfo.CurrentCulture), IsEmphasized = true },
-                new() { Text = " kay\u0131t bulundu." }
+                new() { Text = " kayıt bulundu." }
             ]
         };
     }

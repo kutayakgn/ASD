@@ -25,6 +25,7 @@ public sealed partial class ManagementController(
     IJuryWatchedPlayReportService juryWatchedPlayReportService,
     IPlayReportService playReportService,
     ICandidateReportService candidateReportService,
+    IRankingReportService rankingReportService,
     IUserActivityLogger activityLogger,
     IExcelExporter excelExporter,
     ILogger<ManagementController> logger) : Controller
@@ -222,7 +223,7 @@ public sealed partial class ManagementController(
 
 
         TempData["GenericPopup.Type"] = "success";
-        TempData["GenericPopup.Message"] = "J\u00fcri ba\u015far\u0131yla silindi.";
+        TempData["GenericPopup.Message"] = "Jüri başarıyla silindi.";
         return RedirectToAction(nameof(Juries));
     }
 
@@ -296,14 +297,14 @@ public sealed partial class ManagementController(
                 user => user.Id != id && user.Username == model.Username,
                 cancellationToken))
         {
-            ModelState.AddModelError(nameof(model.Username), "Bu kullan\u0131c\u0131 ad\u0131 zaten kullan\u0131l\u0131yor.");
+            ModelState.AddModelError(nameof(model.Username), "Bu kullanıcı adı zaten kullanılıyor.");
         }
 
         if (await context.Users.AsNoTracking().AnyAsync(
                 user => user.Id != id && user.Email == model.Email,
                 cancellationToken))
         {
-            ModelState.AddModelError(nameof(model.Email), "Bu e-posta adresi zaten kullan\u0131l\u0131yor.");
+            ModelState.AddModelError(nameof(model.Email), "Bu e-posta adresi zaten kullanılıyor.");
         }
 
         byte[]? photoData = null;
@@ -314,7 +315,7 @@ public sealed partial class ManagementController(
             const long maximumPhotoSize = 5 * 1024 * 1024;
             if (model.Photo.Length == 0 || model.Photo.Length > maximumPhotoSize)
             {
-                ModelState.AddModelError(nameof(model.Photo), "Foto\u011fraf boyutu 5 MB'dan k\u00fc\u00e7\u00fck olmal\u0131d\u0131r.");
+                ModelState.AddModelError(nameof(model.Photo), "Fotoğraf boyutu 5 MB'dan küçük olmalıdır.");
             }
             else
             {
@@ -327,7 +328,7 @@ public sealed partial class ManagementController(
                 {
                     ModelState.AddModelError(
                         nameof(model.Photo),
-                        "Yaln\u0131zca JPEG, PNG veya WebP format\u0131nda foto\u011fraf y\u00fckleyebilirsiniz.");
+                        "Yalnızca JPEG, PNG veya WebP formatında fotoğraf yükleyebilirsiniz.");
                 }
             }
         }
@@ -404,7 +405,7 @@ public sealed partial class ManagementController(
                 jury.Id,
                 jury.Username,
                 currentUserId,
-                details: "J\u00fcri e-posta adresi g\u00fcncellendi.",
+                details: "Jüri e-posta adresi güncellendi.",
                 oldValue: oldEmail,
                 newValue: jury.Email,
                 cancellationToken: cancellationToken);
@@ -418,12 +419,12 @@ public sealed partial class ManagementController(
                 jury.Id,
                 jury.Username,
                 currentUserId,
-                details: "J\u00fcri \u015fifresi y\u00f6netici taraf\u0131ndan de\u011fi\u015ftirildi.",
+                details: "Jüri şifresi yönetici tarafından değiştirildi.",
                 cancellationToken: cancellationToken);
         }
 
         TempData["GenericPopup.Type"] = "success";
-        TempData["GenericPopup.Message"] = "J\u00fcri ba\u015far\u0131yla g\u00fcncellendi.";
+        TempData["GenericPopup.Message"] = "Jüri başarıyla güncellendi.";
         TempData["GenericPopup.RedirectUrl"] = Url.Action(nameof(JuryDetails), new { id }) ?? $"/juriler/{id}";
         return RedirectToAction(nameof(EditJury), new { id });
     }
@@ -458,14 +459,14 @@ public sealed partial class ManagementController(
                 user => user.Username == model.Username,
                 cancellationToken))
         {
-            ModelState.AddModelError(nameof(model.Username), "Bu kullan\u0131c\u0131 ad\u0131 zaten kullan\u0131l\u0131yor.");
+            ModelState.AddModelError(nameof(model.Username), "Bu kullanıcı adı zaten kullanılıyor.");
         }
 
         if (await context.Users.AsNoTracking().AnyAsync(
                 user => user.Email == model.Email,
                 cancellationToken))
         {
-            ModelState.AddModelError(nameof(model.Email), "Bu e-posta adresi zaten kullan\u0131l\u0131yor.");
+            ModelState.AddModelError(nameof(model.Email), "Bu e-posta adresi zaten kullanılıyor.");
         }
 
         byte[]? photoData = null;
@@ -477,7 +478,7 @@ public sealed partial class ManagementController(
             const long maximumPhotoSize = 5 * 1024 * 1024;
             if (model.Photo.Length == 0 || model.Photo.Length > maximumPhotoSize)
             {
-                ModelState.AddModelError(nameof(model.Photo), "Foto\u011Fraf boyutu 5 MB'dan k\u00FC\u00E7\u00FCk olmal\u0131d\u0131r.");
+                ModelState.AddModelError(nameof(model.Photo), "Fotoğraf boyutu 5 MB'dan küçük olmalıdır.");
             }
             else
             {
@@ -491,7 +492,7 @@ public sealed partial class ManagementController(
                 {
                     ModelState.AddModelError(
                         nameof(model.Photo),
-                        "Yaln\u0131zca JPEG, PNG veya WebP format\u0131nda foto\u011Fraf y\u00FCkleyebilirsiniz.");
+                        "Yalnızca JPEG, PNG veya WebP formatında fotoğraf yükleyebilirsiniz.");
                 }
             }
         }
@@ -549,7 +550,7 @@ public sealed partial class ManagementController(
 
 
         TempData["GenericPopup.Type"] = "success";
-        TempData["GenericPopup.Message"] = "J\u00FCri ba\u015Far\u0131yla kaydedildi.";
+        TempData["GenericPopup.Message"] = "Jüri başarıyla kaydedildi.";
         TempData["GenericPopup.RedirectUrl"] = Url.Action(nameof(Juries)) ?? "/juriler";
         return RedirectToAction(nameof(AddJury));
     }
@@ -1815,9 +1816,49 @@ public sealed partial class ManagementController(
         return value;
     }
     [HttpGet("siralamalar")]
-    public IActionResult Rankings() => Page(
-        "Sıralamalar",
-        "Oylama sonuçlarını ve kategori sıralamalarını inceleyin.");
+    public async Task<IActionResult> Rankings(CancellationToken cancellationToken)
+    {
+        var report = await rankingReportService.GetPageAsync(
+            new RankingTableQuery(),
+            cancellationToken);
+        return View(new RankingsDashboardViewModel
+        {
+            Table = RankingComplexTableFactory.Create(report)
+        });
+    }
+
+    [HttpPost("siralamalar/tablo")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RankingsTable(
+        [FromForm] RankingTableQuery query,
+        CancellationToken cancellationToken)
+    {
+        var report = await rankingReportService.GetPageAsync(query, cancellationToken);
+        return ViewComponent("ComplexTable", new
+        {
+            model = RankingComplexTableFactory.Create(report)
+        });
+    }
+
+    [HttpPost("siralamalar/excel")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ExportRankings(
+        [FromForm] RankingTableQuery query,
+        [FromForm] string exportScope,
+        CancellationToken cancellationToken)
+    {
+        var currentPageOnly = !string.Equals(exportScope, "all", StringComparison.OrdinalIgnoreCase);
+        var report = await rankingReportService.GetExportAsync(
+            query,
+            currentPageOnly,
+            cancellationToken);
+        var content = excelExporter.Export(RankingExcelExportFactory.Create(report));
+        var scope = currentPageOnly ? $"sayfa-{report.CurrentPage}" : "tum-tablo";
+        return File(
+            content,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"siralamalar-{scope}-{DateTime.Now:yyyyMMdd-HHmm}.xlsx");
+    }
 
     [HttpGet("editorler")]
     public IActionResult Editors() => Page("Editörler", "Editör hesaplarını yönetin.");
@@ -1993,11 +2034,11 @@ public sealed partial class ManagementController(
                 cancellationToken);
         if (vote is null)
         {
-            return BadRequest(new { success = false, message = "S\u0131f\u0131rlanabilecek bir oy bulunamad\u0131." });
+            return BadRequest(new { success = false, message = "Sıfırlanabilecek bir oy bulunamadı." });
         }
         if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId))
         {
-            return Unauthorized(new { success = false, message = "Oturum bilgisi do\u011frulanamad\u0131." });
+            return Unauthorized(new { success = false, message = "Oturum bilgisi doğrulanamadı." });
         }
 
         vote.IsPublished = false;
@@ -2006,7 +2047,7 @@ public sealed partial class ManagementController(
         await context.SaveChangesAsync(cancellationToken);
 
 
-        return Json(new { success = true, message = "Oylama ba\u015far\u0131yla s\u0131f\u0131rland\u0131." });
+        return Json(new { success = true, message = "Oylama başarıyla sıfırlandı." });
     }
 
     [HttpGet("bilet-satislari")]
