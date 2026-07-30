@@ -21,7 +21,7 @@ public static class RankingExcelExportFactory
             Column("Sıra", 10, ExcelExportAlignment.Center), Column("Kategori", 38),
             Column(displayNameHeader, 34), Column("Oyun Adı", 34),
             Column("Toplam Puan", 16, ExcelExportAlignment.Center),
-            Column("İzlenme Sayısı", 18, ExcelExportAlignment.Center)
+            Column("Oy Sayısı", 18, ExcelExportAlignment.Center)
         };
         if (includeVariance) columns.Add(Column("Varyans", 16, ExcelExportAlignment.Center));
         columns.Add(Column(metricHeader, 20, ExcelExportAlignment.Center));

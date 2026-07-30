@@ -84,7 +84,7 @@ public static class RankingComplexTableFactory
                 Key = "displayName", ColWidth = 21, IsSortable = false
             },
             new() { Title = "Oyun Adı", Key = "play", ColWidth = 21, IsSortable = false },
-            new() { Title = "İzlenme Sayısı", Key = "viewCount", ColWidth = 12, IsSortable = false }
+            new() { Title = "Oy Sayısı", Key = "viewCount", ColWidth = 12, IsSortable = false }
         };
         if (report.RankingType != RankingTypes.Trimmed)
         {

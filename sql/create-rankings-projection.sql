@@ -204,7 +204,7 @@ BEGIN
                 PlayAwardCategoryId,
                 COUNT_BIG(*) AS NumberOfActiveVote,
                 AVG(CONVERT(float, Score)) AS ArithmeticMean,
-                VARP(CONVERT(float, Score)) AS ArithmeticVariance
+                VAR(CONVERT(float, Score)) AS ArithmeticVariance
             FROM OrderedActiveVotes
             GROUP BY PlayAwardCategoryId
         ),
@@ -214,11 +214,9 @@ BEGIN
                 PlayAwardCategoryId,
                 AVG(CONVERT(float, Score)) AS TrimmedMean
             FROM OrderedActiveVotes
-            WHERE ScoreOrder >
-                    CONVERT(bigint, FLOOR(CONVERT(float, VoteCount) * 0.05))
-              AND ScoreOrder <=
-                    VoteCount -
-                    CONVERT(bigint, FLOOR(CONVERT(float, VoteCount) * 0.05))
+            WHERE VoteCount >= 3
+              AND ScoreOrder > 1
+              AND ScoreOrder < VoteCount
             GROUP BY PlayAwardCategoryId
         ),
         CandidateStatistics AS

@@ -26,14 +26,19 @@ calculations.
 
 - `NumberOfActiveVote`: count of eligible votes for the candidate/category row.
 - `ArithmeticMean`: arithmetic average of eligible `JuryVotes.Score` values.
-- `ArithmeticVariance`: population variance (`VARP`) of eligible scores.
+- `ArithmeticVariance`: sample variance (`VAR`) of eligible scores. SQL Server
+  calculates it as `SUM((score - average)^2) / (vote count - 1)`. A single
+  eligible vote therefore has a null variance.
 - `ConfidenceValue`: variance-derived confidence band. It is `1` for variance
   greater than or equal to `6.064`, `2` for `[4.987, 6.064)`, `3` for
   `[4.141, 4.987)`, and `4` below `4.141`. A row without a variance has a null
   confidence value. Higher values therefore represent stronger confidence.
-- `TrimmedMean`: scores are ordered ascending; both the lowest and highest
-  `FLOOR(NumberOfActiveVote * 0.05)` rows are excluded, then the remaining scores
-  are averaged. Fewer than 20 votes therefore cause no trimming.
+- `TrimmedMean`: when at least three eligible votes exist, scores are ordered
+  ascending and exactly one lowest and one highest vote are excluded. The
+  remaining scores are averaged:
+  `(SUM(score) - MIN(score) - MAX(score)) / (vote count - 2)`. Tied extremes
+  still remove only one row from each end. One or two eligible votes produce a
+  null trimmed mean because no valid trimmed set remains.
 - `ArithmeticRank`: descending `RANK()` of `ArithmeticMean`.
 - `TrimmedRank`: descending `RANK()` of `TrimmedMean`.
 
@@ -49,7 +54,7 @@ views order descending by their selected mean with null metrics last. Confidence
 views order `ConfidenceValue` descending because `4` is the strongest confidence,
 then use `TrimmedMean` descending as the tie breaker. Candidate and play names
 provide deterministic final ordering. The visible sequence number is the row's
-position in this selected report ordering across server-side pages. Ranking exports include the active-vote total score before the vote count. Arithmetic and confidence reports also expose population variance. Confidence is rendered as `value/4`; vote drill-downs include only published, active votes and are paged server-side.
+position in this selected report ordering across server-side pages. Ranking exports include the active-vote total score before the vote count. Arithmetic and confidence reports also expose sample variance. Confidence is rendered as `value/4`; vote drill-downs include only published, active votes and are paged server-side.
 ## Write ownership
 
 - `dbo.usp_RefreshRankings` is the only supported writer.
@@ -78,3 +83,11 @@ Run these scripts in order:
 The second script installs `TR_AdminAudit_dbo_Rankings`, so procedure and
 trigger-generated ranking changes retain complete old/new snapshots and the
 initiating correlation context. Verify changes with rollback-based tests.
+
+`sql/seed-ranking-formula-test-cases.sql` is an optional, persistent, idempotent
+formula test seed. It uses two previously empty categories of the `Kon Perdes`
+play and 33 dedicated jury users. Test set 1 must produce 32 votes, arithmetic
+mean `6.28125`, sample variance `5.11189516129032`, trimmed mean `6.3`, and
+confidence `2`. Test set 2 must produce 33 votes, arithmetic mean
+`5.81818181818182`, sample variance `4.77840909090909`, trimmed mean
+`5.83870967741935`, and confidence `3`.
