@@ -289,7 +289,7 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
         DisableSqlOutputClauseForAuditedTables(modelBuilder);
         ApplyPublishedQueryFilters(modelBuilder);
         modelBuilder.Entity<Form>()
-            .HasQueryFilter(form => form.IsPublished && form.IsActive);
+            .HasQueryFilter(form => form.IsPublished);
         modelBuilder.Entity<Play>()
             .HasQueryFilter(play => play.IsPublished && play.IsActive);
     }

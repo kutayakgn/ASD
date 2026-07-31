@@ -1,0 +1,26 @@
+#applications-table .complex-table-heading-tools {
+    width: min(100%, 660px);
+}
+
+#applications-table .jury-voting-table-search-form {
+    order: 1;
+}
+
+#applications-table .complex-table-select-filter {
+    width: 160px;
+    order: 2;
+}
+
+#applications-table .complex-table-select-trigger {
+    min-height: 44px;
+}
+
+#applications-table .applications-status-column .complex-table-cell-content {
+    justify-content: center;
+}
+
+@media (max-width: 760px) {
+    #applications-table .complex-table-select-filter {
+        width: 100%;
+    }
+}

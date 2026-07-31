@@ -1,0 +1,27 @@
+@model YKBAfife.Models.ViewModels.ApplicationDetailsViewModel
+@{
+    ViewData["Title"] = "Başvuru Detay";
+}
+
+<section class="play-details-page" aria-labelledby="application-details-title">
+    <a asp-action="Applications" class="play-details-back">
+        <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
+        <span>Başvurulara Dön</span>
+    </a>
+    <header class="play-details-toolbar">
+        <h1 id="application-details-title">Başvuru Detay</h1>
+    </header>
+    <dl class="play-details-content">
+        <div class="play-detail-field"><dt>Başvuru No</dt><dd>@Model.ApplicationNumber</dd></div>
+        <div class="play-detail-field"><dt>Oyun</dt><dd>@Model.PlayName</dd></div>
+        <div class="play-detail-field"><dt>Tiyatro Adı</dt><dd>@Model.TheatreName</dd></div>
+        <div class="play-detail-field"><dt>Başvuran</dt><dd>@Model.ApplicantName</dd></div>
+        <div class="play-detail-field"><dt>Başvuran Rolü</dt><dd>@Model.ApplicantRole</dd></div>
+        <div class="play-detail-field"><dt>E-posta</dt><dd>@Model.Email</dd></div>
+        <div class="play-detail-field"><dt>Telefon</dt><dd>@Model.Phone</dd></div>
+        <div class="play-detail-field"><dt>Yönetmen</dt><dd>@Model.Director</dd></div>
+        <div class="play-detail-field"><dt>Prömiyer Tarihi</dt><dd>@Model.PremiereDate.ToString("dd.MM.yyyy")</dd></div>
+        <div class="play-detail-field"><dt>Başvuru Tarihi</dt><dd>@(Model.CreatedDate?.ToString("dd.MM.yyyy HH:mm:ss") ?? "-")</dd></div>
+        <div class="play-detail-field"><dt>Statü</dt><dd>@(Model.IsActive ? "Aktif" : "Aktif Değil")</dd></div>
+    </dl>
+</section>

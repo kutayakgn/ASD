@@ -20,7 +20,7 @@
             ? []
             : new[] { Model.SelectFilter };
 
-    string ColumnWidth(int percentage)
+    string ColumnWidth(decimal percentage)
     {
         var actionColumnsWidth = (Model.IsEditableRows ? Model.EditColumnWidth : 0) +
             (Model.IsDeleteColActive ? Model.DeleteColumnWidth : 0) +

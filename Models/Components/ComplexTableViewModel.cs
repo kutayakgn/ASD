@@ -56,7 +56,7 @@ public sealed class ComplexTableColumnViewModel
     public string Title { get; init; } = string.Empty;
     public string Key { get; init; } = string.Empty;
     public bool IsSortable { get; init; } = true;
-    public int ColWidth { get; init; } = 100;
+    public decimal ColWidth { get; init; } = 100;
     public string CssClass { get; init; } = string.Empty;
 }
 

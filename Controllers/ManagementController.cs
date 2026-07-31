@@ -22,6 +22,7 @@ public sealed partial class ManagementController(
     IArchiveComparisonReportService archiveComparisonReportService,
     ITicketSalesReportService ticketSalesReportService,
     IBlacklistReportService blacklistReportService,
+    IApplicationReportService applicationReportService,
     IJuryWatchedPlayReportService juryWatchedPlayReportService,
     IPlayReportService playReportService,
     ICandidateReportService candidateReportService,
@@ -2163,6 +2164,73 @@ public sealed partial class ManagementController(
 
     [HttpGet("oyun-tarihleri")]
     public IActionResult PlayDates() => Page("Oyun Tarihleri", "Oyun gösterim tarihlerini yönetin.");
+
+    [HttpGet("basvurular")]
+    public async Task<IActionResult> Applications(CancellationToken cancellationToken)
+    {
+        var report = await applicationReportService.GetPageAsync(new ApplicationTableQuery(), cancellationToken);
+        return View(new ApplicationsViewModel { Table = ApplicationComplexTableFactory.Create(report) });
+    }
+
+    [HttpPost("basvurular/tablo")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ApplicationsTable([FromForm] ApplicationTableQuery query, CancellationToken cancellationToken)
+    {
+        var report = await applicationReportService.GetPageAsync(query, cancellationToken);
+        return ViewComponent("ComplexTable", new { model = ApplicationComplexTableFactory.Create(report) });
+    }
+
+    [HttpGet("basvurular/{id:guid}")]
+    public async Task<IActionResult> ApplicationDetails(Guid id, CancellationToken cancellationToken)
+    {
+        var model = await context.Forms.AsNoTracking()
+            .Where(form => form.Id == id && form.IsPublished)
+            .Select(form => new ApplicationDetailsViewModel
+            {
+                Id = form.Id,
+                ApplicationNumber = form.ApplicationNumber,
+                PlayName = form.RepertoireName,
+                TheatreName = form.TheatreName,
+                ApplicantName = form.ApplicantName,
+                ApplicantRole = form.ApplicantRole,
+                Email = form.Email,
+                Phone = form.Phone,
+                Director = form.Director,
+                PremiereDate = form.PremiereDate,
+                CreatedDate = form.CreatedDate,
+                IsActive = form.IsActive
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+        return model is null ? NotFound() : View(model);
+    }
+
+    [AdminMutationAudit]
+    [HttpPost("basvurular/{id:guid}/status")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateApplicationStatus(Guid id, [FromForm] bool isActive, CancellationToken cancellationToken)
+    {
+        var form = await context.Forms.SingleOrDefaultAsync(item => item.Id == id && item.IsPublished, cancellationToken);
+        if (form is null) return NotFound(new { message = "Başvuru bulunamadı." });
+
+        form.IsActive = isActive;
+        form.UpdatedDate = TurkeyTime.Now;
+        await context.SaveChangesAsync(cancellationToken);
+        return Ok(new { isActive = form.IsActive, refreshTable = false });
+    }
+
+    [AdminMutationAudit]
+    [HttpPost("basvurular/{id:guid}/sil")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteApplication(Guid id, CancellationToken cancellationToken)
+    {
+        var form = await context.Forms.SingleOrDefaultAsync(item => item.Id == id && item.IsPublished, cancellationToken);
+        if (form is null) return NotFound(new { message = "Başvuru bulunamadı." });
+
+        form.IsPublished = false;
+        form.UpdatedDate = TurkeyTime.Now;
+        await context.SaveChangesAsync(cancellationToken);
+        return Ok(new { success = true, refreshTable = true, message = "Başvuru başarıyla silindi." });
+    }
 
     [HttpGet("blacklists")]
     public async Task<IActionResult> Blacklists(CancellationToken cancellationToken)

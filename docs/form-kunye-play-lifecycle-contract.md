@@ -61,7 +61,10 @@ category-1001 trigger synchronizes its Candidate when TheaterName changes.
 - Deactivation sets both play visibility statuses to `0` so external applications
   cannot treat the play as visible or open for voting.
 - AfifeAdmin global query filters require both `Play.IsPublished` and
-  `Play.IsActive`, and both `Form.IsPublished` and `Form.IsActive`.
+  `Play.IsActive`. The Form global filter requires `Form.IsPublished`; the
+  applications management screen deliberately lists both active and inactive
+  published Forms so an inactive application can be reactivated. Every other
+  Form-backed business flow must explicitly require `Form.IsActive = 1`.
 
 ## Dependent state snapshot
 

@@ -1,0 +1,8 @@
+@model YKBAfife.Models.ViewModels.ApplicationsViewModel
+@{
+    ViewData["Title"] = "Başvurular";
+}
+
+<section class="applications-page">
+    @await Component.InvokeAsync("ComplexTable", new { model = Model.Table })
+</section>

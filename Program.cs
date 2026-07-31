@@ -40,6 +40,7 @@ builder.Services.AddScoped<IAdminReportService, AdminReportService>();
 builder.Services.AddScoped<IArchiveComparisonReportService, ArchiveComparisonReportService>();
 builder.Services.AddScoped<ITicketSalesReportService, TicketSalesReportService>();
 builder.Services.AddScoped<IBlacklistReportService, BlacklistReportService>();
+builder.Services.AddScoped<IApplicationReportService, ApplicationReportService>();
 builder.Services.AddScoped<IJuryWatchedPlayReportService, JuryWatchedPlayReportService>();
 builder.Services.AddSingleton<IExcelExporter, ExcelExporter>();
 
