@@ -174,6 +174,7 @@ BEGIN
             INNER JOIN dbo.Plays AS play ON play.Id = candidate.PlayId
             WHERE play.RecordType = 0
               AND play.IsPublished = 1
+              AND play.IsActive = 1
               AND candidate.IsPublished = 1
               AND candidate.IsCurrent = 1
               AND candidate.IsActive = 1

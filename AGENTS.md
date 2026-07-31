@@ -9,6 +9,8 @@
   play-status, candidate, voting, or seed-data behavior.
 - Read `docs/play-source-and-voting-contracts.md` before changing `RecordType`,
   play visibility, jury voting, ticket-fee, assignment, or blacklist behavior.
+- Read `docs/form-kunye-play-lifecycle-contract.md` before changing Form, season
+  assignment, Form-sourced plays, or their dependent lifecycle behavior.
 - No application or SQL path may physically delete a database row. Every table
   uses `IsPublished`: `1` is non-deleted and `0` is soft-deleted. All foreign keys
   use `ON DELETE NO ACTION`; delete cascades are forbidden.
@@ -26,6 +28,9 @@
 - Kunye (`RecordType = 0`) plays can never be soft-deleted and must always
   remain `IsPublished = 1`; only AfifeAdmin (`RecordType = 1`) plays may be
   soft-deleted.
+- Form-sourced Kunye play availability is controlled by `Form.IsActive` and
+  `Plays.IsActive`; inactive Forms preserve the Kunye play with
+  `Plays.IsPublished = 1` while snapshot-soft-deleting dependent business rows.
 - `KunyeGirisStatus` and `JuriOylamaStatus` are editable only for `RecordType = 0`.
   Both must remain false for `RecordType = 1`.
 - Candidates and votes are allowed only for `RecordType = 0`; ticket fees and

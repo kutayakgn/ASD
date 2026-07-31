@@ -25,8 +25,11 @@ public class Play
     public bool JuriOylamaStatus { get; set; }
     public bool KunyeGirisStatus { get; set; }
     public bool RecordType { get; set; }
+    public Guid? SourceFormId { get; set; }
+    public bool IsActive { get; set; } = true;
 
     public PlayStatus Status { get; set; } = null!;
+    public Form? SourceForm { get; set; }
     public ICollection<JuryAssignedPlay> JuryAssignments { get; set; } = [];
     public ICollection<JuryGameTicketFee> JuryGameTicketFees { get; set; } = [];
     public ICollection<PlayAwardCategory> PlayAwardCategories { get; set; } = [];

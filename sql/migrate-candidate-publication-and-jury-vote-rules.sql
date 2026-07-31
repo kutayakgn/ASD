@@ -205,6 +205,9 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
+    IF TRY_CONVERT(int, SESSION_CONTEXT(N'FormLifecycleSyncInProgress')) = 1
+        RETURN;
+
     IF UPDATE(IsActive)
     BEGIN
         UPDATE vote

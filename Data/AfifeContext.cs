@@ -19,6 +19,7 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
     public DbSet<Image> Images => Set<Image>();
     public DbSet<Announcement> Announcements => Set<Announcement>();
     public DbSet<Form> Forms => Set<Form>();
+    public DbSet<FormLifecycleState> FormLifecycleStates => Set<FormLifecycleState>();
     public DbSet<Group> Groups => Set<Group>();
     public DbSet<PlayStatus> PlayStatuses => Set<PlayStatus>();
     public DbSet<JuryAssignedPlay> JuryAssignedPlays => Set<JuryAssignedPlay>();
@@ -128,6 +129,10 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
                 .Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
             entity.Ignore(x => x.Status);
             entity.Ignore(x => x.JuryAssignments);
+            entity.HasOne(x => x.SourceForm)
+                .WithOne(x => x.Play)
+                .HasForeignKey<Play>(x => x.SourceFormId)
+                .OnDelete(DeleteBehavior.NoAction);
             entity.HasMany(x => x.PlayAwardCategories)
                 .WithOne(x => x.Play)
                 .HasForeignKey(x => x.PlayId)
@@ -174,6 +179,26 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
         modelBuilder.Entity<Form>(entity =>
         {
             entity.ToTable("Form", "dbo");
+            entity.HasIndex(x => x.ApplicationNumber)
+                .IsUnique()
+                .HasFilter("[IsPublished] = 1");
+            entity.HasOne(x => x.Season)
+                .WithMany()
+                .HasForeignKey(x => x.SeasonId)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<FormLifecycleState>(entity =>
+        {
+            entity.ToTable("FormLifecycleStates", "dbo");
+            entity.Property(x => x.EntityName).HasMaxLength(64);
+            entity.HasIndex(x => new { x.FormId, x.EntityName, x.EntityId })
+                .IsUnique()
+                .HasFilter("[IsPublished] = 1");
+            entity.HasOne(x => x.Form)
+                .WithMany()
+                .HasForeignKey(x => x.FormId)
+                .OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<Config>(entity =>
@@ -263,6 +288,10 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
         });
         DisableSqlOutputClauseForAuditedTables(modelBuilder);
         ApplyPublishedQueryFilters(modelBuilder);
+        modelBuilder.Entity<Form>()
+            .HasQueryFilter(form => form.IsPublished && form.IsActive);
+        modelBuilder.Entity<Play>()
+            .HasQueryFilter(play => play.IsPublished && play.IsActive);
     }
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)

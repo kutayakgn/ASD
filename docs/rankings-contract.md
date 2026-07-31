@@ -9,7 +9,7 @@ ranking formulas, ranking triggers, or ranking reports.
 There is exactly one published ranking row for every candidate/category row that
 meets all of these conditions:
 
-- The related `Plays` row has `RecordType = 0` and `IsPublished = 1`.
+- The related `Plays` row has `RecordType = 0`, `IsPublished = 1`, and `IsActive = 1`.
 - The `PlayAwardCategories` row has `IsPublished = 1`, `IsCurrent = 1`, and
   `IsActive = 1`.
 

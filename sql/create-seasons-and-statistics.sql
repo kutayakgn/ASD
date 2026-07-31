@@ -175,6 +175,7 @@ BEGIN
             SELECT COUNT_BIG(*)
             FROM dbo.Plays AS play
             WHERE play.IsPublished = 1
+              AND play.IsActive = 1
               AND play.CreatedAt >= CONVERT(datetime2(7), season.SeasonStartDate)
               AND play.CreatedAt < CONVERT(datetime2(7), season.SeasonEndDate)
         ),
@@ -183,6 +184,7 @@ BEGIN
             SELECT COUNT_BIG(*)
             FROM dbo.Plays AS play
             WHERE play.IsPublished = 1
+              AND play.IsActive = 1
               AND play.StatusCode = 1
               AND play.CreatedAt >= CONVERT(datetime2(7), season.SeasonStartDate)
               AND play.CreatedAt < CONVERT(datetime2(7), season.SeasonEndDate)
@@ -191,8 +193,15 @@ BEGIN
         (
             SELECT COUNT_BIG(*)
             FROM dbo.JuryVotes AS vote
+            INNER JOIN dbo.PlayAwardCategories AS candidate
+                ON candidate.Id = vote.PlayAwardCategoryId
+            INNER JOIN dbo.Plays AS play ON play.Id = candidate.PlayId
             WHERE vote.IsPublished = 1
               AND vote.IsActive = 1
+              AND candidate.IsPublished = 1
+              AND candidate.IsActive = 1
+              AND play.IsPublished = 1
+              AND play.IsActive = 1
               AND vote.CreatedAt >= CONVERT(datetime2(7), season.SeasonStartDate)
               AND vote.CreatedAt < CONVERT(datetime2(7), season.SeasonEndDate)
         )
@@ -219,7 +228,7 @@ BEGIN
 
     IF EXISTS (SELECT 1 FROM inserted)
        AND EXISTS (SELECT 1 FROM deleted)
-       AND NOT (UPDATE(CreatedAt) OR UPDATE(IsPublished) OR UPDATE(StatusCode))
+       AND NOT (UPDATE(CreatedAt) OR UPDATE(IsPublished) OR UPDATE(IsActive) OR UPDATE(StatusCode))
     BEGIN
         RETURN;
     END;

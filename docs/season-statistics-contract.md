@@ -20,8 +20,8 @@ The initial rows begin with the 2018-2019 season. Their sample schedule is:
 
 ## Counters
 
-- `PlayCount`: published `Plays` whose `CreatedAt` is in the season interval.
-- `ActivePlayCount`: the same published plays with `StatusCode = 1`.
+- `PlayCount`: published and active `Plays` whose `CreatedAt` is in the season interval.
+- `ActivePlayCount`: the same published and active plays with `StatusCode = 1`.
 - `VoteCount`: published and active `JuryVotes` whose own `CreatedAt` is in the
   season interval.
 

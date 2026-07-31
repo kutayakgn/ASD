@@ -54,9 +54,9 @@ GO
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Form' AND schema_id = SCHEMA_ID('dbo'))
 BEGIN
     CREATE TABLE [dbo].[Form] (
-        [Id] [int] IDENTITY(1,1) NOT NULL,
+        [Id] [uniqueidentifier] NOT NULL CONSTRAINT [DF_Form_Id] DEFAULT (NEWSEQUENTIALID()),
         [ApplicationNumber] [nvarchar](6) NOT NULL,
-        [SeasonId] [int] NOT NULL,
+        [SeasonId] [uniqueidentifier] NOT NULL CONSTRAINT [DF_Form_SeasonId] DEFAULT ('00000000-0000-0000-0000-000000000000'),
         [CreatedDate] [datetime] NULL,
         [UpdatedDate] [datetime] NULL,
         [RepertoireName] [nvarchar](500) NOT NULL,
@@ -79,8 +79,8 @@ BEGIN
         [LightDesign] [nvarchar](1000) NULL,
         [StageMusic] [nvarchar](1000) NULL,
         [Choreography] [nvarchar](1000) NULL,
-        [Active] [bit] NOT NULL,
-        [Deleted] [bit] NULL,
+        [IsActive] [bit] NOT NULL CONSTRAINT [DF_Form_IsActive] DEFAULT (1),
+        [IsPublished] [bit] NOT NULL CONSTRAINT [DF_Form_IsPublished] DEFAULT (1),
         CONSTRAINT [PK_Form] PRIMARY KEY CLUSTERED ([Id])
     );
 END;
@@ -232,14 +232,17 @@ BEGIN
         [UpdatedBy] [uniqueidentifier] NULL,
         [IsPublished] [bit] NOT NULL,
         [Slug] [varchar](255) NOT NULL,
-        [TheaterName] [varchar](255) NOT NULL,
-        [Phone] [varchar](255) NULL,
-        [ContactPersonName] [varchar](255) NULL,
-        [ContactPersonPhone] [varchar](255) NULL,
-        [Address] [varchar](255) NULL,
-        [Email] [varchar](255) NULL,
+        [TheaterName] [nvarchar](255) NOT NULL,
+        [Phone] [nvarchar](255) NULL,
+        [ContactPersonName] [nvarchar](255) NULL,
+        [ContactPersonPhone] [nvarchar](255) NULL,
+        [Address] [nvarchar](255) NULL,
+        [Email] [nvarchar](255) NULL,
         [JuriOylamaStatus] [bit] NOT NULL CONSTRAINT [DF_Plays_JuriOylamaStatus] DEFAULT (0),
+        [KunyeGirisStatus] [bit] NOT NULL CONSTRAINT [DF_Plays_KunyeGirisStatus] DEFAULT (0),
         [RecordType] [bit] NOT NULL CONSTRAINT [DF_Plays_RecordType] DEFAULT (0),
+        [SourceFormId] [uniqueidentifier] NULL,
+        [IsActive] [bit] NOT NULL CONSTRAINT [DF_Plays_IsActive] DEFAULT (1),
         CONSTRAINT [PK_Plays] PRIMARY KEY CLUSTERED ([Id])
     );
 END;

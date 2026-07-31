@@ -228,13 +228,12 @@ BEGIN TRY
     WHERE NOT EXISTS (SELECT 1 FROM [dbo].[Images] AS i WHERE i.[Id] = s.ImageId);
 
     INSERT INTO [dbo].[Form]
-        ([ApplicationNumber], [SeasonId], [CreatedDate], [UpdatedDate], [RepertoireName], [TheatreName],
+        ([ApplicationNumber], [CreatedDate], [UpdatedDate], [RepertoireName], [TheatreName],
          [PremiereDate], [Display], [ApplicantName], [ApplicantRole], [Phone], [Email], [Director],
          [ContactName], [ContactPhone], [LeadActress], [LeadActor], [SupportActress], [SupportActor],
-         [StageDesign], [ClothesDesign], [LightDesign], [StageMusic], [Choreography], [Active], [Deleted])
+         [StageDesign], [ClothesDesign], [LightDesign], [StageMusic], [Choreography], [IsActive], [IsPublished])
     SELECT
         CONCAT('T', RIGHT('00000' + CONVERT(varchar(5), s.N), 5)),
-        2026,
         DATEADD(day, -s.N, @Now),
         NULL,
         CONCAT(N'Test Repertoire ', s.N),
@@ -258,7 +257,7 @@ BEGIN TRY
         CONCAT(N'Composer ', s.N),
         CONCAT(N'Choreographer ', s.N),
         1,
-        0
+        1
     FROM @Seed AS s
     WHERE NOT EXISTS (
         SELECT 1 FROM [dbo].[Form] AS f

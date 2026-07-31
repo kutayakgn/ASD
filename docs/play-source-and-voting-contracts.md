@@ -71,3 +71,10 @@ Admin kaynakli oyunlarda bu atama oy kullanma yetkisi olusturmaz.
   tekrar olusmalarini trigger'larla engeller.
 - `sql/enforce-admin-play-status-rules.sql`, Admin kaynakli oyunlarin iki statusunu
   `0` olarak ve `StatusCode` degerini `1` disinda tutar.
+## Form kaynakli Kunye oyunlari
+
+Kunye Giris projesindeki `Form` kayitlarinin oyun ve bagli kayit yasam dongusu
+`docs/form-kunye-play-lifecycle-contract.md` dosyasinda tanimlidir. Form kaynakli
+oyunlar `Plays.SourceFormId` ile birebir baglanir. Form pasif oldugunda Kunye
+oyununun `IsPublished` degeri degismez; `Plays.IsActive = 0` olur ve bagli
+aday/oy/bilet/atama/blacklist kayitlari snapshot ile soft-delete edilir.

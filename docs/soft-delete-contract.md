@@ -68,6 +68,12 @@ The play and its published `PlayAwardCategories`, `JuryVotes`,
 `IsPublished = 0`. Candidate and vote `IsActive` values are also changed to `0`.
 No row is physically deleted; the transaction rolls back if any dependent update fails.
 
+Form-sourced Kunye plays use `Plays.IsActive` for source availability. An inactive
+or soft-deleted Form keeps its Kunye Play at `IsPublished = 1`, sets Play
+`IsActive = 0`, and snapshot-soft-deletes its dependents. Explicit Form restore
+restores only rows captured by that lifecycle operation. See
+`docs/form-kunye-play-lifecycle-contract.md`.
+
 ## Restore
 
 Restore is a deliberate operation, not the inverse side effect of another delete.

@@ -271,6 +271,9 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
+    IF TRY_CONVERT(int, SESSION_CONTEXT(N'FormLifecycleSyncInProgress')) = 1
+        RETURN;
+
     IF UPDATE(IsActive)
     BEGIN
         UPDATE vote
@@ -356,7 +359,7 @@ CREATE OR ALTER TRIGGER dbo.TR_Configs_SoftDelete ON dbo.Configs INSTEAD OF DELE
 BEGIN SET NOCOUNT ON; UPDATE target SET IsPublished = 0 FROM dbo.Configs target INNER JOIN deleted source ON source.Id = target.Id; END;
 GO
 CREATE OR ALTER TRIGGER dbo.TR_Form_SoftDelete ON dbo.Form INSTEAD OF DELETE AS
-BEGIN SET NOCOUNT ON; UPDATE target SET IsPublished = 0 FROM dbo.Form target INNER JOIN deleted source ON source.Id = target.Id; END;
+BEGIN SET NOCOUNT ON; UPDATE target SET IsPublished = 0, IsActive = 0 FROM dbo.Form target INNER JOIN deleted source ON source.Id = target.Id; IF OBJECT_ID(N'dbo.usp_SynchronizeFormsToPlays', N'P') IS NOT NULL EXEC dbo.usp_SynchronizeFormsToPlays; END;
 GO
 CREATE OR ALTER TRIGGER dbo.TR_Group_SoftDelete ON dbo.[Group] INSTEAD OF DELETE AS
 BEGIN SET NOCOUNT ON; UPDATE target SET IsPublished = 0 FROM dbo.[Group] target INNER JOIN deleted source ON source.Id = target.Id; END;
