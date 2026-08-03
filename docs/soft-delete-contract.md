@@ -81,6 +81,6 @@ Before setting `IsPublished = 1`, validate filtered unique indexes and all domai
 rules. Restoring a candidate synchronizes its preserved votes according to the
 candidate/vote contract, and the single-published-vote rule still applies.
 
-Run `sql/enforce-global-soft-delete.sql` once on every shared database after deploying
+Run the versioned EF migration resources in `Migrations/Scripts` once on every shared database after deploying
 this code. The script adds missing flags, removes the remaining delete cascade,
 updates vote triggers, and installs direct-SQL soft-delete guards.

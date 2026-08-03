@@ -36,8 +36,8 @@ Season management is available under `/diger-ayarlar`. A season name is derived 
 - `PlayCount`, `ActivePlayCount`, and `VoteCount` remain database-managed values;
   management forms must never accept or write these counters.
 
-Run `sql/enforce-season-management-date-rules.sql` and then
-`sql/sync-form-season-assignments.sql` on existing databases to align constraints and Form season assignments with these rules.
+Run the versioned EF migration resources in `Migrations/Scripts` and then
+the versioned EF migration resources in `Migrations/Scripts` on existing databases to align constraints and Form season assignments with these rules.
 ## Counters
 
 - `PlayCount`: published and active `Plays` whose `CreatedAt` is in the season interval.
@@ -51,6 +51,6 @@ date range when `CreatedAt`, `IsPublished`, `StatusCode`, or `IsActive` changes.
 A season range change also recalculates its counters. Trigger updates never change
 `IsPublished` and never physically delete data.
 
-Run `sql/create-seasons-and-statistics.sql` to create the table, indexes, procedure,
+Run the versioned EF migration resources in `Migrations/Scripts` to create the table, indexes, procedure,
 triggers, initial rows, and initial counter values. The script is idempotent and
 preserves existing published season rows.

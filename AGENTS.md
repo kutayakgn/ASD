@@ -1,5 +1,7 @@
 # Repository invariants
 
+- Read docs/ef-core-migrations-contract.md before changing any entity, DbContext mapping, table, relationship, index, constraint, stored procedure, trigger, or migration. All database deploys are EF Core migrations and must be additive and data-preserving; destructive migration operations and physical rollback are forbidden.
+
 - Treat `AwardCategories.CategoryCode` and `PlayStatuses.StatusCode` as shared,
   immutable integration contracts. Do not renumber, delete, repurpose, or reseed
   their canonical rows from migrations, application startup, or test-data scripts.
@@ -63,7 +65,7 @@
 - All business-table DML and failed mutation attempts must be traceable through
   `AdminLogs`; do not log page visits or duplicate successful actions. Keep
   login/logout/password and similar security events in `UsersLog`.
-- Every new business table requires re-running `sql/create-admin-audit-logging.sql`
+- Every new business table requires refreshing the versioned `Migrations/Scripts/AuditTriggers.sql` resource
   after creation. Every new state-changing MVC endpoint requires
   `[AdminMutationAudit]`; read-only and export endpoints must not use it.
 - Award-category placeholder assets are resolved by the stable convention

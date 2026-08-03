@@ -49,7 +49,7 @@ application that writes to AfifeAdmin:
    delete the business row or its audit history.
 2. Every new business table must have `IsPublished`, be mapped in `AfifeContext`,
    and receive an audit trigger by re-running
-   `sql/create-admin-audit-logging.sql` after the table is created.
+   the versioned EF migration resources in `Migrations/Scripts` after the table is created.
 3. Do not disable or bypass `TR_AdminAudit_*` triggers. Trigger and stored-procedure
    side effects must remain audited with the initiating correlation ID.
 4. Mark every new state-changing MVC endpoint with `[AdminMutationAudit]` so a
@@ -95,7 +95,7 @@ otherwise EF Core `SaveChanges` fails with SQL Server error 334. Do not remove
 The deployment script also soft-deletes legacy successful `MvcAction` and
 `PageView` duplicates; failed actions and SQL data-change history remain published.
 
-Run `sql/create-admin-audit-logging.sql` on every shared database. The script is
+Run the versioned EF migration resources in `Migrations/Scripts` on every shared database. The script is
 idempotent and creates or refreshes one audit trigger for every existing user
 table except `AdminLogs` and `UsersLog`. Re-run it after adding a new table.
 

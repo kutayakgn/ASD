@@ -119,13 +119,13 @@ snapshot is restored.
 
 Run in this order:
 
-1. `sql/migrate-forms-to-kunye-play-lifecycle.sql`
-2. `sql/create-seasons-and-statistics.sql`
-3. `sql/create-rankings-projection.sql`
-4. `sql/sync-form-season-assignments.sql`
-5. `sql/create-admin-audit-logging.sql`
-6. `sql/test-form-kunye-play-lifecycle.sql`
-7. `sql/test-form-season-assignments.sql`
+1. the versioned EF migration resources in `Migrations/Scripts`
+2. the versioned EF migration resources in `Migrations/Scripts`
+3. the versioned EF migration resources in `Migrations/Scripts`
+4. the versioned EF migration resources in `Migrations/Scripts`
+5. the versioned EF migration resources in `Migrations/Scripts`
+6. the versioned EF migration resources in `Migrations/Scripts`
+7. the versioned EF migration resources in `Migrations/Scripts`
 
 The other Kunye application must use GUID Form IDs, stop reading/writing `Active`
 and `Deleted`, use `IsActive` and `IsPublished`, and include `Plays.IsActive = 1`

@@ -8,8 +8,8 @@ The viewer lists every database column from `AdminLogs` and `UsersLog`, includin
 
 ## Deployment checklist
 
-1. Run `sql/create-admin-audit-logging.sql` after every business-table schema addition. This creates or refreshes the successful INSERT, UPDATE, soft-delete, and database-side-effect triggers.
-2. Run `sql/ensure-audit-log-query-support.sql`. It creates the viewer filter indexes and returns any business table missing its generated audit trigger.
+1. Run the versioned EF migration resources in `Migrations/Scripts` after every business-table schema addition. This creates or refreshes the successful INSERT, UPDATE, soft-delete, and database-side-effect triggers.
+2. Run the versioned EF migration resources in `Migrations/Scripts`. It creates the viewer filter indexes and returns any business table missing its generated audit trigger.
 3. The missing-trigger result set must contain zero rows.
 4. Review the metadata-completeness result sets. Direct SSMS operations can legitimately lack HTTP/user fields, but application-originated records should contain request metadata.
 5. Restart AfifeAdmin after deploying the application code.

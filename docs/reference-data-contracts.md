@@ -56,9 +56,9 @@ cannot participate in candidate voting. They may have `JuryAssignedPlays` and
 `JuryGameTicketFees` records. An existing play with candidates cannot be converted
 to `RecordType = 1` until those candidate records are removed.
 
-Run `sql/enforce-admin-play-status-rules.sql` to normalize existing records and
+Run the versioned EF migration resources in `Migrations/Scripts` to normalize existing records and
 enforce these rules with database check constraints.
-Run `sql/enforce-admin-play-candidate-rules.sql` to soft-delete invalid candidate/vote
+Run the versioned EF migration resources in `Migrations/Scripts` to soft-delete invalid candidate/vote
 records and install the cross-table enforcement triggers.
 
 ## Candidate multiplicity and role history
@@ -83,5 +83,5 @@ for that group. Voting for another old/current candidate soft-deletes the previo
 vote and preserves both physical rows as history.
 
 The global rule for every table is documented in `soft-delete-contract.md`. Run
-`sql/enforce-global-soft-delete.sql` after the earlier candidate migration so all
+the versioned EF migration resources in `Migrations/Scripts` after the earlier candidate migration so all
 foreign keys and direct SQL operations follow the same no-hard-delete contract.

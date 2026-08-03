@@ -44,11 +44,6 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
         modelBuilder.Entity<User>(entity =>
         {
             entity.ToTable("Users", "dbo");
-            entity.Ignore(x => x.Role);
-            entity.Ignore(x => x.Group);
-            entity.Ignore(x => x.AssignedPlays);
-            entity.Ignore(x => x.JuryGameTicketFees);
-            entity.Ignore(x => x.JuryVotes);
             entity.HasIndex(x => new { x.RoleCode, x.Username })
                 .IsUnique()
                 .HasFilter("[IsPublished] = 1");
@@ -172,8 +167,6 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
             });
             entity.Property(x => x.RecordType)
                 .Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
-            entity.Ignore(x => x.Status);
-            entity.Ignore(x => x.JuryAssignments);
             entity.HasOne(x => x.SourceForm)
                 .WithOne(x => x.Play)
                 .HasForeignKey<Play>(x => x.SourceFormId)
@@ -191,7 +184,6 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
         modelBuilder.Entity<PlayAwardCategory>(entity =>
         {
             entity.ToTable("PlayAwardCategories", "dbo", table => table.UseSqlOutputClause(false));
-            entity.Ignore(x => x.AwardCategory);
             entity.HasIndex(x => new { x.PlayId, x.AwardCategoryCode, x.RoleCode, x.Candidate })
                 .IsUnique()
                 .HasFilter("[IsPublished] = 1");
@@ -264,31 +256,25 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
         modelBuilder.Entity<Role>(entity =>
         {
             entity.ToTable("Roles", "dbo");
-            entity.Ignore(x => x.Users);
         });
         modelBuilder.Entity<Group>(entity =>
         {
             entity.ToTable("Group", "dbo");
-            entity.Ignore(x => x.Users);
         });
 
         modelBuilder.Entity<PlayStatus>(entity =>
         {
             entity.ToTable("PlayStatuses", "dbo");
-            entity.Ignore(x => x.Plays);
         });
 
         modelBuilder.Entity<AwardCategory>(entity =>
         {
             entity.ToTable("AwardCategories", "dbo");
-            entity.Ignore(x => x.PlayAwardCategories);
         });
 
         modelBuilder.Entity<JuryAssignedPlay>(entity =>
         {
             entity.ToTable("JuryAssignedPlays", "dbo");
-            entity.Ignore(x => x.Play);
-            entity.Ignore(x => x.Jury);
             entity.HasIndex(x => new { x.PlayId, x.JuryId })
                 .IsUnique()
                 .HasFilter("[IsPublished] = 1");
@@ -296,7 +282,6 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
         modelBuilder.Entity<JuryVote>(entity =>
         {
             entity.ToTable("JuryVotes", "dbo", table => table.UseSqlOutputClause(false));
-            entity.Ignore(x => x.Jury);
             entity.HasIndex(x => new { x.PlayAwardCategoryId, x.JuryId })
                 .IsUnique()
                 .HasFilter("[IsPublished] = 1");
@@ -305,7 +290,6 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
         modelBuilder.Entity<JuryGameTicketFee>(entity =>
         {
             entity.ToTable("JuryGameTicketFees", "dbo");
-            entity.Ignore(x => x.User);
             entity.Property(x => x.TicketFee).HasPrecision(10, 2);
             entity.HasIndex(x => new { x.UserId, x.PlayId })
                 .IsUnique()
@@ -331,6 +315,7 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
                 .HasForeignKey(x => x.CreatedBy)
                 .OnDelete(DeleteBehavior.NoAction);
         });
+        AfifeRelationalModelConfiguration.Configure(modelBuilder);
         DisableSqlOutputClauseForAuditedTables(modelBuilder);
         ApplyPublishedQueryFilters(modelBuilder);
         modelBuilder.Entity<Form>()

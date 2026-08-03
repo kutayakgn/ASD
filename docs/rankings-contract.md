@@ -77,14 +77,14 @@ whose persisted values changed.
 
 Run these scripts in order:
 
-1. `sql/create-rankings-projection.sql`
-2. `sql/create-admin-audit-logging.sql`
+1. the versioned EF migration resources in `Migrations/Scripts`
+2. the versioned EF migration resources in `Migrations/Scripts`
 
 The second script installs `TR_AdminAudit_dbo_Rankings`, so procedure and
 trigger-generated ranking changes retain complete old/new snapshots and the
 initiating correlation context. Verify changes with rollback-based tests.
 
-`sql/seed-ranking-formula-test-cases.sql` is an optional, persistent, idempotent
+the versioned EF migration resources in `Migrations/Scripts` is an optional, persistent, idempotent
 formula test seed. It uses two previously empty categories of the `Kon Perdes`
 play and 33 dedicated jury users. Test set 1 must produce 32 votes, arithmetic
 mean `6.28125`, sample variance `5.11189516129032`, trimmed mean `6.3`, and

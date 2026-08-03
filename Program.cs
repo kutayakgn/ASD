@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Migrations;
 using YKBAfife.Data;
+using YKBAfife.Data.Migrations;
 using YKBAfife.Services.Authentication;
 using YKBAfife.Services.Audit;
 using YKBAfife.Services.Exports;
@@ -29,6 +31,7 @@ builder.Services.AddDbContext<AfifeContext>((serviceProvider, options) =>
     options
         .UseSqlServer(connectionString)
         .AddInterceptors(serviceProvider.GetRequiredService<AdminAuditConnectionInterceptor>()));
+builder.Services.AddHostedService<DatabaseMigrationHostedService>();
 builder.Services.AddScoped<IUserActivityLogger, UserActivityLogger>();
 builder.Services.AddScoped<IAdminAuthenticationService, AdminAuthenticationService>();
 builder.Services.AddScoped<IPlayWatchReportService, PlayWatchReportService>();

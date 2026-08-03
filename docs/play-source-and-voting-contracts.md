@@ -62,14 +62,14 @@ Admin kaynakli oyunlarda bu atama oy kullanma yetkisi olusturmaz.
 - Statu toggle guncellemesi veritabanina hemen yazilir; ancak acik oyunlar tablosu
   otomatik yenilenmez. Boylece yeni kayit etiketi ve satir konumu, kullanici arama,
   siralama, filtreleme, pagination veya sayfa navigasyonu yapana kadar korunur.
-- `sql/enforce-plays-recordtype-immutable.sql`, mevcut `Plays` kayitlarinin
+- the versioned EF migration resources in `Migrations/Scripts`, mevcut `Plays` kayitlarinin
   `RecordType` degerinin SQL veya baska bir uygulama tarafindan degistirilmesini
   engeller.
-- `sql/fix-kunye-play-toggle-trigger.sql`, RecordType trigger'ini yalnizca gercek
+- the versioned EF migration resources in `Migrations/Scripts`, RecordType trigger'ini yalnizca gercek
   `0 -> 1` degisiminde calisacak sekilde kurar.
-- `sql/enforce-admin-play-candidate-rules.sql`, yasak iliskileri temizler ve
+- the versioned EF migration resources in `Migrations/Scripts`, yasak iliskileri temizler ve
   tekrar olusmalarini trigger'larla engeller.
-- `sql/enforce-admin-play-status-rules.sql`, Admin kaynakli oyunlarin iki statusunu
+- the versioned EF migration resources in `Migrations/Scripts`, Admin kaynakli oyunlarin iki statusunu
   `0` olarak ve `StatusCode` degerini `1` disinda tutar.
 ## Form kaynakli Kunye oyunlari
 

@@ -87,13 +87,13 @@ The add-candidate UI excludes category 1001. It asks for Role and offers Photo w
 
 ## Operational scripts
 
-Run `sql/add-award-category-multiplicity-and-default-play-category.sql` once on each
+Run the versioned EF migration resources in `Migrations/Scripts` once on each
 shared database. It adds metadata, normalizes the canonical 1001 slot without
 deleting legacy rows, backfills missing defaults, and installs enforcement triggers.
 
-Run `sql/add-award-category-role-photo-metadata.sql` after the multiplicity migration.
+Run the versioned EF migration resources in `Migrations/Scripts` after the multiplicity migration.
 It adds `HasRoleAndPhoto` without changing CategoryCode values and initially mirrors
 the existing `MultiCandidate` metadata.
 
-Run `sql/test-candidate-role-and-category-scenarios.sql` after the migration. Every
+Run the versioned EF migration resources in `Migrations/Scripts` after the migration. Every
 test is wrapped in a transaction and rolled back, so no test data remains.

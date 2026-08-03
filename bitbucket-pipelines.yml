@@ -1,0 +1,42 @@
+﻿definitions:
+  steps:
+    - step: &validate-package
+        name: Validate and package
+        image: mcr.microsoft.com/dotnet/sdk:8.0
+        caches:
+          - dotnetcore
+        script:
+          - dotnet tool restore
+          - dotnet restore
+          - if grep -RIE "\\.(DropTable|DropColumn|DeleteData)[[:space:]]*\\(" Data/Migrations --include='*.cs'; then echo "Destructive migration API detected"; exit 1; fi
+          - if grep -RIE "(DELETE[[:space:]]+FROM|TRUNCATE[[:space:]]+TABLE|DROP[[:space:]]+TABLE|DROP[[:space:]]+COLUMN)" Migrations/Scripts --include='*.sql'; then echo "Physical data-loss SQL detected"; exit 1; fi
+          - dotnet build -c Release --no-restore
+          - dotnet tool run dotnet-ef migrations has-pending-model-changes --configuration Release --no-build
+          - mkdir -p artifacts/deploy artifacts/publish
+          - dotnet tool run dotnet-ef migrations script --idempotent --configuration Release --no-build --output artifacts/deploy/YKBAfife-idempotent.sql
+          - dotnet publish YKBAfife.csproj -c Release --no-build --output artifacts/publish
+        artifacts:
+          - artifacts/deploy/**
+          - artifacts/publish/**
+    - step: &production-database-gate
+        name: Production database gate
+        trigger: manual
+        deployment: production
+        runs-on:
+          - self.hosted
+          - windows
+          - production
+        script:
+          - powershell -NoProfile -ExecutionPolicy Bypass -File scripts/deployment/Invoke-ProductionDatabaseUpgrade.ps1 -MigrationScript artifacts/deploy/YKBAfife-idempotent.sql
+          - powershell -NoProfile -Command "Write-Host 'Database is ready. Continue with the company application rollout automation using artifacts/publish.'"
+
+options:
+  max-time: 30
+
+pipelines:
+  default:
+    - step: *validate-package
+  branches:
+    codex/production-deployment-ready:
+      - step: *validate-package
+      - step: *production-database-gate
