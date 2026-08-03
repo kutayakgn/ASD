@@ -38,7 +38,7 @@ public sealed class DatabaseMigrationHostedService(
                 throw new InvalidOperationException(
                     "The database has pending migrations while startup migration is disabled: " +
                     string.Join(", ", pending) +
-                    ". Run the reviewed Bitbucket database gate before application rollout.");
+                    ". Apply the versioned EF migrations before application startup or enable startup migration.");
             }
 
             await DatabaseSchemaValidator.ValidateAsync(context, connection, cancellationToken);

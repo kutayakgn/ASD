@@ -105,8 +105,7 @@ Keep ApplyOnStartup enabled in deployed environments. Multiple instances can sta
 together; one migrates and the others wait. Migration or schema-drift failure stops
 startup instead of serving against an incompatible database.
 
-A deployment pipeline may run the reviewed idempotent artifact before application
-rollout. Startup then confirms no migration is pending.
+The deployment pipeline needs no database-specific customization. A normal .NET build/publish is sufficient; application startup owns migration and validation. The production SQL principal must have the DDL permissions required by the versioned migrations.
 
 ## Recovery
 
