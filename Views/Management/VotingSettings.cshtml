@@ -3,7 +3,46 @@
     ViewData["Title"] = "Diğer Ayarlar";
 }
 <section class="season-settings-page" aria-label="Diğer Ayarlar">
-    @await Component.InvokeAsync("ComplexTable", new { model = Model.SeasonTable })
-    <div class="settings-section-divider" aria-hidden="true"></div>
-    @await Component.InvokeAsync("ComplexTable", new { model = Model.AdditionalVotingTable })
+    <div class="settings-accordion" data-settings-accordion>
+        <section class="settings-accordion-item" data-settings-section>
+            <h2 class="settings-accordion-heading">
+                <button type="button" class="settings-accordion-trigger" aria-expanded="false" aria-controls="season-settings-content" data-settings-trigger>
+                    <span>Sezon Ayarları</span><img src="~/icons/angle-down.svg" alt="" aria-hidden="true" />
+                </button>
+            </h2>
+            <div id="season-settings-content" class="settings-accordion-content" data-settings-content hidden>
+                <div class="settings-accordion-content-inner">
+                    @await Component.InvokeAsync("ComplexTable", new { model = Model.SeasonTable })
+                </div>
+            </div>
+        </section>
+        <section class="settings-accordion-item" data-settings-section>
+            <h2 class="settings-accordion-heading">
+                <button type="button" class="settings-accordion-trigger" aria-expanded="false" aria-controls="additional-voting-settings-content" data-settings-trigger>
+                    <span>Ek Oylama/Oy Düzenleme Hakkı</span><img src="~/icons/angle-down.svg" alt="" aria-hidden="true" />
+                </button>
+            </h2>
+            <div id="additional-voting-settings-content" class="settings-accordion-content" data-settings-content hidden>
+                <div class="settings-accordion-content-inner">
+                    @await Component.InvokeAsync("ComplexTable", new { model = Model.AdditionalVotingTable })
+                </div>
+            </div>
+        </section>
+        <section class="settings-accordion-item" data-settings-section>
+            <h2 class="settings-accordion-heading">
+                <button type="button" class="settings-accordion-trigger" aria-expanded="false" aria-controls="play-status-settings-content" data-settings-trigger>
+                    <span>Oyun Statüleri</span><img src="~/icons/angle-down.svg" alt="" aria-hidden="true" />
+                </button>
+            </h2>
+            <div id="play-status-settings-content" class="settings-accordion-content" data-settings-content hidden>
+                <div class="settings-accordion-content-inner">
+                    @await Component.InvokeAsync("ComplexTable", new { model = Model.PlayStatusTable })
+                </div>
+            </div>
+        </section>
+    </div>
 </section>
+
+@section Scripts {
+    <script src="~/js/settings-accordion.js" asp-append-version="true"></script>
+}

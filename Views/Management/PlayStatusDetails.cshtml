@@ -1,0 +1,28 @@
+@model YKBAfife.Models.ViewModels.PlayStatusDetailsViewModel
+@{
+    ViewData["Title"] = "Oyun Statüsü Detay";
+}
+
+<section class="play-details-page play-status-details-page" aria-labelledby="play-status-details-title">
+    <a asp-action="VotingSettings" class="play-details-back">
+        <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
+        <span>Diğer Ayarlar'a Dön</span>
+    </a>
+    <header class="play-details-toolbar">
+        <h1 id="play-status-details-title">Oyun Statüsü Detay</h1>
+        <div class="play-details-actions">
+            <a asp-action="EditPlayStatus" asp-route-id="@Model.Id" class="play-detail-action play-detail-action-primary">Düzenle</a>
+        </div>
+    </header>
+    <section class="season-detail-section" aria-labelledby="play-status-information-title">
+        <h2 id="play-status-information-title">Statü Bilgileri</h2>
+        <dl class="season-details-grid">
+            <div class="play-detail-field"><dt>Statü Kodu</dt><dd>@Model.StatusCode</dd></div>
+            <div class="play-detail-field"><dt>Statü Adı</dt><dd>@Model.StatusName</dd></div>
+            <div class="play-detail-field">
+                <dt>Rengi</dt>
+                <dd class="play-status-detail-color"><span style="background-color:@Model.StatusColor" aria-hidden="true"></span>@Model.StatusColor</dd>
+            </div>
+        </dl>
+    </section>
+</section>

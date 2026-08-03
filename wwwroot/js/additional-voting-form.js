@@ -1,6 +1,7 @@
 (() => {
     const form = document.querySelector("[data-additional-voting-form]");
     if (!form) return;
+
     const selects = [...form.querySelectorAll(".additional-voting-select")];
     const page = form.closest(".additional-voting-form-page");
     let clearanceFrame = 0;
@@ -10,10 +11,15 @@
         cancelAnimationFrame(clearanceFrame);
         page.style.setProperty("--additional-voting-clearance", "0px");
         clearanceFrame = requestAnimationFrame(() => {
-            const menu = selects.map(select => select.querySelector("[data-multi-menu]")).find(item => item && !item.hidden);
+            const menu = selects
+                .map(select => select.querySelector("[data-multi-menu]"))
+                .find(item => item && !item.hidden);
             if (!menu) return;
-            const required = Math.max(0, Math.ceil(menu.getBoundingClientRect().bottom + scrollY + 40 - (page.getBoundingClientRect().bottom + scrollY)));
-            page.style.setProperty("--additional-voting-clearance", `${required}px`);
+            const pageBottom = page.getBoundingClientRect().bottom + scrollY;
+            const menuBottom = menu.getBoundingClientRect().bottom + scrollY;
+            page.style.setProperty(
+                "--additional-voting-clearance",
+                `${Math.max(0, Math.ceil(menuBottom + 40 - pageBottom))}px`);
         });
     };
 
@@ -43,6 +49,11 @@
         const allCheckbox = select.querySelector("[data-select-all]");
         const options = [...select.querySelectorAll("[data-option]")];
         const groups = [...select.querySelectorAll("[data-selection-group]")];
+        const initiallyAll = allInput.value === "true";
+
+        if (initiallyAll) {
+            options.forEach(option => { option.checked = true; });
+        }
 
         const syncGroups = () => groups.forEach(group => {
             const checkbox = group.querySelector("[data-group-checkbox]");
@@ -53,12 +64,24 @@
             checkbox.indeterminate = count > 0 && count < members.length;
         });
 
+        const syncAllState = () => {
+            if (options.length === 0) {
+                allCheckbox.indeterminate = false;
+                return;
+            }
+            const selectedCount = options.filter(option => option.checked).length;
+            allCheckbox.checked = selectedCount === options.length;
+            allCheckbox.indeterminate = selectedCount > 0 && selectedCount < options.length;
+        };
+
         const render = () => {
-            const isAll = allCheckbox.checked;
+            syncGroups();
+            syncAllState();
+            const isAll = allCheckbox.checked && !allCheckbox.indeterminate;
             allInput.value = String(isAll);
-            options.forEach(option => { option.disabled = isAll; });
             hidden.replaceChildren();
             selected.replaceChildren();
+
             if (isAll) {
                 selected.append(createToken(allLabel, "all", "all"));
             } else {
@@ -66,56 +89,117 @@
                 const represented = new Set();
                 groups.forEach(group => {
                     const members = [...group.querySelectorAll("[data-option]")];
-                    if (members.length > 0 && members.every(item => item.checked) && group.querySelector("[data-group-checkbox]")) {
+                    if (members.length > 0 &&
+                        members.every(item => item.checked) &&
+                        group.querySelector("[data-group-checkbox]")) {
                         selected.append(createToken(group.dataset.groupName, group.dataset.groupKey, "group"));
                         members.forEach(item => represented.add(item.value));
                     }
                 });
-                selectedOptions.filter(option => !represented.has(option.value)).forEach(option =>
-                    selected.append(createToken(option.dataset.optionName, option.value, "option")));
+                selectedOptions
+                    .filter(option => !represented.has(option.value))
+                    .forEach(option => selected.append(
+                        createToken(option.dataset.optionName, option.value, "option")));
                 selectedOptions.forEach(option => {
-                    const input = document.createElement("input"); input.type = "hidden"; input.name = inputName; input.value = option.value; hidden.append(input);
+                    const input = document.createElement("input");
+                    input.type = "hidden";
+                    input.name = inputName;
+                    input.value = option.value;
+                    hidden.append(input);
                 });
                 if (selectedOptions.length === 0) {
-                    const text = document.createElement("span"); text.className = "add-play-select-placeholder"; text.textContent = placeholder; selected.append(text);
+                    const text = document.createElement("span");
+                    text.className = "add-play-select-placeholder";
+                    text.textContent = placeholder;
+                    selected.append(text);
                 }
             }
-            syncGroups(); syncClearance();
+            syncClearance();
         };
 
         trigger.addEventListener("click", event => {
             if (event.target.closest("[data-remove-value]")) return;
-            const open = menu.hidden; closeAll(select); menu.hidden = !open;
-            trigger.setAttribute("aria-expanded", String(open)); select.classList.toggle("is-open", open); syncClearance();
+            const open = menu.hidden;
+            closeAll(select);
+            menu.hidden = !open;
+            trigger.setAttribute("aria-expanded", String(open));
+            select.classList.toggle("is-open", open);
+            syncClearance();
         });
-        trigger.addEventListener("keydown", event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); trigger.click(); } });
-        allCheckbox.addEventListener("change", () => { if (allCheckbox.checked) options.forEach(option => { option.checked = false; }); render(); });
-        menu.addEventListener("change", event => {
-            const group = event.target.closest("[data-group-checkbox]");
-            if (group) group.closest("[data-selection-group]").querySelectorAll("[data-option]").forEach(option => { option.checked = group.checked; });
-            if (event.target.matches("[data-option], [data-group-checkbox]")) allCheckbox.checked = false;
+        trigger.addEventListener("keydown", event => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            trigger.click();
+        });
+
+        allCheckbox.addEventListener("change", () => {
+            const selectAll = allCheckbox.checked;
+            allCheckbox.indeterminate = false;
+            options.forEach(option => { option.checked = selectAll; });
             render();
         });
+
+        menu.addEventListener("change", event => {
+            const groupCheckbox = event.target.closest("[data-group-checkbox]");
+            if (groupCheckbox) {
+                groupCheckbox.closest("[data-selection-group]")
+                    .querySelectorAll("[data-option]")
+                    .forEach(option => { option.checked = groupCheckbox.checked; });
+            }
+            render();
+        });
+
         menu.addEventListener("click", event => {
             const toggle = event.target.closest("[data-group-toggle]");
             if (!toggle) return;
             const members = toggle.closest("[data-selection-group]").querySelector("[data-group-members]");
-            const open = members.hidden; members.hidden = !open; toggle.setAttribute("aria-expanded", String(open)); toggle.classList.toggle("is-open", open); syncClearance();
+            const open = members.hidden;
+            members.hidden = !open;
+            toggle.setAttribute("aria-expanded", String(open));
+            toggle.classList.toggle("is-open", open);
+            syncClearance();
         });
+
         selected.addEventListener("click", event => {
-            const token = event.target.closest("[data-remove-value]"); if (!token) return; event.stopPropagation();
-            if (token.dataset.removeType === "all") allCheckbox.checked = false;
-            else if (token.dataset.removeType === "group") select.querySelector(`[data-selection-group][data-group-key="${CSS.escape(token.dataset.removeValue)}"]`)?.querySelectorAll("[data-option]").forEach(option => { option.checked = false; });
-            else { const option = options.find(item => item.value === token.dataset.removeValue); if (option) option.checked = false; }
+            const token = event.target.closest("[data-remove-value]");
+            if (!token) return;
+            event.stopPropagation();
+            if (token.dataset.removeType === "all") {
+                options.forEach(option => { option.checked = false; });
+            } else if (token.dataset.removeType === "group") {
+                select.querySelector(
+                    `[data-selection-group][data-group-key="${CSS.escape(token.dataset.removeValue)}"]`)
+                    ?.querySelectorAll("[data-option]")
+                    .forEach(option => { option.checked = false; });
+            } else {
+                const option = options.find(item => item.value === token.dataset.removeValue);
+                if (option) option.checked = false;
+            }
             render();
         });
+
         render();
     };
 
-    setupSelect(form.querySelector("[data-additional-jury-select]"), "SelectedJuryIds", "Tüm Jüriler", "Jürileri Seçin");
-    setupSelect(form.querySelector("[data-additional-play-select]"), "SelectedPlayIds", "Tüm Oyunlar", "Oyunları Seçin");
-    document.addEventListener("click", event => { if (!event.target.closest(".additional-voting-select")) { closeAll(); syncClearance(); } });
-    document.addEventListener("keydown", event => { if (event.key === "Escape") { closeAll(); syncClearance(); } });
+    setupSelect(
+        form.querySelector("[data-additional-jury-select]"),
+        "SelectedJuryIds", "Tüm Jüriler", "Jürileri Seçin");
+    setupSelect(
+        form.querySelector("[data-additional-play-select]"),
+        "SelectedPlayIds", "Tüm Oyunlar", "Oyunları Seçin");
+
+    document.addEventListener("click", event => {
+        if (!event.target.closest(".additional-voting-select")) {
+            closeAll();
+            syncClearance();
+        }
+    });
+    document.addEventListener("keydown", event => {
+        if (event.key === "Escape") {
+            closeAll();
+            syncClearance();
+        }
+    });
     window.addEventListener("resize", syncClearance);
 
     let confirmed = false;
@@ -127,12 +211,31 @@
         const end = form.querySelector('[name="EndDate"]')?.value;
         if (!start) errors.push("Ek oylama başlangıç tarihi zorunludur.");
         if (!end) errors.push("Ek oylama bitiş tarihi zorunludur.");
-        if (start && end && start >= end) errors.push("Ek oylama başlangıç tarihi bitiş tarihinden önce olmalıdır.");
+        if (start && end && start >= end) {
+            errors.push("Ek oylama başlangıç tarihi bitiş tarihinden önce olmalıdır.");
+        }
         const allJuries = form.querySelector('[name="AppliesToAllJuries"]')?.value === "true";
         const allPlays = form.querySelector('[name="AppliesToAllPlays"]')?.value === "true";
-        if (!allJuries && !form.querySelector('[name="SelectedJuryIds"]')) errors.push("En az bir jüri seçmelisiniz.");
-        if (!allPlays && !form.querySelector('[name="SelectedPlayIds"]')) errors.push("En az bir oyun seçmelisiniz.");
-        if (errors.length) { window.genericPopup?.fail(errors.join("\n")); return; }
-        window.genericPopup?.show({ type: "question", message: form.dataset.confirmMessage, confirmText: "Evet", cancelText: "İptal", showCancel: true, onConfirm: () => { confirmed = true; form.requestSubmit(event.submitter || undefined); } });
+        if (!allJuries && !form.querySelector('[name="SelectedJuryIds"]')) {
+            errors.push("En az bir jüri seçmelisiniz.");
+        }
+        if (!allPlays && !form.querySelector('[name="SelectedPlayIds"]')) {
+            errors.push("En az bir oyun seçmelisiniz.");
+        }
+        if (errors.length) {
+            window.genericPopup?.fail(errors.join("\n"));
+            return;
+        }
+        window.genericPopup?.show({
+            type: "question",
+            message: form.dataset.confirmMessage,
+            confirmText: "Evet",
+            cancelText: "İptal",
+            showCancel: true,
+            onConfirm: () => {
+                confirmed = true;
+                form.requestSubmit(event.submitter || undefined);
+            }
+        });
     });
 })();

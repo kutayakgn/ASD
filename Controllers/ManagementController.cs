@@ -2462,14 +2462,121 @@ public sealed partial class ManagementController(
     [HttpGet("diger-ayarlar")]
     public async Task<IActionResult> VotingSettings(CancellationToken cancellationToken)
     {
-        var seasonTask = seasonSettingsReportService.GetPageAsync(new SeasonSettingsTableQuery(), cancellationToken);
-        var additionalVotingTask = additionalVotingReportService.GetPageAsync(new AdditionalVotingTableQuery(), cancellationToken);
-        await Task.WhenAll(seasonTask, additionalVotingTask);
+        var seasonReport = await seasonSettingsReportService.GetPageAsync(
+            new SeasonSettingsTableQuery(), cancellationToken);
+        var additionalVotingReport = await additionalVotingReportService.GetPageAsync(
+            new AdditionalVotingTableQuery(), cancellationToken);
+        var playStatuses = await context.PlayStatuses.AsNoTracking()
+            .Where(status => status.IsPublished)
+            .OrderBy(status => status.StatusCode)
+            .Select(status => new PlayStatusSettingsRowViewModel
+            {
+                Id = status.Id,
+                StatusCode = status.StatusCode,
+                StatusName = status.StatusName,
+                StatusColor = status.StatusColor ?? "#6B7280"
+            })
+            .ToArrayAsync(cancellationToken);
         return View(new VotingSettingsViewModel
         {
-            SeasonTable = SeasonSettingsComplexTableFactory.Create(await seasonTask),
-            AdditionalVotingTable = AdditionalVotingComplexTableFactory.Create(await additionalVotingTask)
+            SeasonTable = SeasonSettingsComplexTableFactory.Create(seasonReport),
+            AdditionalVotingTable = AdditionalVotingComplexTableFactory.Create(additionalVotingReport),
+            PlayStatusTable = PlayStatusSettingsComplexTableFactory.Create(playStatuses)
         });
+    }
+
+    [HttpGet("diger-ayarlar/oyun-statuler/{id:guid}")]
+    public async Task<IActionResult> PlayStatusDetails(Guid id, CancellationToken cancellationToken)
+    {
+        var model = await context.PlayStatuses.AsNoTracking()
+            .Where(status => status.Id == id && status.IsPublished)
+            .Select(status => new PlayStatusDetailsViewModel
+            {
+                Id = status.Id,
+                StatusCode = status.StatusCode,
+                StatusName = status.StatusName,
+                StatusColor = status.StatusColor ?? "#6B7280"
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+
+        return model is null ? NotFound() : View(model);
+    }
+
+    [HttpGet("diger-ayarlar/oyun-statuler/{id:guid}/duzenle")]
+    public async Task<IActionResult> EditPlayStatus(Guid id, CancellationToken cancellationToken)
+    {
+        var model = await context.PlayStatuses.AsNoTracking()
+            .Where(status => status.Id == id && status.IsPublished)
+            .Select(status => new EditPlayStatusViewModel
+            {
+                Id = status.Id,
+                StatusCode = status.StatusCode,
+                StatusName = status.StatusName,
+                StatusColor = status.StatusColor ?? "#6B7280"
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+
+        return model is null ? NotFound() : View(model);
+    }
+
+    [AdminMutationAudit]
+    [HttpPost("diger-ayarlar/oyun-statuler/{id:guid}/duzenle")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EditPlayStatus(
+        Guid id,
+        EditPlayStatusViewModel model,
+        CancellationToken cancellationToken)
+    {
+        if (model.Id != id) return BadRequest();
+
+        var status = await context.PlayStatuses.SingleOrDefaultAsync(
+            item => item.Id == id && item.IsPublished,
+            cancellationToken);
+        if (status is null) return NotFound();
+
+        model.StatusCode = status.StatusCode;
+        model.StatusName = status.StatusName;
+        model.StatusColor = model.StatusColor?.Trim() ?? string.Empty;
+        if (!ModelState.IsValid)
+        {
+            SetPlayStatusValidationPopup();
+            return View(model);
+        }
+
+        if (string.Equals(status.StatusColor, model.StatusColor, StringComparison.OrdinalIgnoreCase))
+        {
+            TempData["GenericPopup.Type"] = "fail";
+            TempData["GenericPopup.Message"] = "Herhangi bir değişiklik yapmadınız.";
+            return View(model);
+        }
+
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId))
+        {
+            return Challenge();
+        }
+
+        status.StatusColor = model.StatusColor.ToUpperInvariant();
+        status.UpdatedAt = TurkeyTime.Now;
+        status.UpdatedBy = currentUserId;
+        await context.SaveChangesAsync(cancellationToken);
+
+        TempData["GenericPopup.Type"] = "success";
+        TempData["GenericPopup.Message"] = "Oyun statüsü rengi başarıyla güncellendi.";
+        TempData["GenericPopup.RedirectUrl"] = Url.Action(nameof(PlayStatusDetails), new { id });
+        return RedirectToAction(nameof(EditPlayStatus), new { id });
+    }
+
+    private void SetPlayStatusValidationPopup()
+    {
+        var message = string.Join("\n", ModelState.Values
+            .SelectMany(value => value.Errors)
+            .Select(error => error.ErrorMessage)
+            .Where(error => !string.IsNullOrWhiteSpace(error))
+            .Distinct());
+        TempData["GenericPopup.Type"] = "fail";
+        TempData["GenericPopup.Message"] = string.IsNullOrWhiteSpace(message)
+            ? "Renk kodunu kontrol ediniz."
+            : message;
     }
 
     [HttpPost("diger-ayarlar/sezonlar/tablo")]
@@ -2775,10 +2882,9 @@ public sealed partial class ManagementController(
             .SingleOrDefaultAsync(cancellationToken);
         if (record is null) return NotFound();
 
-        var juryNames = record.AppliesToAllJuries ? [] : await context.AdditionalVotingJuries.AsNoTracking()
-            .Where(link => link.AdditionalVotingId == id && link.IsPublished && link.IsActive)
-            .OrderBy(link => link.Jury.FirstName).ThenBy(link => link.Jury.LastName)
-            .Select(link => (link.Jury.FirstName + " " + link.Jury.LastName).Trim()).ToArrayAsync(cancellationToken);
+        var juryNames = record.AppliesToAllJuries
+            ? []
+            : await GetAdditionalVotingJuryLabelsAsync(id, cancellationToken);
         var playNames = record.AppliesToAllPlays ? [] : await context.AdditionalVotingPlays.AsNoTracking()
             .Where(link => link.AdditionalVotingId == id && link.IsPublished && link.IsActive)
             .OrderBy(link => link.Play.PlayName).Select(link => link.Play.PlayName).ToArrayAsync(cancellationToken);
@@ -2937,6 +3043,53 @@ public sealed partial class ManagementController(
         }));
     }
 
+    private async Task<IReadOnlyList<string>> GetAdditionalVotingJuryLabelsAsync(
+        Guid additionalVotingId,
+        CancellationToken cancellationToken)
+    {
+        var selectedJuries = await context.AdditionalVotingJuries.AsNoTracking()
+            .Where(link => link.AdditionalVotingId == additionalVotingId && link.IsPublished && link.IsActive)
+            .Select(link => new
+            {
+                link.JuryId,
+                link.Jury.GroupCode,
+                FullName = (link.Jury.FirstName + " " + link.Jury.LastName).Trim()
+            })
+            .ToArrayAsync(cancellationToken);
+
+        var groupCodes = selectedJuries
+            .Where(jury => jury.GroupCode.HasValue)
+            .Select(jury => jury.GroupCode!.Value)
+            .Distinct()
+            .ToArray();
+        if (groupCodes.Length == 0)
+        {
+            return selectedJuries.OrderBy(jury => jury.FullName).Select(jury => jury.FullName).ToArray();
+        }
+
+        var eligibleGroupMembers = await context.Users.AsNoTracking()
+            .Where(user => user.IsPublished && user.IsActive && user.RoleCode == 2 &&
+                user.GroupCode.HasValue && groupCodes.Contains(user.GroupCode.Value))
+            .Select(user => new { user.Id, GroupCode = user.GroupCode!.Value })
+            .ToArrayAsync(cancellationToken);
+        var groupNames = await context.Groups.AsNoTracking()
+            .Where(group => group.IsPublished && groupCodes.Contains(group.Code))
+            .ToDictionaryAsync(group => group.Code, group => group.GroupName, cancellationToken);
+        var selectedIds = selectedJuries.Select(jury => jury.JuryId).ToHashSet();
+        var completeGroupCodes = eligibleGroupMembers
+            .GroupBy(member => member.GroupCode)
+            .Where(group => group.Any() && group.All(member => selectedIds.Contains(member.Id)) && groupNames.ContainsKey(group.Key))
+            .Select(group => group.Key)
+            .ToHashSet();
+
+        return completeGroupCodes
+            .Select(code => groupNames[code])
+            .Concat(selectedJuries
+                .Where(jury => !jury.GroupCode.HasValue || !completeGroupCodes.Contains(jury.GroupCode.Value))
+                .Select(jury => jury.FullName))
+            .OrderBy(label => label, StringComparer.Create(new System.Globalization.CultureInfo("tr-TR"), true))
+            .ToArray();
+    }
     private async Task<IReadOnlyList<string>> GetAdditionalVotingUsageNamesAsync(
         Guid id, AdditionalVotingUsageType usageType, CancellationToken cancellationToken) =>
         await context.AdditionalVotingUsages.AsNoTracking()

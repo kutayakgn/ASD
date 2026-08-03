@@ -65,6 +65,17 @@
     justify-content: flex-end;
 }
 
+#play-status-settings-table .complex-table-heading {
+    display: flex;
+    min-height: 84px;
+    align-items: center;
+    padding: 32px 16px 16px;
+}
+
+#play-status-settings-table .complex-table-heading-tools {
+    display: none;
+}
+
 #additional-voting-settings-table td,
 #additional-voting-settings-table th {
     white-space: nowrap;
@@ -152,4 +163,121 @@
 .additional-voting-all-option input:focus-visible + .add-play-check-mark {
     outline: 2px solid #918150;
     outline-offset: 2px;
+}
+
+.additional-voting-all-option input:indeterminate + .add-play-check-mark {
+    border-color: #171717;
+    background: #171717;
+}
+
+.additional-voting-all-option input:indeterminate + .add-play-check-mark::after {
+    position: absolute;
+    top: 8px;
+    left: 4px;
+    width: 11px;
+    height: 2px;
+    background: #fff;
+    content: "";
+}
+
+.settings-accordion {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-top:24px;
+}
+
+.settings-accordion-item {
+    border: 1px solid #e3dfd3;
+    background: #fff;
+}
+
+.settings-accordion-heading {
+    margin: 0;
+}
+
+.settings-accordion-trigger {
+    display: flex;
+    width: 100%;
+    min-height: 60px;
+    padding: 14px 16px;
+    align-items: center;
+    justify-content: space-between;
+    border: 0;
+    background: #f5f3ee;
+    color: #171717;
+    font: 600 20px/28px Outfit;
+    text-align: left;
+}
+
+.settings-accordion-trigger:focus-visible {
+    outline: 2px solid #918150;
+    outline-offset: -2px;
+}
+
+.settings-accordion-trigger img {
+    width: 16px;
+    height: 16px;
+    transition: transform .15s ease-in-out;
+}
+
+.settings-accordion-item.is-open .settings-accordion-trigger img {
+    transform: rotate(180deg);
+}
+
+.settings-accordion-content {
+    height: 0;
+    overflow: hidden;
+    transition: height .32s ease-in-out;
+}
+
+.settings-accordion-content[hidden] {
+    display: none;
+}
+
+.settings-accordion-content-inner {
+    padding: 0px 0px 32px 0px;
+}
+
+.play-status-color-value,
+.play-status-detail-color {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.play-status-color-dot,
+.play-status-detail-color > span {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 14px;
+    border: 1px solid #bdbdbd;
+    border-radius: 50%;
+}
+
+.play-status-form-page,
+.play-status-details-page {
+    font-family: Outfit;
+}
+
+.play-status-form-page .add-jury-actions {
+    margin-top: 32px;
+}
+
+@media (max-width: 760px) {
+    .settings-accordion-content-inner {
+        padding: 12px;
+    }
+
+    .settings-accordion-trigger {
+        min-height: 54px;
+        font-size: 18px;
+        line-height: 24px;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .settings-accordion-content,
+    .settings-accordion-trigger img {
+        transition-duration: 0s;
+    }
 }

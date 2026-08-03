@@ -1,0 +1,39 @@
+@model YKBAfife.Models.ViewModels.EditPlayStatusViewModel
+@{
+    ViewData["Title"] = "Oyun Statüsünü Düzenle";
+}
+
+<section class="play-details-page add-jury-page play-status-form-page" aria-labelledby="edit-play-status-title">
+    <a asp-action="PlayStatusDetails" asp-route-id="@Model.Id" class="play-details-back">
+        <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
+        <span>Oyun Statüsü Detayına Dön</span>
+    </a>
+    <header class="play-details-toolbar"><h1 id="edit-play-status-title">Oyun Statüsünü Düzenle</h1></header>
+    <form asp-action="EditPlayStatus" asp-route-id="@Model.Id" method="post" class="add-jury-form" novalidate data-play-status-form data-confirm-message="Oyun statüsü rengini güncellemek istediğinize emin misiniz?">
+        @Html.AntiForgeryToken()
+        <input asp-for="Id" type="hidden" />
+        <div asp-validation-summary="ModelOnly" class="add-jury-validation-summary" role="alert"></div>
+        <div class="season-form-grid">
+            <div class="add-jury-field">
+                <label asp-for="StatusCode">Statü Kodu</label>
+                <input asp-for="StatusCode" disabled />
+            </div>
+            <div class="add-jury-field">
+                <label asp-for="StatusName">Statü Adı</label>
+                <input asp-for="StatusName" disabled />
+            </div>
+            <div class="add-jury-field">
+                <label asp-for="StatusColor">Renk Kodu</label>
+                <input asp-for="StatusColor" autocomplete="off" data-initial-value="@Model.StatusColor" placeholder="#27AE60" />
+            </div>
+        </div>
+        <div class="add-jury-actions">
+            <a asp-action="PlayStatusDetails" asp-route-id="@Model.Id" class="add-jury-cancel">İptal</a>
+            <button type="submit" class="add-jury-submit">Kaydet</button>
+        </div>
+    </form>
+</section>
+
+@section Scripts {
+    <script src="~/js/play-status-form.js" asp-append-version="true"></script>
+}
