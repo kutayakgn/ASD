@@ -1,0 +1,13 @@
+@model YKBAfife.Models.ViewModels.AdditionalVotingFormViewModel
+@{ ViewData["Title"] = "Ek Oylama Hakkını Düzenle"; }
+<section class="play-details-page add-jury-page additional-voting-form-page" aria-labelledby="additional-voting-title">
+    <a asp-action="AdditionalVotingDetails" asp-route-id="@Model.Id" class="play-details-back"><img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" /><span>Ek Oylama Detayına Dön</span></a>
+    <header class="play-details-toolbar"><h1 id="additional-voting-title">Ek Oylama Hakkını Düzenle</h1></header>
+    <form asp-action="EditAdditionalVoting" asp-route-id="@Model.Id" method="post" class="add-jury-form" novalidate data-additional-voting-form data-confirm-message="Ek oylama hakkını güncellemek istediğinize emin misiniz?">
+        @Html.AntiForgeryToken()<input asp-for="Id" type="hidden" />
+        <div asp-validation-summary="ModelOnly" class="add-jury-validation-summary" role="alert"></div>
+        <partial name="_AdditionalVotingFormFields" model="Model" />
+        <div class="add-jury-actions"><a asp-action="AdditionalVotingDetails" asp-route-id="@Model.Id" class="add-jury-cancel">İptal</a><button type="submit" class="add-jury-submit">Kaydet</button></div>
+    </form>
+</section>
+@section Scripts { <script src="~/js/date-picker.js" asp-append-version="true"></script><script src="~/js/additional-voting-form.js" asp-append-version="true"></script> }

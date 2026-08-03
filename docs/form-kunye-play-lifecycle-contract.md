@@ -9,11 +9,12 @@ assignments, blacklists, rankings, or their triggers.
 
 - `Form.Id` is a GUID. Legacy integer IDs are converted deterministically to
   `f0000000-0000-0000-0000-{legacy id padded to 12 digits}`.
-- `Form.SeasonId` is a GUID foreign key to `Seasons.Id` with `ON DELETE NO ACTION`.
-- `Form.SeasonId` is database-managed from `Form.CreatedDate`; callers may omit it.
+- `Form.SeasonId` is a nullable GUID foreign key to `Seasons.Id` with `ON DELETE NO ACTION`.
+- `Form.SeasonId` is database-managed from `Form.CreatedDate`; callers must not choose it manually and may omit it.
 - If seasons overlap, the matching season with the earliest end date is selected,
   then the latest start date and GUID are deterministic tie breakers.
-- A CreatedDate outside every published season is rejected.
+- Season insert, date-range update, and soft delete recalculate all Form season assignments. A deleted season is never retained in `Form.SeasonId`; each affected Form is reassigned to another matching published season or set to `NULL`.
+- A Form whose `CreatedDate` is null or outside every published season remains valid with `SeasonId = NULL`.
 - Legacy `Active` is renamed to the domain flag `IsActive`.
 - Legacy `Deleted` is removed. `IsPublished` is the only soft-delete flag.
 - `ApplicationNumber` is unique only while `IsPublished = 1`.
@@ -121,13 +122,15 @@ Run in this order:
 1. `sql/migrate-forms-to-kunye-play-lifecycle.sql`
 2. `sql/create-seasons-and-statistics.sql`
 3. `sql/create-rankings-projection.sql`
-4. `sql/create-admin-audit-logging.sql`
-5. `sql/test-form-kunye-play-lifecycle.sql`
+4. `sql/sync-form-season-assignments.sql`
+5. `sql/create-admin-audit-logging.sql`
+6. `sql/test-form-kunye-play-lifecycle.sql`
+7. `sql/test-form-season-assignments.sql`
 
 The other Kunye application must use GUID Form IDs, stop reading/writing `Active`
 and `Deleted`, use `IsActive` and `IsPublished`, and include `Plays.IsActive = 1`
 in direct SQL play/voting/ticket lookups. Normal inserts may omit SeasonId because
-the database derives it from CreatedDate.
+the database derives it from CreatedDate and leaves it null when no published season matches.
 
 ## Verified scenarios
 
@@ -143,8 +146,7 @@ The rollback test script verifies these outcomes:
 6. `IsActive = 1` restores exact previous states and refreshes Rankings.
 7. Form DELETE remains a physical row and executes the same lifecycle.
 8. An initially inactive Form creates no play until activated.
-9. A CreatedDate outside published seasons is rejected without leaving a row.
+9. A CreatedDate outside published seasons is accepted with `SeasonId = NULL`.
 10. A published child insert for an inactive Form play is rejected by the database.
 
-All ten scenarios passed against the local AfifeAdmin database and the test left
-zero persistent Form or Play rows.
+The existing lifecycle test remains rollback-only. Run it again after the season-assignment migration when validating a target database.

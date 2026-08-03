@@ -12,6 +12,10 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
     public DbSet<AdminLog> AdminLogs => Set<AdminLog>();
     public DbSet<Play> Plays => Set<Play>();
     public DbSet<Season> Seasons => Set<Season>();
+    public DbSet<AdditionalVoting> AdditionalVotings => Set<AdditionalVoting>();
+    public DbSet<AdditionalVotingJury> AdditionalVotingJuries => Set<AdditionalVotingJury>();
+    public DbSet<AdditionalVotingPlay> AdditionalVotingPlays => Set<AdditionalVotingPlay>();
+    public DbSet<AdditionalVotingUsage> AdditionalVotingUsages => Set<AdditionalVotingUsage>();
     public DbSet<Ranking> Rankings => Set<Ranking>();
     public DbSet<PlayAwardCategory> PlayAwardCategories => Set<PlayAwardCategory>();
     public DbSet<JuryVote> JuryVotes => Set<JuryVote>();
@@ -97,6 +101,44 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
             entity.HasIndex(season => new { season.SeasonStartDate, season.SeasonEndDate })
                 .IsUnique()
                 .HasFilter("[IsPublished] = 1");
+        });
+        modelBuilder.Entity<AdditionalVoting>(entity =>
+        {
+            entity.ToTable("AdditionalVotings", "dbo", table =>
+                table.HasCheckConstraint("CK_AdditionalVotings_DateRange", "[StartDate] < [EndDate]"));
+            entity.HasMany(x => x.EligibleJuries).WithOne(x => x.AdditionalVoting)
+                .HasForeignKey(x => x.AdditionalVotingId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasMany(x => x.EligiblePlays).WithOne(x => x.AdditionalVoting)
+                .HasForeignKey(x => x.AdditionalVotingId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasMany(x => x.Usages).WithOne(x => x.AdditionalVoting)
+                .HasForeignKey(x => x.AdditionalVotingId).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<AdditionalVotingJury>(entity =>
+        {
+            entity.ToTable("AdditionalVotingJuries", "dbo");
+            entity.HasIndex(x => new { x.AdditionalVotingId, x.JuryId }).IsUnique()
+                .HasFilter("[IsPublished] = 1");
+            entity.HasOne(x => x.Jury).WithMany().HasForeignKey(x => x.JuryId)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<AdditionalVotingPlay>(entity =>
+        {
+            entity.ToTable("AdditionalVotingPlays", "dbo");
+            entity.HasIndex(x => new { x.AdditionalVotingId, x.PlayId }).IsUnique()
+                .HasFilter("[IsPublished] = 1");
+            entity.HasOne(x => x.Play).WithMany().HasForeignKey(x => x.PlayId)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<AdditionalVotingUsage>(entity =>
+        {
+            entity.ToTable("AdditionalVotingUsages", "dbo", table =>
+                table.HasCheckConstraint("CK_AdditionalVotingUsages_UsageType", "[UsageType] IN (0, 1)"));
+            entity.HasIndex(x => new { x.AdditionalVotingId, x.JuryId, x.PlayId })
+                .IsUnique().HasFilter("[IsPublished] = 1");
+            entity.HasOne(x => x.Jury).WithMany().HasForeignKey(x => x.JuryId)
+                .OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(x => x.Play).WithMany().HasForeignKey(x => x.PlayId)
+                .OnDelete(DeleteBehavior.NoAction);
         });
         modelBuilder.Entity<Ranking>(entity =>
         {

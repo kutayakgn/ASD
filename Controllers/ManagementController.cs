@@ -21,6 +21,7 @@ public sealed partial class ManagementController(
     IJuryReportService juryReportService,
     IArchiveComparisonReportService archiveComparisonReportService,
     ISeasonSettingsReportService seasonSettingsReportService,
+    IAdditionalVotingReportService additionalVotingReportService,
     ITicketSalesReportService ticketSalesReportService,
     IBlacklistReportService blacklistReportService,
     IApplicationReportService applicationReportService,
@@ -2461,10 +2462,13 @@ public sealed partial class ManagementController(
     [HttpGet("diger-ayarlar")]
     public async Task<IActionResult> VotingSettings(CancellationToken cancellationToken)
     {
-        var report = await seasonSettingsReportService.GetPageAsync(new SeasonSettingsTableQuery(), cancellationToken);
-        return View(new SeasonSettingsViewModel
+        var seasonTask = seasonSettingsReportService.GetPageAsync(new SeasonSettingsTableQuery(), cancellationToken);
+        var additionalVotingTask = additionalVotingReportService.GetPageAsync(new AdditionalVotingTableQuery(), cancellationToken);
+        await Task.WhenAll(seasonTask, additionalVotingTask);
+        return View(new VotingSettingsViewModel
         {
-            Table = SeasonSettingsComplexTableFactory.Create(report)
+            SeasonTable = SeasonSettingsComplexTableFactory.Create(await seasonTask),
+            AdditionalVotingTable = AdditionalVotingComplexTableFactory.Create(await additionalVotingTask)
         });
     }
 
@@ -2712,6 +2716,241 @@ public sealed partial class ManagementController(
             : message;
     }
 
+    [HttpPost("diger-ayarlar/ek-oylamalar/tablo")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AdditionalVotingTable(
+        [FromForm] AdditionalVotingTableQuery query,
+        CancellationToken cancellationToken)
+    {
+        var report = await additionalVotingReportService.GetPageAsync(query, cancellationToken);
+        return ViewComponent("ComplexTable", new { model = AdditionalVotingComplexTableFactory.Create(report) });
+    }
+
+    [HttpGet("diger-ayarlar/ek-oylama-ekle")]
+    public async Task<IActionResult> AddAdditionalVoting(CancellationToken cancellationToken)
+    {
+        var today = DateOnly.FromDateTime(TurkeyTime.Now);
+        var model = new AdditionalVotingFormViewModel { StartDate = today, EndDate = today.AddDays(1) };
+        await PopulateAdditionalVotingOptionsAsync(model, cancellationToken);
+        return View(model);
+    }
+
+    [AdminMutationAudit]
+    [HttpPost("diger-ayarlar/ek-oylama-ekle")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AddAdditionalVoting(AdditionalVotingFormViewModel model, CancellationToken cancellationToken)
+    {
+        var selection = await ValidateAdditionalVotingSelectionAsync(model, cancellationToken);
+        if (!ModelState.IsValid)
+        {
+            SetAdditionalVotingValidationPopup();
+            await PopulateAdditionalVotingOptionsAsync(model, cancellationToken);
+            return View(model);
+        }
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId)) return Challenge();
+
+        var now = TurkeyTime.Now;
+        var record = new AdditionalVoting
+        {
+            Id = Guid.NewGuid(), StartDate = model.StartDate!.Value, EndDate = model.EndDate!.Value,
+            AppliesToAllJuries = model.AppliesToAllJuries, AppliesToAllPlays = model.AppliesToAllPlays,
+            CreatedAt = now, CreatedBy = currentUserId, IsActive = true, IsPublished = true
+        };
+        context.AdditionalVotings.Add(record);
+        AddAdditionalVotingLinks(record.Id, selection.JuryIds, selection.PlayIds, currentUserId, now);
+        await context.SaveChangesAsync(cancellationToken);
+
+        TempData["GenericPopup.Type"] = "success";
+        TempData["GenericPopup.Message"] = "Ek oylama hakkı başarıyla oluşturuldu.";
+        TempData["GenericPopup.RedirectUrl"] = Url.Action(nameof(AdditionalVotingDetails), new { id = record.Id });
+        return RedirectToAction(nameof(AddAdditionalVoting));
+    }
+
+    [HttpGet("diger-ayarlar/ek-oylamalar/{id:guid}")]
+    public async Task<IActionResult> AdditionalVotingDetails(Guid id, CancellationToken cancellationToken)
+    {
+        var record = await context.AdditionalVotings.AsNoTracking()
+            .Where(item => item.Id == id && item.IsPublished)
+            .Select(item => new { item.Id, item.StartDate, item.EndDate, item.AppliesToAllJuries, item.AppliesToAllPlays })
+            .SingleOrDefaultAsync(cancellationToken);
+        if (record is null) return NotFound();
+
+        var juryNames = record.AppliesToAllJuries ? [] : await context.AdditionalVotingJuries.AsNoTracking()
+            .Where(link => link.AdditionalVotingId == id && link.IsPublished && link.IsActive)
+            .OrderBy(link => link.Jury.FirstName).ThenBy(link => link.Jury.LastName)
+            .Select(link => (link.Jury.FirstName + " " + link.Jury.LastName).Trim()).ToArrayAsync(cancellationToken);
+        var playNames = record.AppliesToAllPlays ? [] : await context.AdditionalVotingPlays.AsNoTracking()
+            .Where(link => link.AdditionalVotingId == id && link.IsPublished && link.IsActive)
+            .OrderBy(link => link.Play.PlayName).Select(link => link.Play.PlayName).ToArrayAsync(cancellationToken);
+        var firstVoteUsers = await GetAdditionalVotingUsageNamesAsync(id, AdditionalVotingUsageType.FirstVote, cancellationToken);
+        var updateUsers = await GetAdditionalVotingUsageNamesAsync(id, AdditionalVotingUsageType.VoteUpdate, cancellationToken);
+
+        return View(new AdditionalVotingDetailsViewModel
+        {
+            Id = record.Id, StartDate = record.StartDate, EndDate = record.EndDate,
+            AppliesToAllJuries = record.AppliesToAllJuries, AppliesToAllPlays = record.AppliesToAllPlays,
+            JuryNames = juryNames, PlayNames = playNames,
+            FirstVoteUserNames = firstVoteUsers, VoteUpdateUserNames = updateUsers
+        });
+    }
+
+    [HttpGet("diger-ayarlar/ek-oylamalar/{id:guid}/duzenle")]
+    public async Task<IActionResult> EditAdditionalVoting(Guid id, CancellationToken cancellationToken)
+    {
+        var model = await context.AdditionalVotings.AsNoTracking()
+            .Where(item => item.Id == id && item.IsPublished)
+            .Select(item => new AdditionalVotingFormViewModel
+            {
+                Id = item.Id, StartDate = item.StartDate, EndDate = item.EndDate,
+                AppliesToAllJuries = item.AppliesToAllJuries, AppliesToAllPlays = item.AppliesToAllPlays
+            }).SingleOrDefaultAsync(cancellationToken);
+        if (model is null) return NotFound();
+        model.SelectedJuryIds = await context.AdditionalVotingJuries.AsNoTracking()
+            .Where(link => link.AdditionalVotingId == id && link.IsPublished && link.IsActive).Select(link => link.JuryId).ToListAsync(cancellationToken);
+        model.SelectedPlayIds = await context.AdditionalVotingPlays.AsNoTracking()
+            .Where(link => link.AdditionalVotingId == id && link.IsPublished && link.IsActive).Select(link => link.PlayId).ToListAsync(cancellationToken);
+        await PopulateAdditionalVotingOptionsAsync(model, cancellationToken);
+        return View(model);
+    }
+
+    [AdminMutationAudit]
+    [HttpPost("diger-ayarlar/ek-oylamalar/{id:guid}/duzenle")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EditAdditionalVoting(Guid id, AdditionalVotingFormViewModel model, CancellationToken cancellationToken)
+    {
+        if (model.Id != id) return BadRequest();
+        var selection = await ValidateAdditionalVotingSelectionAsync(model, cancellationToken);
+        var record = await context.AdditionalVotings.SingleOrDefaultAsync(item => item.Id == id && item.IsPublished, cancellationToken);
+        if (record is null) return NotFound();
+        if (!ModelState.IsValid)
+        {
+            SetAdditionalVotingValidationPopup();
+            await PopulateAdditionalVotingOptionsAsync(model, cancellationToken);
+            return View(model);
+        }
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId)) return Challenge();
+
+        var currentJuries = await context.AdditionalVotingJuries.Where(link => link.AdditionalVotingId == id && link.IsPublished && link.IsActive)
+            .Select(link => link.JuryId).OrderBy(value => value).ToArrayAsync(cancellationToken);
+        var currentPlays = await context.AdditionalVotingPlays.Where(link => link.AdditionalVotingId == id && link.IsPublished && link.IsActive)
+            .Select(link => link.PlayId).OrderBy(value => value).ToArrayAsync(cancellationToken);
+        var hasChanges = record.StartDate != model.StartDate!.Value || record.EndDate != model.EndDate!.Value ||
+            record.AppliesToAllJuries != model.AppliesToAllJuries || record.AppliesToAllPlays != model.AppliesToAllPlays ||
+            !currentJuries.SequenceEqual(selection.JuryIds.OrderBy(value => value)) ||
+            !currentPlays.SequenceEqual(selection.PlayIds.OrderBy(value => value));
+        if (!hasChanges)
+        {
+            TempData["GenericPopup.Type"] = "fail";
+            TempData["GenericPopup.Message"] = "Herhangi bir değişiklik yapmadınız.";
+            await PopulateAdditionalVotingOptionsAsync(model, cancellationToken);
+            return View(model);
+        }
+
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+        var now = TurkeyTime.Now;
+        record.StartDate = model.StartDate!.Value; record.EndDate = model.EndDate!.Value;
+        record.AppliesToAllJuries = model.AppliesToAllJuries; record.AppliesToAllPlays = model.AppliesToAllPlays;
+        record.UpdatedAt = now; record.UpdatedBy = currentUserId;
+        await context.AdditionalVotingJuries.Where(link => link.AdditionalVotingId == id && link.IsPublished && link.IsActive)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(link => link.IsActive, false).SetProperty(link => link.IsPublished, false)
+                .SetProperty(link => link.UpdatedAt, now).SetProperty(link => link.UpdatedBy, currentUserId), cancellationToken);
+        await context.AdditionalVotingPlays.Where(link => link.AdditionalVotingId == id && link.IsPublished && link.IsActive)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(link => link.IsActive, false).SetProperty(link => link.IsPublished, false)
+                .SetProperty(link => link.UpdatedAt, now).SetProperty(link => link.UpdatedBy, currentUserId), cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
+        AddAdditionalVotingLinks(id, selection.JuryIds, selection.PlayIds, currentUserId, now);
+        await context.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+
+        TempData["GenericPopup.Type"] = "success";
+        TempData["GenericPopup.Message"] = "Ek oylama hakkı başarıyla güncellendi.";
+        TempData["GenericPopup.RedirectUrl"] = Url.Action(nameof(AdditionalVotingDetails), new { id });
+        return RedirectToAction(nameof(EditAdditionalVoting), new { id });
+    }
+
+    [AdminMutationAudit]
+    [HttpPost("diger-ayarlar/ek-oylamalar/{id:guid}/sil")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteAdditionalVoting(Guid id, CancellationToken cancellationToken)
+    {
+        var record = await context.AdditionalVotings.SingleOrDefaultAsync(item => item.Id == id && item.IsPublished, cancellationToken);
+        if (record is null) return NotFound();
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId)) return Challenge();
+        var now = TurkeyTime.Now;
+        record.IsActive = false; record.IsPublished = false; record.UpdatedAt = now; record.UpdatedBy = currentUserId;
+        await context.AdditionalVotingJuries.Where(link => link.AdditionalVotingId == id && link.IsPublished && link.IsActive)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(link => link.IsActive, false).SetProperty(link => link.IsPublished, false).SetProperty(link => link.UpdatedAt, now).SetProperty(link => link.UpdatedBy, currentUserId), cancellationToken);
+        await context.AdditionalVotingPlays.Where(link => link.AdditionalVotingId == id && link.IsPublished && link.IsActive)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(link => link.IsActive, false).SetProperty(link => link.IsPublished, false).SetProperty(link => link.UpdatedAt, now).SetProperty(link => link.UpdatedBy, currentUserId), cancellationToken);
+        await context.AdditionalVotingUsages.Where(usage => usage.AdditionalVotingId == id && usage.IsPublished)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(usage => usage.IsActive, false).SetProperty(usage => usage.IsPublished, false).SetProperty(usage => usage.UpdatedAt, now).SetProperty(usage => usage.UpdatedBy, currentUserId), cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
+        TempData["GenericPopup.Type"] = "success";
+        TempData["GenericPopup.Message"] = "Ek oylama hakkı başarıyla silindi.";
+        return RedirectToAction(nameof(VotingSettings));
+    }
+
+    private async Task PopulateAdditionalVotingOptionsAsync(AdditionalVotingFormViewModel model, CancellationToken cancellationToken)
+    {
+        var holder = new AddPlayViewModel();
+        await PopulateAddPlayOptionsAsync(holder, cancellationToken, includeActiveStatus: true);
+        model.JuryGroups = holder.JuryGroups;
+        model.PlayOptions = await context.Plays.AsNoTracking()
+            .Where(play => play.IsPublished && play.IsActive && play.StatusCode == 1)
+            .OrderBy(play => play.PlayName).ThenBy(play => play.TheaterName)
+            .Select(play => new AdditionalVotingPlayOptionViewModel
+            {
+                Id = play.Id,
+                Name = play.PlayName + " / " + play.TheaterName
+            }).ToArrayAsync(cancellationToken);
+    }
+
+    private async Task<(Guid[] JuryIds, Guid[] PlayIds)> ValidateAdditionalVotingSelectionAsync(
+        AdditionalVotingFormViewModel model, CancellationToken cancellationToken)
+    {
+        var juryIds = model.AppliesToAllJuries ? [] : model.SelectedJuryIds.Distinct().ToArray();
+        var playIds = model.AppliesToAllPlays ? [] : model.SelectedPlayIds.Distinct().ToArray();
+        if (!model.AppliesToAllJuries)
+        {
+            var validCount = await context.Users.CountAsync(user => juryIds.Contains(user.Id) && user.IsPublished && user.IsActive && user.RoleCode == 2, cancellationToken);
+            if (validCount != juryIds.Length) ModelState.AddModelError(nameof(model.SelectedJuryIds), "Seçilen jürilerden biri artık uygun değil.");
+        }
+        if (!model.AppliesToAllPlays)
+        {
+            var validCount = await context.Plays.CountAsync(play => playIds.Contains(play.Id) && play.IsPublished && play.IsActive && play.StatusCode == 1, cancellationToken);
+            if (validCount != playIds.Length) ModelState.AddModelError(nameof(model.SelectedPlayIds), "Seçilen oyunlardan biri artık uygun değil.");
+        }
+        return (juryIds, playIds);
+    }
+
+    private void AddAdditionalVotingLinks(Guid id, IEnumerable<Guid> juryIds, IEnumerable<Guid> playIds, Guid userId, DateTime now)
+    {
+        context.AdditionalVotingJuries.AddRange(juryIds.Select(juryId => new AdditionalVotingJury
+        {
+            Id = Guid.NewGuid(), AdditionalVotingId = id, JuryId = juryId,
+            CreatedAt = now, CreatedBy = userId, IsActive = true, IsPublished = true
+        }));
+        context.AdditionalVotingPlays.AddRange(playIds.Select(playId => new AdditionalVotingPlay
+        {
+            Id = Guid.NewGuid(), AdditionalVotingId = id, PlayId = playId,
+            CreatedAt = now, CreatedBy = userId, IsActive = true, IsPublished = true
+        }));
+    }
+
+    private async Task<IReadOnlyList<string>> GetAdditionalVotingUsageNamesAsync(
+        Guid id, AdditionalVotingUsageType usageType, CancellationToken cancellationToken) =>
+        await context.AdditionalVotingUsages.AsNoTracking()
+            .Where(usage => usage.AdditionalVotingId == id && usage.IsPublished && usage.IsActive && usage.UsageType == usageType)
+            .Select(usage => new { usage.JuryId, Name = (usage.Jury.FirstName + " " + usage.Jury.LastName).Trim() })
+            .Distinct().OrderBy(item => item.Name).Select(item => item.Name).ToArrayAsync(cancellationToken);
+
+    private void SetAdditionalVotingValidationPopup()
+    {
+        var message = string.Join("\n", ModelState.Values.SelectMany(value => value.Errors)
+            .Select(error => error.ErrorMessage).Where(error => !string.IsNullOrWhiteSpace(error)).Distinct());
+        TempData["GenericPopup.Type"] = "fail";
+        TempData["GenericPopup.Message"] = string.IsNullOrWhiteSpace(message) ? "Ek oylama alanlarını kontrol ediniz." : message;
+    }
     [HttpGet("arsiv-karsilastirma")]
     public async Task<IActionResult> ArchiveComparison(CancellationToken cancellationToken)
     {

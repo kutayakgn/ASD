@@ -2,6 +2,7 @@ SET NOCOUNT ON;
 SET XACT_ABORT ON;
 
 IF OBJECT_ID(N'dbo.usp_SynchronizeFormsToPlays', N'P') IS NULL
+   OR OBJECT_ID(N'dbo.usp_ReassignFormSeasons', N'P') IS NULL
    OR COL_LENGTH(N'dbo.Form', N'IsActive') IS NULL
    OR COL_LENGTH(N'dbo.Plays', N'SourceFormId') IS NULL
    OR COL_LENGTH(N'dbo.Plays', N'IsActive') IS NULL
@@ -15,11 +16,21 @@ IF EXISTS
 (
     SELECT 1
     FROM dbo.Form AS formRecord
-    LEFT JOIN dbo.Seasons AS season ON season.Id = formRecord.SeasonId
-    WHERE season.Id IS NULL
+    OUTER APPLY
+    (
+        SELECT TOP (1) season.Id
+        FROM dbo.Seasons AS season
+        WHERE season.IsPublished = 1
+          AND formRecord.CreatedDate IS NOT NULL
+          AND CAST(formRecord.CreatedDate AS date) >= season.SeasonStartDate
+          AND CAST(formRecord.CreatedDate AS date) < season.SeasonEndDate
+        ORDER BY season.SeasonEndDate, season.SeasonStartDate DESC, season.Id
+    ) AS expectedSeason
+    WHERE formRecord.SeasonId <> expectedSeason.Id
+       OR (formRecord.SeasonId IS NULL AND expectedSeason.Id IS NOT NULL)
+       OR (formRecord.SeasonId IS NOT NULL AND expectedSeason.Id IS NULL)
 )
-    THROW 52501, N'FAIL: Sezonsuz Form kaydı bulundu.', 1;
-
+    THROW 52501, N'FAIL: Form.SeasonId değerleri CreatedDate ve yayınlanmış sezonlarla uyumlu değil.', 1;
 IF EXISTS
 (
     SELECT 1
@@ -47,7 +58,7 @@ IF EXISTS
 )
     THROW 52503, N'FAIL: Form kaynaklı oyunda sistem kategorisi 1001 bulunamadı.', 1;
 
-SELECT N'PASS' AS Result, N'Mevcut Form kayıtları sezon, oyun ve kategori 1001 ile eşleşiyor.' AS Scenario;
+SELECT N'PASS' AS Result, N'Mevcut Form kayıtlarının SeasonId değerleri normalize; aktif kayıtların oyun ve kategori 1001 ilişkileri mevcut.' AS Scenario;
 GO
 
 DECLARE @Results TABLE
@@ -386,9 +397,10 @@ BEGIN CATCH
 END CATCH;
 GO
 
-/* Invalid season dates must fail without leaving a Form row. */
-DECLARE @InvalidSeasonRejected bit = 0;
+/* A Form outside every published season is valid and remains unassigned. */
 BEGIN TRY
+    BEGIN TRANSACTION;
+
     INSERT INTO dbo.Form
     (
         Id, ApplicationNumber, CreatedDate, RepertoireName, TheatreName,
@@ -403,17 +415,25 @@ BEGIN TRY
         N'Test', N'Yapımcı', N'05550000004', N'sezonsuz@afife.test',
         N'Yönetmen', 1, 1
     );
+
+    IF NOT EXISTS
+    (
+        SELECT 1
+        FROM dbo.Form
+        WHERE Id = 'fa000000-0000-0000-0000-000000000003'
+          AND SeasonId IS NULL
+          AND IsPublished = 1
+    )
+        THROW 52518, N'FAIL: Sezon dışı Form kaydı SeasonId NULL olarak oluşturulmadı.', 1;
+
+    SELECT N'PASS' AS Result, N'Sezon dışındaki CreatedDate ile Form kaydedildi ve SeasonId NULL kaldı.' AS Scenario;
+    ROLLBACK TRANSACTION;
 END TRY
 BEGIN CATCH
-    IF ERROR_NUMBER() = 52405 SET @InvalidSeasonRejected = 1;
+    IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+    THROW;
 END CATCH;
-
-IF @InvalidSeasonRejected = 0
-    THROW 52518, N'FAIL: Sezon dışı CreatedDate reddedilmedi.', 1;
-
-SELECT N'PASS' AS Result, N'Sezon dışındaki CreatedDate ile Form insert reddedildi ve kayıt oluşmadı.' AS Scenario;
 GO
-
 /* A visible child cannot be added while the source Form is inactive. */
 DECLARE @InactiveWriteRejected bit = 0;
 DECLARE @GuardFormId uniqueidentifier = 'fa000000-0000-0000-0000-000000000004';

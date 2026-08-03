@@ -1,8 +1,9 @@
-@model YKBAfife.Models.ViewModels.SeasonSettingsViewModel
+@model YKBAfife.Models.ViewModels.VotingSettingsViewModel
 @{
     ViewData["Title"] = "Diğer Ayarlar";
 }
-
 <section class="season-settings-page" aria-label="Diğer Ayarlar">
-    @await Component.InvokeAsync("ComplexTable", new { model = Model.Table })
+    @await Component.InvokeAsync("ComplexTable", new { model = Model.SeasonTable })
+    <div class="settings-section-divider" aria-hidden="true"></div>
+    @await Component.InvokeAsync("ComplexTable", new { model = Model.AdditionalVotingTable })
 </section>

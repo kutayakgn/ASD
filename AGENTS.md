@@ -68,3 +68,4 @@
   `[AdminMutationAudit]`; read-only and export endpoints must not use it.
 - Award-category placeholder assets are resolved by the stable convention
   `wwwroot/images/awardCategoryPlaceholder/{CategoryCode}.svg`.
+- Read `docs/additional-voting-contract.md` before changing additional-voting grants, jury/play eligibility, vote creation/update exceptions, or usage tracking.

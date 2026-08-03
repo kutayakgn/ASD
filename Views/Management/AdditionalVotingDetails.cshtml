@@ -1,0 +1,25 @@
+@model YKBAfife.Models.ViewModels.AdditionalVotingDetailsViewModel
+@{ ViewData["Title"] = "Ek Oylama Detay"; }
+<section class="play-details-page additional-voting-details-page" aria-labelledby="additional-voting-details-title">
+    <a asp-action="VotingSettings" class="play-details-back"><img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" /><span>Diğer Ayarlar'a Dön</span></a>
+    <header class="play-details-toolbar">
+        <h1 id="additional-voting-details-title">Ek Oylama/Oy Düzenleme Hakkı</h1>
+        <div class="play-details-actions">
+            <form asp-action="DeleteAdditionalVoting" asp-route-id="@Model.Id" method="post" data-generic-confirm data-confirm-message="Ek oylama hakkını silmek istediğinize emin misiniz?" data-confirm-text="Evet" data-cancel-text="İptal">
+                @Html.AntiForgeryToken()<button type="submit" class="play-detail-action play-detail-action-secondary">Sil</button>
+            </form>
+            <a asp-action="EditAdditionalVoting" asp-route-id="@Model.Id" class="play-detail-action play-detail-action-primary">Düzenle</a>
+        </div>
+    </header>
+    <section class="season-detail-section" aria-labelledby="additional-voting-information-title">
+        <h2 id="additional-voting-information-title">Hak Bilgileri</h2>
+        <dl class="season-details-grid additional-voting-details-grid">
+            <div class="play-detail-field"><dt>Ek Oylama Başlangıç Süresi</dt><dd>@Model.StartDate.ToString("dd.MM.yyyy")</dd></div>
+            <div class="play-detail-field"><dt>Ek Oylama Bitiş Süresi</dt><dd>@Model.EndDate.ToString("dd.MM.yyyy")</dd></div>
+            <div class="play-detail-field"><dt>Oy Verebilecek Jüriler</dt><dd>@(Model.AppliesToAllJuries ? "Tüm Jüriler" : string.Join(", ", Model.JuryNames))</dd></div>
+            <div class="play-detail-field"><dt>Oy Verilebilecek Oyunlar</dt><dd>@(Model.AppliesToAllPlays ? "Tüm Oyunlar" : string.Join(", ", Model.PlayNames))</dd></div>
+            <div class="play-detail-field"><dt>İlk Defa Oy Kullananlar</dt><dd>@(Model.FirstVoteUserNames.Count == 0 ? "-" : string.Join(", ", Model.FirstVoteUserNames))</dd></div>
+            <div class="play-detail-field"><dt>Oyunu Güncelleyenler</dt><dd>@(Model.VoteUpdateUserNames.Count == 0 ? "-" : string.Join(", ", Model.VoteUpdateUserNames))</dd></div>
+        </dl>
+    </section>
+</section>

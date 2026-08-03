@@ -54,3 +54,102 @@
         flex: 1 1 160px;
     }
 }
+
+.settings-section-divider {
+    height: 1px;
+    margin: 40px 0;
+    background: #e3dfd3;
+}
+
+#additional-voting-settings-table .complex-table-heading-tools {
+    justify-content: flex-end;
+}
+
+#additional-voting-settings-table td,
+#additional-voting-settings-table th {
+    white-space: nowrap;
+}
+
+.additional-voting-form-page {
+    padding-bottom: var(--additional-voting-clearance, 0px);
+    transition: padding-bottom .12s ease;
+}
+
+.additional-voting-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 28px 32px;
+}
+
+.additional-voting-selection-field {
+    min-width: 0;
+}
+
+.additional-voting-select {
+    position: relative;
+}
+
+.additional-voting-menu {
+    z-index: 40;
+    max-height: 360px;
+    overflow-y: auto;
+}
+
+.additional-voting-all-option {
+    display: flex;
+    min-height: 44px;
+    padding: 10px 16px;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid #e3dfd3;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.additional-voting-all-option input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.additional-voting-all-option input:checked + .add-play-check-mark {
+    border-color: #171717;
+    background: #171717;
+}
+
+.additional-voting-flat-menu .add-play-check-option {
+    min-height: 44px;
+    padding: 10px 16px;
+}
+
+.additional-voting-details-grid dd {
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+    .additional-voting-form-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .settings-section-divider {
+        margin: 28px 0;
+    }
+}
+
+.additional-voting-all-option input:checked + .add-play-check-mark::after {
+    position: absolute;
+    top: 2px;
+    left: 6px;
+    width: 6px;
+    height: 11px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    content: "";
+    transform: rotate(45deg);
+}
+
+.additional-voting-all-option input:focus-visible + .add-play-check-mark {
+    outline: 2px solid #918150;
+    outline-offset: 2px;
+}

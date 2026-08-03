@@ -9,7 +9,7 @@ public class Form
     [Key]
     public Guid Id { get; set; }
     public string ApplicationNumber { get; set; } = null!;
-    public Guid SeasonId { get; set; }
+    public Guid? SeasonId { get; set; }
     public DateTime? CreatedDate { get; set; }
     public DateTime? UpdatedDate { get; set; }
     public string RepertoireName { get; set; } = null!;
@@ -35,6 +35,6 @@ public class Form
     public bool IsActive { get; set; } = true;
     public bool IsPublished { get; set; } = true;
 
-    public Season Season { get; set; } = null!;
+    public Season? Season { get; set; }
     public Play? Play { get; set; }
 }

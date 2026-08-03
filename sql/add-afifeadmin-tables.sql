@@ -56,7 +56,7 @@ BEGIN
     CREATE TABLE [dbo].[Form] (
         [Id] [uniqueidentifier] NOT NULL CONSTRAINT [DF_Form_Id] DEFAULT (NEWSEQUENTIALID()),
         [ApplicationNumber] [nvarchar](6) NOT NULL,
-        [SeasonId] [uniqueidentifier] NOT NULL CONSTRAINT [DF_Form_SeasonId] DEFAULT ('00000000-0000-0000-0000-000000000000'),
+        [SeasonId] [uniqueidentifier] NULL,
         [CreatedDate] [datetime] NULL,
         [UpdatedDate] [datetime] NULL,
         [RepertoireName] [nvarchar](500) NOT NULL,

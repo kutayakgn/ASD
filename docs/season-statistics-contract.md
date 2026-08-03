@@ -32,11 +32,12 @@ Season management is available under `/diger-ayarlar`. A season name is derived 
 - Voting start and end must remain inside the inclusive season boundaries, and
   voting start must be strictly earlier than voting end.
 - Season deletion is always a soft delete (`IsPublished = 0`).
+- Every season create, date-range update, or soft delete recalculates `Form.SeasonId` from `Form.CreatedDate`. Forms with no matching published season keep `SeasonId = NULL`; deleting a season therefore clears or reassigns all references to it.
 - `PlayCount`, `ActivePlayCount`, and `VoteCount` remain database-managed values;
   management forms must never accept or write these counters.
 
-Run `sql/enforce-season-management-date-rules.sql` on existing databases to align
-check constraints with these rules.
+Run `sql/enforce-season-management-date-rules.sql` and then
+`sql/sync-form-season-assignments.sql` on existing databases to align constraints and Form season assignments with these rules.
 ## Counters
 
 - `PlayCount`: published and active `Plays` whose `CreatedAt` is in the season interval.

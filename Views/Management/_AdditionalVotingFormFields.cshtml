@@ -1,0 +1,88 @@
+@model YKBAfife.Models.ViewModels.AdditionalVotingFormViewModel
+@{
+    var selectedJuries = Model.SelectedJuryIds.ToHashSet();
+    var selectedPlays = Model.SelectedPlayIds.ToHashSet();
+}
+<div class="additional-voting-form-grid">
+    <partial name="_DatePicker" model="@(new YKBAfife.Models.Components.DatePickerViewModel
+    {
+        Id = "additional-voting-start-date", InputName = nameof(Model.StartDate),
+        Label = "Ek Oylama Başlangıç Süresi", Value = Model.StartDate,
+        ValidationMessage = "Ek oylama başlangıç tarihi zorunludur."
+    })" />
+    <partial name="_DatePicker" model="@(new YKBAfife.Models.Components.DatePickerViewModel
+    {
+        Id = "additional-voting-end-date", InputName = nameof(Model.EndDate),
+        Label = "Ek Oylama Bitiş Süresi", Value = Model.EndDate,
+        ValidationMessage = "Ek oylama bitiş tarihi zorunludur."
+    })" />
+
+    <div class="add-jury-field additional-voting-selection-field">
+        <label id="additional-jury-label">Oy Verebilecek Jüriler</label>
+        <div class="add-play-jury-select additional-voting-select" data-additional-jury-select>
+            <div class="add-play-select-trigger" role="combobox" tabindex="0" aria-labelledby="additional-jury-label" aria-expanded="false" data-multi-trigger>
+                <div class="add-play-selected-values" data-multi-selected><span class="add-play-select-placeholder">Jürileri Seçin</span></div>
+                <img src="~/icons/angle-down.svg" alt="" aria-hidden="true" />
+            </div>
+            <input type="hidden" name="AppliesToAllJuries" value="@Model.AppliesToAllJuries.ToString().ToLowerInvariant()" data-all-value />
+            <div data-hidden-values></div>
+            <div class="add-play-jury-menu additional-voting-menu" data-multi-menu hidden>
+                <label class="additional-voting-all-option">
+                    <input type="checkbox" data-select-all checked="@(Model.AppliesToAllJuries ? "checked" : null)" />
+                    <span class="add-play-check-mark" aria-hidden="true"></span><span>Tüm Jüriler</span>
+                </label>
+                @foreach (var group in Model.JuryGroups)
+                {
+                    var groupSelected = group.CanSelectAll && group.Juries.Count > 0 && group.Juries.All(jury => selectedJuries.Contains(jury.Id));
+                    <section class="add-play-jury-group" data-selection-group data-group-key="@group.Key" data-group-name="@group.Name">
+                        <div class="add-play-jury-group-header">
+                            @if (group.CanSelectAll)
+                            {
+                                <label class="add-play-group-checkbox" aria-label="@($"{group.Name} grubunu seç")">
+                                    <input type="checkbox" data-group-checkbox checked="@(groupSelected ? "checked" : null)" /><span class="add-play-check-mark" aria-hidden="true"></span>
+                                </label>
+                            }
+                            <button type="button" class="add-play-group-toggle@(group.CanSelectAll ? string.Empty : " add-play-group-toggle-ungrouped")" aria-expanded="false" data-group-toggle>
+                                <span>@group.Name</span><img src="~/icons/angle-down.svg" alt="" aria-hidden="true" />
+                            </button>
+                        </div>
+                        <div class="add-play-jury-members" data-group-members hidden>
+                            @foreach (var jury in group.Juries)
+                            {
+                                <label class="add-play-check-option add-play-jury-option">
+                                    <input type="checkbox" value="@jury.Id" data-option data-option-name="@jury.FullName" checked="@(selectedJuries.Contains(jury.Id) ? "checked" : null)" />
+                                    <span class="add-play-check-mark" aria-hidden="true"></span><span>@jury.FullName</span>
+                                </label>
+                            }
+                        </div>
+                    </section>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="add-jury-field additional-voting-selection-field">
+        <label id="additional-play-label">Oy Verilebilecek Oyunlar</label>
+        <div class="add-play-jury-select additional-voting-select" data-additional-play-select>
+            <div class="add-play-select-trigger" role="combobox" tabindex="0" aria-labelledby="additional-play-label" aria-expanded="false" data-multi-trigger>
+                <div class="add-play-selected-values" data-multi-selected><span class="add-play-select-placeholder">Oyunları Seçin</span></div>
+                <img src="~/icons/angle-down.svg" alt="" aria-hidden="true" />
+            </div>
+            <input type="hidden" name="AppliesToAllPlays" value="@Model.AppliesToAllPlays.ToString().ToLowerInvariant()" data-all-value />
+            <div data-hidden-values></div>
+            <div class="add-play-jury-menu additional-voting-menu additional-voting-flat-menu" data-multi-menu hidden>
+                <label class="additional-voting-all-option">
+                    <input type="checkbox" data-select-all checked="@(Model.AppliesToAllPlays ? "checked" : null)" />
+                    <span class="add-play-check-mark" aria-hidden="true"></span><span>Tüm Oyunlar</span>
+                </label>
+                @foreach (var play in Model.PlayOptions)
+                {
+                    <label class="add-play-check-option add-play-jury-option">
+                        <input type="checkbox" value="@play.Id" data-option data-option-name="@play.Name" checked="@(selectedPlays.Contains(play.Id) ? "checked" : null)" />
+                        <span class="add-play-check-mark" aria-hidden="true"></span><span>@play.Name</span>
+                    </label>
+                }
+            </div>
+        </div>
+    </div>
+</div>
