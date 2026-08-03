@@ -26,15 +26,17 @@ IF EXISTS (SELECT PlayId, AwardCategoryCode, RoleCode, Candidate FROM dbo.PlayAw
     THROW 51019, 'Legacy upgrade blocked: duplicate published candidate identities exist.', 1;
 IF EXISTS (SELECT PlayId, AwardCategoryCode, RoleCode FROM dbo.PlayAwardCategories WHERE IsPublished = 1 AND IsCurrent = 1 GROUP BY PlayId, AwardCategoryCode, RoleCode HAVING COUNT(*) > 1)
     THROW 51020, 'Legacy upgrade blocked: multiple current candidates exist in one role slot.', 1;
-IF EXISTS (SELECT 1 FROM dbo.Plays WHERE IsPublished = 0)
-    THROW 51021, 'Legacy upgrade blocked: old Plays contains unpublished rows whose source provenance is unknown.', 1;
-
 /* Additive columns retain every legacy column and row. */
 IF COL_LENGTH(N'dbo.AwardCategories', N'MultiCandidate') IS NULL
     ALTER TABLE dbo.AwardCategories ADD MultiCandidate bit NOT NULL CONSTRAINT DF_AwardCategories_MultiCandidate DEFAULT (0) WITH VALUES;
 IF COL_LENGTH(N'dbo.AwardCategories', N'HasRoleAndPhoto') IS NULL
     ALTER TABLE dbo.AwardCategories ADD HasRoleAndPhoto bit NOT NULL CONSTRAINT DF_AwardCategories_HasRoleAndPhoto DEFAULT (0) WITH VALUES;
-EXEC(N'UPDATE dbo.AwardCategories SET HasRoleAndPhoto = MultiCandidate WHERE HasRoleAndPhoto <> MultiCandidate;');
+
+/* Backfill only the newly introduced behavior flags from immutable category codes. */
+UPDATE dbo.AwardCategories
+SET MultiCandidate = CASE WHEN CategoryCode IN (1003, 1004, 1005, 1006, 1012) THEN 1 ELSE 0 END,
+    HasRoleAndPhoto = CASE WHEN CategoryCode IN (1002, 1003, 1004, 1005, 1006, 1012) THEN 1 ELSE 0 END
+WHERE CategoryCode BETWEEN 1001 AND 1012;
 
 IF COL_LENGTH(N'dbo.Configs', N'IsPublished') IS NULL
     ALTER TABLE dbo.Configs ADD IsPublished bit NOT NULL CONSTRAINT DF_Configs_IsPublished DEFAULT (1) WITH VALUES;
@@ -76,13 +78,25 @@ BEGIN
     IF COL_LENGTH(N'dbo.Plays', N'FromKunye') IS NOT NULL
         EXEC(N'UPDATE dbo.Plays SET RecordType = CASE WHEN FromKunye = 1 THEN 0 ELSE 1 END;');
     ELSE
-        EXEC(N'UPDATE dbo.Plays SET RecordType = 0;');
+        EXEC(N'UPDATE dbo.Plays SET RecordType = CASE WHEN IsPublished = 0 THEN 1 ELSE 0 END;');
     EXEC(N'ALTER TABLE dbo.Plays ALTER COLUMN RecordType bit NOT NULL;');
 END;
 IF COL_LENGTH(N'dbo.Plays', N'SourceFormId') IS NULL
     ALTER TABLE dbo.Plays ADD SourceFormId uniqueidentifier NULL;
 IF COL_LENGTH(N'dbo.Plays', N'IsActive') IS NULL
     ALTER TABLE dbo.Plays ADD IsActive bit NOT NULL CONSTRAINT DF_Plays_IsActive DEFAULT (1) WITH VALUES;
+
+/*
+   Legacy unpublished plays without source metadata are retained as soft-deleted
+   Admin records. This is the only provenance compatible with an unpublished
+   play because Kunye records must remain published.
+*/
+UPDATE dbo.Plays
+SET JuriOylamaStatus = 0,
+    KunyeGirisStatus = 0,
+    StatusCode = CASE WHEN StatusCode = 1 THEN 2 ELSE StatusCode END,
+    IsActive = CASE WHEN IsPublished = 0 THEN 0 ELSE IsActive END
+WHERE RecordType = 1;
 
 ALTER TABLE dbo.Plays ALTER COLUMN TheaterName nvarchar(255) NOT NULL;
 ALTER TABLE dbo.Plays ALTER COLUMN Phone nvarchar(255) NULL;

@@ -99,6 +99,11 @@ internal static partial class DatabaseSchemaValidator
             missing.Add($"unexpected trigger {trigger}");
         }
 
+        if (missing.Count == 0)
+        {
+            await ValidateReferenceDataAsync(connection, missing, cancellationToken);
+        }
+
         if (missing.Count > 0)
         {
             throw new InvalidOperationException(
@@ -107,6 +112,77 @@ internal static partial class DatabaseSchemaValidator
         }
     }
 
+    private static async Task ValidateReferenceDataAsync(
+        SqlConnection connection,
+        ICollection<string> invalid,
+        CancellationToken cancellationToken)
+    {
+        const string sql = """
+            SELECT N'Role', RoleCode, RoleName, IsPublished, NULL, NULL
+            FROM dbo.Roles WHERE RoleCode IN (1, 2)
+            UNION ALL
+            SELECT N'AwardCategory', CategoryCode, CategoryName, IsPublished,
+                   MultiCandidate, CONVERT(nvarchar(50), HasRoleAndPhoto)
+            FROM dbo.AwardCategories WHERE CategoryCode BETWEEN 1001 AND 1012
+            UNION ALL
+            SELECT N'PlayStatus', StatusCode, StatusName, IsPublished,
+                   NULL, StatusColor
+            FROM dbo.PlayStatuses WHERE StatusCode BETWEEN 1 AND 6;
+            """;
+
+        var actual = new Dictionary<(string Type, int Code), ReferenceRow>();
+        await using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            var key = (reader.GetString(0), reader.GetInt32(1));
+            actual[key] = new ReferenceRow(
+                reader.GetString(2),
+                reader.GetBoolean(3),
+                reader.IsDBNull(4) ? null : reader.GetBoolean(4),
+                reader.IsDBNull(5) ? null : reader.GetString(5));
+        }
+
+        foreach (var expected in RequiredReferenceRows)
+        {
+            if (!actual.TryGetValue(expected.Key, out var row) || row != expected.Value)
+            {
+                invalid.Add($"reference data {expected.Key.Type} code {expected.Key.Code}");
+            }
+        }
+    }
+
+    private static readonly IReadOnlyDictionary<(string Type, int Code), ReferenceRow>
+        RequiredReferenceRows = new Dictionary<(string, int), ReferenceRow>
+        {
+            [("Role", 1)] = new("Koordinatör", true, null, null),
+            [("Role", 2)] = new("Jüri", true, null, null),
+            [("AwardCategory", 1001)] = new("Yılın En Başarılı Oyunu", true, false, "0"),
+            [("AwardCategory", 1002)] = new("Yılın En Başarılı Yönetmeni", true, false, "1"),
+            [("AwardCategory", 1003)] = new("Yılın En Başarılı Kadın Oyuncusu", true, true, "1"),
+            [("AwardCategory", 1004)] = new("Yılın En Başarılı Erkek Oyuncusu", true, true, "1"),
+            [("AwardCategory", 1005)] = new("Yardımcı Rolde Yılın En Başarılı Kadın Oyuncusu", true, true, "1"),
+            [("AwardCategory", 1006)] = new("Yardımcı Rolde Yılın En Başarılı Erkek Oyuncusu", true, true, "1"),
+            [("AwardCategory", 1007)] = new("Yılın En Başarılı Sahne Tasarımı", true, false, "0"),
+            [("AwardCategory", 1008)] = new("Yılın En Başarılı Giysi Tasarımı", true, false, "0"),
+            [("AwardCategory", 1009)] = new("Yılın En Başarılı Sahne Müziği", true, false, "0"),
+            [("AwardCategory", 1010)] = new("Yılın En Başarılı Işık Tasarımı", true, false, "0"),
+            [("AwardCategory", 1011)] = new("Yılın En Başarılı Hareket Düzeni (Kareografisi)", true, false, "0"),
+            [("AwardCategory", 1012)] = new("Yılın En Başarılı Genç Kuşak Sanatçısı", true, true, "1"),
+            [("PlayStatus", 1)] = new("Oylama Aktif", true, null, "#27ae60"),
+            [("PlayStatus", 2)] = new("Değerlendirmeyecek Oyun", true, null, "#d9322d"),
+            [("PlayStatus", 3)] = new("Başvuru Yapmayacak Oyun", true, null, "#2CA9E8"),
+            [("PlayStatus", 4)] = new("Sahnelenmeyecek Oyun", true, null, "#ac48ed"),
+            [("PlayStatus", 5)] = new("Başvurusu Olmayan Oyun", true, null, "#ffffff"),
+            [("PlayStatus", 6)] = new("Sistemde Aktif Değil", true, null, "#ffc400")
+        };
+
+    private sealed record ReferenceRow(
+        string Name,
+        bool IsPublished,
+        bool? Flag,
+        string? Value);
     private static async Task<Catalog> ReadCatalogAsync(
         SqlConnection connection,
         CancellationToken cancellationToken)
