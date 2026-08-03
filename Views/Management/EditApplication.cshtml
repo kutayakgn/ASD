@@ -1,0 +1,187 @@
+@model YKBAfife.Models.ViewModels.EditApplicationViewModel
+@{
+    ViewData["Title"] = "Başvuruyu Düzenle";
+    var dateValue = Model.PremiereDate?.ToString("yyyy-MM-dd") ?? string.Empty;
+    var dateDisplay = Model.PremiereDate?.ToString("dd / MM / yyyy") ?? string.Empty;
+}
+
+<section class="play-details-page add-jury-page application-edit-page" aria-labelledby="edit-application-title">
+    <a asp-action="ApplicationDetails" asp-route-id="@Model.Id" class="play-details-back">
+        <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
+        <span>Başvuru Detay'a Dön</span>
+    </a>
+
+    <header class="play-details-toolbar">
+        <h1 id="edit-application-title">Başvuruyu Düzenle</h1>
+    </header>
+
+    <form asp-action="EditApplication"
+          asp-route-id="@Model.Id"
+          method="post"
+          class="add-jury-form application-edit-form"
+          novalidate
+          data-application-edit-form
+          data-initial-active="@Model.IsActive?.ToString().ToLowerInvariant()"
+          data-confirm-message="Başvuruyu güncellemek istediğinize emin misiniz?">
+        @Html.AntiForgeryToken()
+        <input asp-for="Id" type="hidden" />
+        <div asp-validation-summary="ModelOnly" class="add-jury-validation-summary" role="alert"></div>
+
+        <section class="application-form-section" aria-labelledby="edit-application-play-title">
+            <h2 id="edit-application-play-title">Oyun Bilgileri</h2>
+            <div class="application-form-grid">
+                <div class="add-jury-field">
+                    <label asp-for="ApplicationNumber"></label>
+                    <input asp-for="ApplicationNumber" required maxlength="6"
+                           data-track-change data-initial-value="@Model.ApplicationNumber"
+                           data-fail-message="Başvuru no zorunludur." />
+                </div>
+
+                <fieldset class="add-jury-status application-status-field">
+                    <legend>Statü</legend>
+                    <div class="add-jury-status-options">
+                        <label class="add-jury-option">
+                            <input type="radio" asp-for="IsActive" value="true" required />
+                            <span>Aktif</span>
+                        </label>
+                        <label class="add-jury-option">
+                            <input type="radio" asp-for="IsActive" value="false" required />
+                            <span>Aktif Değil</span>
+                        </label>
+                    </div>
+                </fieldset>
+
+                <div class="add-jury-field">
+                    <label asp-for="PlayName"></label>
+                    <input asp-for="PlayName" required maxlength="500"
+                           data-track-change data-initial-value="@Model.PlayName"
+                           data-fail-message="Oyun adı zorunludur." />
+                </div>
+                <div class="add-jury-field">
+                    <label asp-for="TheatreName"></label>
+                    <input asp-for="TheatreName" required maxlength="500"
+                           data-track-change data-initial-value="@Model.TheatreName"
+                           data-fail-message="Tiyatro adı zorunludur." />
+                </div>
+
+                <div class="add-jury-field application-date-field"
+                     data-date-picker
+                     data-initial-date="@dateValue">
+                    <label for="PremiereDateDisplay">Prömiyer Tarihi</label>
+                    <div class="application-date-input">
+                        <input id="PremiereDateDisplay"
+                               type="text"
+                               value="@dateDisplay"
+                               placeholder="GG / AA / YYYY"
+                               readonly
+                               required
+                               data-date-display
+                               data-fail-message="Prömiyer tarihi zorunludur." />
+                        <input asp-for="PremiereDate"
+                               type="hidden"
+                               value="@dateValue"
+                               data-date-value
+                               data-track-change
+                               data-initial-value="@dateValue" />
+                        <button type="button"
+                                class="application-date-trigger"
+                                aria-label="Prömiyer tarihi takvimini aç"
+                                aria-expanded="false"
+                                aria-controls="premiere-date-calendar"
+                                data-date-trigger>
+                            <img src="~/icons/calendar.svg" alt="" aria-hidden="true" />
+                        </button>
+                    </div>
+
+                    <div id="premiere-date-calendar"
+                         class="application-calendar"
+                         aria-label="Prömiyer tarihi seçimi"
+                         data-date-panel
+                         hidden>
+                        <div class="application-calendar-header">
+                            <div class="application-calendar-navigation">
+                                <button type="button" aria-label="Önceki yıl" data-calendar-action="prev-year">
+                                    <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
+                                    <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
+                                </button>
+                                <button type="button" aria-label="Önceki ay" data-calendar-action="prev-month">
+                                    <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
+                                </button>
+                            </div>
+                            <strong aria-live="polite" data-calendar-title></strong>
+                            <div class="application-calendar-navigation">
+                                <button type="button" aria-label="Sonraki ay" data-calendar-action="next-month">
+                                    <img src="~/icons/angle-right-solid-full.svg" alt="" aria-hidden="true" />
+                                </button>
+                                <button type="button" aria-label="Sonraki yıl" data-calendar-action="next-year">
+                                    <img src="~/icons/angle-right-solid-full.svg" alt="" aria-hidden="true" />
+                                    <img src="~/icons/angle-right-solid-full.svg" alt="" aria-hidden="true" />
+                                </button>
+                            </div>
+                        </div>
+                        <div class="application-calendar-weekdays" aria-hidden="true">
+                            <span>Pzt</span><span>Sal</span><span>Çar</span><span>Per</span>
+                            <span>Cum</span><span>Cmt</span><span>Paz</span>
+                        </div>
+                        <div class="application-calendar-days" role="grid" data-calendar-days></div>
+                        <div class="application-calendar-footer">
+                            <button type="button" class="application-calendar-apply" data-calendar-apply>Tarih Seç</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="play-details-divider" role="separator"></div>
+
+        <section class="application-form-section" aria-labelledby="edit-application-applicant-title">
+            <h2 id="edit-application-applicant-title">Başvuran Bilgileri</h2>
+            <div class="application-form-grid">
+                <div class="add-jury-field">
+                    <label asp-for="ApplicantName"></label>
+                    <input asp-for="ApplicantName" required maxlength="100"
+                           autocomplete="name" data-track-change data-initial-value="@Model.ApplicantName"
+                           data-fail-message="Adı soyadı zorunludur." />
+                </div>
+                <div class="add-jury-field">
+                    <label asp-for="ApplicantRole"></label>
+                    <input asp-for="ApplicantRole" required maxlength="200"
+                           data-track-change data-initial-value="@Model.ApplicantRole"
+                           data-fail-message="Görevi zorunludur." />
+                </div>
+                <div class="add-jury-field">
+                    <label asp-for="Phone"></label>
+                    <input asp-for="Phone" type="tel" required maxlength="20"
+                           autocomplete="tel" data-track-change data-initial-value="@Model.Phone"
+                           data-fail-message="Geçerli bir telefon numarası giriniz." />
+                </div>
+                <div class="add-jury-field">
+                    <label asp-for="Email"></label>
+                    <input asp-for="Email" type="email" required maxlength="150"
+                           autocomplete="email" data-track-change data-initial-value="@Model.Email"
+                           data-fail-message="Geçerli bir e-posta adresi giriniz." />
+                </div>
+                <div class="add-jury-field">
+                    <label asp-for="ContactName"></label>
+                    <input asp-for="ContactName" maxlength="100"
+                           data-track-change data-initial-value="@Model.ContactName" />
+                </div>
+                <div class="add-jury-field">
+                    <label asp-for="ContactPhone"></label>
+                    <input asp-for="ContactPhone" type="tel" maxlength="20"
+                           data-track-change data-initial-value="@Model.ContactPhone"
+                           data-fail-message="Geçerli bir iletişim telefonu giriniz." />
+                </div>
+            </div>
+        </section>
+
+        <div class="add-jury-actions">
+            <a asp-action="ApplicationDetails" asp-route-id="@Model.Id" class="add-jury-cancel">İptal</a>
+            <button type="submit" class="add-jury-submit">Kaydet</button>
+        </div>
+    </form>
+</section>
+
+@section Scripts {
+    <script src="~/js/application-edit.js" asp-append-version="true"></script>
+}

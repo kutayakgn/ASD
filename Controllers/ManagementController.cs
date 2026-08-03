@@ -2195,9 +2195,9 @@ public sealed partial class ManagementController(
                 ApplicantRole = form.ApplicantRole,
                 Email = form.Email,
                 Phone = form.Phone,
-                Director = form.Director,
+                ContactName = form.ContactName,
+                ContactPhone = form.ContactPhone,
                 PremiereDate = form.PremiereDate,
-                CreatedDate = form.CreatedDate,
                 IsActive = form.IsActive
             })
             .SingleOrDefaultAsync(cancellationToken);
@@ -2229,7 +2229,122 @@ public sealed partial class ManagementController(
         form.IsPublished = false;
         form.UpdatedDate = TurkeyTime.Now;
         await context.SaveChangesAsync(cancellationToken);
-        return Ok(new { success = true, refreshTable = true, message = "Başvuru başarıyla silindi." });
+
+        if (string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase))
+        {
+            return Ok(new { success = true, refreshTable = true, message = "Başvuru başarıyla silindi." });
+        }
+
+        TempData["GenericPopup.Type"] = "success";
+        TempData["GenericPopup.Message"] = "Başvuru başarıyla silindi.";
+        return RedirectToAction(nameof(Applications));
+    }
+
+    [HttpGet("basvurular/{id:guid}/duzenle")]
+    public async Task<IActionResult> EditApplication(Guid id, CancellationToken cancellationToken)
+    {
+        var model = await context.Forms.AsNoTracking()
+            .Where(form => form.Id == id && form.IsPublished)
+            .Select(form => new EditApplicationViewModel
+            {
+                Id = form.Id,
+                ApplicationNumber = form.ApplicationNumber,
+                IsActive = form.IsActive,
+                PlayName = form.RepertoireName,
+                TheatreName = form.TheatreName,
+                PremiereDate = form.PremiereDate,
+                ApplicantName = form.ApplicantName,
+                ApplicantRole = form.ApplicantRole,
+                Phone = form.Phone,
+                Email = form.Email,
+                ContactName = form.ContactName,
+                ContactPhone = form.ContactPhone
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+        return model is null ? NotFound() : View(model);
+    }
+
+    [AdminMutationAudit]
+    [HttpPost("basvurular/{id:guid}/duzenle")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EditApplication(Guid id, EditApplicationViewModel model, CancellationToken cancellationToken)
+    {
+        if (id != model.Id) return BadRequest();
+        NormalizeApplication(model);
+
+        if (await context.Forms.AsNoTracking().AnyAsync(form =>
+                form.Id != id && form.IsPublished && form.ApplicationNumber == model.ApplicationNumber,
+                cancellationToken))
+        {
+            ModelState.AddModelError(nameof(model.ApplicationNumber), "Bu başvuru numarası başka bir aktif kayıtta kullanılıyor.");
+        }
+
+        var form = await context.Forms.SingleOrDefaultAsync(item => item.Id == id && item.IsPublished, cancellationToken);
+        if (form is null) return NotFound();
+
+        if (!ModelState.IsValid || !model.PremiereDate.HasValue)
+        {
+            TempData["GenericPopup.Type"] = "fail";
+            var validationMessage = string.Join("\n",
+                ModelState.Values.SelectMany(value => value.Errors)
+                    .Select(error => error.ErrorMessage)
+                    .Where(message => !string.IsNullOrWhiteSpace(message))
+                    .Distinct());
+            TempData["GenericPopup.Message"] = string.IsNullOrWhiteSpace(validationMessage)
+                ? "Form alanlarını kontrol ediniz."
+                : validationMessage;
+            return View(model);
+        }
+
+        var hasChanges = form.ApplicationNumber != model.ApplicationNumber ||
+            form.IsActive != model.IsActive!.Value ||
+            form.RepertoireName != model.PlayName ||
+            form.TheatreName != model.TheatreName ||
+            form.PremiereDate != model.PremiereDate.Value ||
+            form.ApplicantName != model.ApplicantName ||
+            form.ApplicantRole != model.ApplicantRole ||
+            form.Phone != model.Phone ||
+            form.Email != model.Email ||
+            (form.ContactName ?? string.Empty) != (model.ContactName ?? string.Empty) ||
+            (form.ContactPhone ?? string.Empty) != (model.ContactPhone ?? string.Empty);
+        if (!hasChanges)
+        {
+            TempData["GenericPopup.Type"] = "fail";
+            TempData["GenericPopup.Message"] = "Herhangi bir değişiklik yapmadınız.";
+            return View(model);
+        }
+
+        form.ApplicationNumber = model.ApplicationNumber;
+        form.IsActive = model.IsActive!.Value;
+        form.RepertoireName = model.PlayName;
+        form.TheatreName = model.TheatreName;
+        form.PremiereDate = model.PremiereDate.Value;
+        form.ApplicantName = model.ApplicantName;
+        form.ApplicantRole = model.ApplicantRole;
+        form.Phone = model.Phone;
+        form.Email = model.Email;
+        form.ContactName = model.ContactName;
+        form.ContactPhone = model.ContactPhone;
+        form.UpdatedDate = TurkeyTime.Now;
+        await context.SaveChangesAsync(cancellationToken);
+
+        TempData["GenericPopup.Type"] = "success";
+        TempData["GenericPopup.Message"] = "Başvuru başarıyla güncellendi.";
+        TempData["GenericPopup.RedirectUrl"] = Url.Action(nameof(ApplicationDetails), new { id });
+        return RedirectToAction(nameof(EditApplication), new { id });
+    }
+
+    private static void NormalizeApplication(EditApplicationViewModel model)
+    {
+        model.ApplicationNumber = model.ApplicationNumber?.Trim() ?? string.Empty;
+        model.PlayName = model.PlayName?.Trim() ?? string.Empty;
+        model.TheatreName = model.TheatreName?.Trim() ?? string.Empty;
+        model.ApplicantName = model.ApplicantName?.Trim() ?? string.Empty;
+        model.ApplicantRole = model.ApplicantRole?.Trim() ?? string.Empty;
+        model.Phone = model.Phone?.Trim() ?? string.Empty;
+        model.Email = model.Email?.Trim() ?? string.Empty;
+        model.ContactName = string.IsNullOrWhiteSpace(model.ContactName) ? null : model.ContactName.Trim();
+        model.ContactPhone = string.IsNullOrWhiteSpace(model.ContactPhone) ? null : model.ContactPhone.Trim();
     }
 
     [HttpGet("blacklists")]

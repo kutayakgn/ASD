@@ -16,11 +16,267 @@
 }
 
 #applications-table .applications-status-column .complex-table-cell-content {
+    display: flex;
+    align-items: center;
     justify-content: center;
+}
+
+#applications-table col.applications-status-column,
+#applications-table th.applications-status-column,
+#applications-table td.applications-status-column {
+    width: clamp(112px, 11.111vw, 160px) !important;
 }
 
 @media (max-width: 760px) {
     #applications-table .complex-table-select-filter {
         width: 100%;
+    }
+}
+.application-details-page,
+.application-edit-page {
+    font-family: Outfit;
+}
+
+.application-info-section h2,
+.application-form-section h2 {
+    margin: 0 0 24px;
+    color: #171717;
+    font-family: Outfit;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 30px;
+}
+
+.application-details-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 0;
+    gap: 28px 48px;
+}
+
+.application-details-page .play-details-divider,
+.application-edit-page .play-details-divider {
+    margin: 24px 0;
+}
+
+.application-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px 28px;
+}
+
+.application-form-grid .add-jury-field input:not([type="file"]) {
+    width: 100%;
+    min-height: 46px;
+}
+
+.application-status-field {
+    align-self: start;
+}
+
+.application-date-field {
+    position: relative;
+}
+
+.application-date-input {
+    position: relative;
+}
+
+.application-date-input [data-date-display] {
+    padding-right: 52px !important;
+    cursor: pointer;
+}
+
+.application-date-trigger {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    display: inline-grid;
+    width: 36px;
+    height: 36px;
+    padding: 8px;
+    place-items: center;
+    background: transparent;
+    border: 0;
+    transform: translateY(-50%);
+}
+
+.application-date-trigger:hover,
+.application-date-trigger:focus-visible {
+    background: #f4f2ed;
+    outline: none;
+}
+
+.application-date-trigger img {
+    width: 20px;
+    height: 20px;
+}
+
+.application-calendar {
+    width: 100%;
+    margin-top: 8px;
+    padding-bottom: 16px;
+    background: #fff;
+    border: 1px solid #171717;
+    box-shadow: 0 10px 24px rgba(23, 23, 23, .1);
+}
+
+.application-calendar[hidden] {
+    display: none;
+}
+
+.application-calendar-header {
+    display: grid;
+    min-height: 64px;
+    padding: 12px 16px;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    border-bottom: 1px solid #e3dfd3;
+}
+
+.application-calendar-header > strong {
+    font-size: 18px;
+    line-height: 24px;
+    text-align: center;
+    text-transform: capitalize;
+}
+
+.application-calendar-navigation {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.application-calendar-navigation:last-child {
+    justify-content: flex-end;
+}
+
+.application-calendar-navigation button {
+    display: inline-flex;
+    width: 34px;
+    height: 34px;
+    padding: 7px;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 0;
+    gap: 0;
+}
+
+.application-calendar-navigation button:hover,
+.application-calendar-navigation button:focus-visible {
+    color: #918150;
+    background: #f4f2ed;
+    outline: none;
+}
+
+.application-calendar-navigation img {
+    width: 16px;
+    height: 16px;
+}
+
+.application-calendar-navigation button img + img {
+    margin-left: -9px;
+}
+
+.application-calendar-weekdays,
+.application-calendar-days {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.application-calendar-weekdays {
+    padding: 16px 16px 8px;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.application-calendar-days {
+    padding: 0 16px;
+    row-gap: 6px;
+}
+
+.application-calendar-day {
+    display: inline-grid;
+    width: 34px;
+    height: 34px;
+    margin: auto;
+    padding: 0;
+    place-items: center;
+    color: #171717;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    font-family: Outfit;
+}
+
+.application-calendar-day:hover,
+.application-calendar-day:focus-visible {
+    border-color: #918150;
+    outline: none;
+}
+
+.application-calendar-day.is-outside {
+    color: #bdbdbd;
+}
+
+.application-calendar-day.is-today {
+    border-color: #c9b989;
+}
+
+.application-calendar-day.is-selected {
+    color: #171717;
+    background: #d8cfb5;
+    border-color: #d8cfb5;
+    font-weight: 700;
+}
+
+.application-calendar-footer {
+    display: flex;
+    padding: 14px 16px 0;
+    justify-content: flex-end;
+}
+
+.application-calendar-apply {
+    min-width: 96px;
+    min-height: 38px;
+    padding: 8px 14px;
+    color: #fff;
+    background: #171717;
+    border: 1px solid #171717;
+    font-weight: 600;
+}
+
+.application-calendar-apply:hover,
+.application-calendar-apply:focus-visible {
+    background: #918150;
+    border-color: #918150;
+    outline: none;
+}
+
+@media (max-width: 760px) {
+    .application-details-grid,
+    .application-form-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .application-calendar-header {
+        padding-inline: 8px;
+    }
+
+    .application-calendar-navigation {
+        gap: 2px;
+    }
+
+    .application-calendar-weekdays,
+    .application-calendar-days {
+        padding-inline: 8px;
+    }
+
+    .application-calendar-day {
+        width: 32px;
+        height: 32px;
     }
 }

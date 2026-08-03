@@ -22,17 +22,18 @@
 
     string ColumnWidth(decimal percentage)
     {
+        var percentageValue = percentage.ToString("0.##", CultureInfo.InvariantCulture);
         var actionColumnsWidth = (Model.IsEditableRows ? Model.EditColumnWidth : 0) +
             (Model.IsDeleteColActive ? Model.DeleteColumnWidth : 0) +
             (Model.IsNavigationColActive ? Model.NavigationColumnWidth : 0) +
             (Model.IsIconColActive ? Model.IconColumnWidth : 0);
         if (actionColumnsWidth == 0)
         {
-            return $"{percentage}%";
+            return $"{percentageValue}%";
         }
 
         var reservedWidth = actionColumnsWidth * percentage / 100m;
-        return $"calc({percentage}% - {reservedWidth.ToString("0.##", CultureInfo.InvariantCulture)}px)";
+        return $"calc({percentageValue}% - {reservedWidth.ToString("0.##", CultureInfo.InvariantCulture)}px)";
     }
 }
 

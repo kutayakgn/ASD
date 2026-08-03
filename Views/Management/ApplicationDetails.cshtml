@@ -1,27 +1,57 @@
 @model YKBAfife.Models.ViewModels.ApplicationDetailsViewModel
 @{
     ViewData["Title"] = "Başvuru Detay";
+    string DisplayValue(string? value) => string.IsNullOrWhiteSpace(value) ? "-" : value;
 }
 
-<section class="play-details-page" aria-labelledby="application-details-title">
+<section class="play-details-page application-details-page" aria-labelledby="application-details-title">
     <a asp-action="Applications" class="play-details-back">
         <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
         <span>Başvurulara Dön</span>
     </a>
+
     <header class="play-details-toolbar">
         <h1 id="application-details-title">Başvuru Detay</h1>
+        <div class="play-details-actions">
+            <form asp-action="DeleteApplication"
+                  asp-route-id="@Model.Id"
+                  method="post"
+                  class="play-detail-action-form"
+                  data-generic-confirm
+                  data-confirm-message="Başvuruyu silmek istediğinize emin misiniz?"
+                  data-confirm-text="Evet"
+                  data-cancel-text="İptal">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="play-detail-action play-detail-action-secondary">Başvuruyu Sil</button>
+            </form>
+            <a asp-action="EditApplication"
+               asp-route-id="@Model.Id"
+               class="play-detail-action play-detail-action-primary">Başvuruyu Düzenle</a>
+        </div>
     </header>
-    <dl class="play-details-content">
-        <div class="play-detail-field"><dt>Başvuru No</dt><dd>@Model.ApplicationNumber</dd></div>
-        <div class="play-detail-field"><dt>Oyun</dt><dd>@Model.PlayName</dd></div>
-        <div class="play-detail-field"><dt>Tiyatro Adı</dt><dd>@Model.TheatreName</dd></div>
-        <div class="play-detail-field"><dt>Başvuran</dt><dd>@Model.ApplicantName</dd></div>
-        <div class="play-detail-field"><dt>Başvuran Rolü</dt><dd>@Model.ApplicantRole</dd></div>
-        <div class="play-detail-field"><dt>E-posta</dt><dd>@Model.Email</dd></div>
-        <div class="play-detail-field"><dt>Telefon</dt><dd>@Model.Phone</dd></div>
-        <div class="play-detail-field"><dt>Yönetmen</dt><dd>@Model.Director</dd></div>
-        <div class="play-detail-field"><dt>Prömiyer Tarihi</dt><dd>@Model.PremiereDate.ToString("dd.MM.yyyy")</dd></div>
-        <div class="play-detail-field"><dt>Başvuru Tarihi</dt><dd>@(Model.CreatedDate?.ToString("dd.MM.yyyy HH:mm:ss") ?? "-")</dd></div>
-        <div class="play-detail-field"><dt>Statü</dt><dd>@(Model.IsActive ? "Aktif" : "Aktif Değil")</dd></div>
-    </dl>
+
+    <section class="application-info-section" aria-labelledby="application-play-info-title">
+        <h2 id="application-play-info-title">Oyun Bilgileri</h2>
+        <dl class="application-details-grid">
+            <div class="play-detail-field"><dt>Başvuru No</dt><dd>@Model.ApplicationNumber</dd></div>
+            <div class="play-detail-field"><dt>Statü</dt><dd>@(Model.IsActive ? "Aktif" : "Aktif Değil")</dd></div>
+            <div class="play-detail-field"><dt>Oyun Adı</dt><dd>@Model.PlayName</dd></div>
+            <div class="play-detail-field"><dt>Tiyatro Adı</dt><dd>@Model.TheatreName</dd></div>
+            <div class="play-detail-field"><dt>Prömiyer Tarihi</dt><dd>@Model.PremiereDate.ToString("dd.MM.yyyy")</dd></div>
+        </dl>
+    </section>
+
+    <div class="play-details-divider" role="separator"></div>
+
+    <section class="application-info-section" aria-labelledby="application-applicant-info-title">
+        <h2 id="application-applicant-info-title">Başvuran Bilgileri</h2>
+        <dl class="application-details-grid">
+            <div class="play-detail-field"><dt>Adı Soyadı</dt><dd>@Model.ApplicantName</dd></div>
+            <div class="play-detail-field"><dt>Görevi</dt><dd>@Model.ApplicantRole</dd></div>
+            <div class="play-detail-field"><dt>Telefon</dt><dd>@Model.Phone</dd></div>
+            <div class="play-detail-field"><dt>E-posta</dt><dd>@Model.Email</dd></div>
+            <div class="play-detail-field"><dt>İletişim Kurulacak Kişi</dt><dd>@DisplayValue(Model.ContactName)</dd></div>
+            <div class="play-detail-field"><dt>İletişim Kurulacak Telefon</dt><dd>@DisplayValue(Model.ContactPhone)</dd></div>
+        </dl>
+    </section>
 </section>
