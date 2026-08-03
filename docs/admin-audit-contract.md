@@ -103,3 +103,10 @@ Because full-row snapshots include binary image columns and password hashes,
 access to `AdminLogs` must be restricted to authorized administrators, retention
 must be monitored, and logs must never be exposed through ordinary application
 responses.
+## Restricted audit viewer
+
+The hidden audit console is documented in `docs/audit-log-viewer-user-guide.md`.
+It has no application navigation entry, requires the authenticated `Coordinator`
+role, disables response caching, deliberately reads published and soft-deleted log
+history, and redacts sensitive snapshot values for display. Invalid filter values
+must fail closed rather than returning an unfiltered result set.

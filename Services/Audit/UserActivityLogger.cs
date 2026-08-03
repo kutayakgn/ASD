@@ -20,28 +20,26 @@ public sealed class UserActivityLogger(
         string? newValue = null,
         CancellationToken cancellationToken = default)
     {
-        var httpContext = httpContextAccessor.HttpContext;
-        var correlationId = Guid.TryParse(httpContext?.TraceIdentifier, out var traceId)
-            ? traceId
-            : Guid.NewGuid();
+        var request = AdminAuditRequestContext.FromHttpContext(httpContextAccessor.HttpContext);
+        var effectiveUsername = Truncate(username?.Trim(), 100) ?? Truncate(request.Username, 100) ?? string.Empty;
 
         context.UserLogs.Add(new UserLog
         {
             Id = Guid.NewGuid(),
             UserId = userId,
-            ActorUserId = actorUserId,
-            Username = Truncate(username?.Trim(), 100) ?? string.Empty,
+            ActorUserId = actorUserId ?? request.UserId,
+            Username = effectiveUsername,
             EventType = Truncate(eventType, 50) ?? throw new ArgumentException("Event type is required.", nameof(eventType)),
             IsSuccessful = isSuccessful,
             OccurredAt = TurkeyTime.Now,
-            IpAddress = Truncate(httpContext?.Connection.RemoteIpAddress?.ToString(), 64),
-            UserAgent = Truncate(httpContext?.Request.Headers.UserAgent.ToString(), 1000),
+            IpAddress = Truncate(request.IpAddress, 64),
+            UserAgent = Truncate(request.UserAgent, 1000),
             Application = "AfifeAdmin",
-            Details = Truncate(details, 2000),
+            Details = Truncate(details, 2000) ?? $"{eventType} olayı kaydedildi.",
             FailureReason = Truncate(failureReason, 500),
             OldValue = oldValue,
             NewValue = newValue,
-            CorrelationId = correlationId,
+            CorrelationId = request.CorrelationId,
             IsPublished = true
         });
 

@@ -1,0 +1,104 @@
+@model YKBAfife.Models.ViewModels.AuditLogPageViewModel
+@{
+    Layout = null;
+    string DateValue(DateTime? value) => value?.ToString("yyyy-MM-ddTHH:mm:ss") ?? string.Empty;
+}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow,noarchive" />
+    <title>@Model.Title | Afife Audit</title>
+    <link rel="stylesheet" href="~/css/audit-logs.css" asp-append-version="true" />
+</head>
+<body>
+<main class="audit-page">
+    <header class="audit-page-header">
+        <div><span class="audit-kicker">Restricted audit console</span><h1>@Model.Title</h1></div>
+        <p>Gösterilen sonuç: <strong>@Model.TotalCount</strong></p>
+    </header>
+
+    @if (Model.AdminFilter is not null)
+    {
+        <form method="get" action="@Model.BasePath" class="audit-filter" autocomplete="off">
+            <label>CorrelationId<input name="correlationId" value="@Model.AdminFilter.CorrelationId" /></label>
+            <label>Username<input name="username" value="@Model.AdminFilter.Username" /></label>
+            <label>OperationType<input name="operationType" value="@Model.AdminFilter.OperationType" /></label>
+            <label>SchemaName<input name="schemaName" value="@Model.AdminFilter.SchemaName" /></label>
+            <label>TableName<input name="tableName" value="@Model.AdminFilter.TableName" /></label>
+            <label>OccurredAt başlangıç<input type="datetime-local" step="1" name="occurredFrom" value="@DateValue(Model.AdminFilter.OccurredFrom)" /></label>
+            <label>OccurredAt bitiş<input type="datetime-local" step="1" name="occurredTo" value="@DateValue(Model.AdminFilter.OccurredTo)" /></label>
+            <label>ActionName<input name="actionName" value="@Model.AdminFilter.ActionName" /></label>
+            <label>Sayfa boyutu<input type="number" min="1" max="100" name="pageSize" value="@Model.PageSize" /></label>
+            <div class="audit-filter-actions"><a href="@Model.BasePath">Temizle</a><button type="submit">Filtrele</button></div>
+        </form>
+    }
+    else if (Model.UserFilter is not null)
+    {
+        <form method="get" action="@Model.BasePath" class="audit-filter" autocomplete="off">
+            <label>UserId<input name="userId" value="@Model.UserFilter.UserId" /></label>
+            <label>ActorUserId<input name="actorUserId" value="@Model.UserFilter.ActorUserId" /></label>
+            <label>Username<input name="username" value="@Model.UserFilter.Username" /></label>
+            <label>OccurredAt başlangıç<input type="datetime-local" step="1" name="occurredFrom" value="@DateValue(Model.UserFilter.OccurredFrom)" /></label>
+            <label>OccurredAt bitiş<input type="datetime-local" step="1" name="occurredTo" value="@DateValue(Model.UserFilter.OccurredTo)" /></label>
+            <label>Application<input name="application" value="@Model.UserFilter.Application" /></label>
+            <label>CorrelationId<input name="correlationId" value="@Model.UserFilter.CorrelationId" /></label>
+            <label>Sayfa boyutu<input type="number" min="1" max="100" name="pageSize" value="@Model.PageSize" /></label>
+            <div class="audit-filter-actions"><a href="@Model.BasePath">Temizle</a><button type="submit">Filtrele</button></div>
+        </form>
+    }
+
+    <section class="audit-records" aria-label="Log kayıtları">
+        @if (Model.Records.Count == 0)
+        {
+            <p class="audit-empty">Filtrelerle eşleşen log kaydı bulunamadı.</p>
+        }
+        @foreach (var record in Model.Records)
+        {
+            <article class="audit-record">
+                <header><strong>@record.Id</strong><time>@record.OccurredAt.ToString("dd.MM.yyyy HH:mm:ss")</time></header>
+                <dl>
+                    @foreach (var field in record.Fields)
+                    {
+                        <div class="@(field.IsLongValue ? "audit-field-long" : string.Empty)">
+                            <dt>@field.Name</dt>
+                            <dd>
+                                @if (field.IsLongValue)
+                                {
+                                    <pre>@(string.IsNullOrEmpty(field.Value) ? "NULL" : field.Value)</pre>
+                                }
+                                else
+                                {
+                                    @(string.IsNullOrEmpty(field.Value) ? "NULL" : field.Value)
+                                }
+                            </dd>
+                        </div>
+                    }
+                </dl>
+            </article>
+        }
+    </section>
+
+    <nav class="audit-pagination" aria-label="Log sayfaları">
+        @if (Model.PreviousPageUrl is not null)
+        {
+            <a href="@Model.PreviousPageUrl">Önceki</a>
+        }
+        else
+        {
+            <span></span>
+        }
+        <strong>Sayfa @Model.CurrentPage / @Model.TotalPages</strong>
+        @if (Model.NextPageUrl is not null)
+        {
+            <a href="@Model.NextPageUrl">Sonraki</a>
+        }
+        else
+        {
+            <span></span>
+        }
+    </nav>
+</main>
+</body>
+</html>

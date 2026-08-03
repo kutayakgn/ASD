@@ -27,14 +27,14 @@ public sealed class AdminActionAuditLogger(
                 INSERT INTO dbo.AdminLogs
                 (
                     Id, CorrelationId, UserId, Username, OperationName, OperationType,
-                    AffectedRowCount, OccurredAt, IpAddress, UserAgent, Application,
+                    SchemaName, TableName, EntityKey, AffectedRowCount, OccurredAt, IpAddress, UserAgent, Application,
                     HttpMethod, RequestPath, ControllerName, ActionName, Source,
                     IsSuccessful, Details, FailureReason, IsPublished
                 )
                 VALUES
                 (
                     @Id, @CorrelationId, @UserId, @Username, @OperationName, @OperationType,
-                    0, @OccurredAt, @IpAddress, @UserAgent, N'AfifeAdmin',
+                    @SchemaName, @TableName, @EntityKey, 0, @OccurredAt, @IpAddress, @UserAgent, N'AfifeAdmin',
                     @HttpMethod, @RequestPath, @ControllerName, @ActionName, N'MvcAction',
                     @IsSuccessful, @Details, @FailureReason, 1
                 );
@@ -45,6 +45,10 @@ public sealed class AdminActionAuditLogger(
             command.Parameters.AddWithValue("@Username", (object?)request.Username ?? DBNull.Value);
             command.Parameters.AddWithValue("@OperationName", request.OperationName);
             command.Parameters.AddWithValue("@OperationType", operationType);
+            var tableName = ResolvePrimaryTarget(request.ControllerName, request.ActionName);
+            command.Parameters.AddWithValue("@SchemaName", tableName is null ? DBNull.Value : "dbo");
+            command.Parameters.AddWithValue("@TableName", (object?)tableName ?? DBNull.Value);
+            command.Parameters.AddWithValue("@EntityKey", (object?)request.RequestPath ?? DBNull.Value);
             command.Parameters.AddWithValue("@OccurredAt", TurkeyTime.Now);
             command.Parameters.AddWithValue("@IpAddress", (object?)request.IpAddress ?? DBNull.Value);
             command.Parameters.AddWithValue("@UserAgent", (object?)request.UserAgent ?? DBNull.Value);
@@ -61,6 +65,29 @@ public sealed class AdminActionAuditLogger(
         {
             logger.LogError(exception, "Admin action audit log could not be persisted.");
         }
+    }
+
+    private static string? ResolvePrimaryTarget(string? controller, string? action)
+    {
+        if (string.Equals(controller, "AdminManagement", StringComparison.OrdinalIgnoreCase))
+            return "Users";
+        if (!string.Equals(controller, "Management", StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(action))
+            return null;
+
+        return action switch
+        {
+            "AddJury" or "EditJury" or "DeleteJury" => "Users",
+            "AddPlay" or "EditPlay" or "DeletePlay" or "UpdateJuryVotingStatus" or "UpdateKunyeGirisStatus" => "Plays",
+            "AddCandidate" or "EditCandidate" or "DeleteCandidate" or "UpdateCandidateStatus" => "PlayAwardCategories",
+            "ResetJuryVote" => "JuryVotes",
+            "UpdateTicketFee" => "JuryGameTicketFees",
+            "AddBlacklist" or "DeleteBlacklist" => "Blacklist",
+            "EditApplication" or "DeleteApplication" or "UpdateApplicationStatus" => "Form",
+            "AddSeason" or "EditSeason" or "DeleteSeason" => "Seasons",
+            "AddAdditionalVoting" or "EditAdditionalVoting" or "DeleteAdditionalVoting" => "AdditionalVotings",
+            "EditPlayStatus" => "PlayStatuses",
+            _ => null
+        };
     }
 
     private static string? Truncate(string? value, int maximumLength) =>
