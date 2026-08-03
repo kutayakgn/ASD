@@ -1,0 +1,72 @@
+@model YKBAfife.Models.Components.DatePickerViewModel
+@{
+    var value = Model.Value?.ToString("yyyy-MM-dd") ?? string.Empty;
+    var displayValue = Model.Value?.ToString("dd / MM / yyyy") ?? string.Empty;
+    var calendarId = $"{Model.Id}-calendar";
+}
+<div class="add-jury-field application-date-field"
+     data-date-picker
+     data-initial-date="@value">
+    <label for="@(Model.Id)-display">@Model.Label</label>
+    <div class="application-date-input">
+        <input id="@(Model.Id)-display"
+               type="text"
+               value="@displayValue"
+               placeholder="GG / AA / YYYY"
+               readonly
+               required="@Model.IsRequired"
+               data-date-display
+               data-fail-message="@Model.ValidationMessage" />
+        <input id="@Model.Id"
+               name="@Model.InputName"
+               type="hidden"
+               value="@value"
+               data-date-value
+               data-track-change="@Model.TrackChanges"
+               data-initial-value="@value" />
+        <button type="button"
+                class="application-date-trigger"
+                aria-label="@Model.Label takvimini aç"
+                aria-expanded="false"
+                aria-controls="@calendarId"
+                data-date-trigger>
+            <img src="~/icons/calendar.svg" alt="" aria-hidden="true" />
+        </button>
+    </div>
+
+    <div id="@calendarId"
+         class="application-calendar"
+         aria-label="@Model.Label seçimi"
+         data-date-panel
+         hidden>
+        <div class="application-calendar-header">
+            <div class="application-calendar-navigation">
+                <button type="button" aria-label="Önceki yıl" data-calendar-action="prev-year">
+                    <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
+                    <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
+                </button>
+                <button type="button" aria-label="Önceki ay" data-calendar-action="prev-month">
+                    <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
+                </button>
+            </div>
+            <strong aria-live="polite" data-calendar-title></strong>
+            <div class="application-calendar-navigation">
+                <button type="button" aria-label="Sonraki ay" data-calendar-action="next-month">
+                    <img src="~/icons/angle-right-solid-full.svg" alt="" aria-hidden="true" />
+                </button>
+                <button type="button" aria-label="Sonraki yıl" data-calendar-action="next-year">
+                    <img src="~/icons/angle-right-solid-full.svg" alt="" aria-hidden="true" />
+                    <img src="~/icons/angle-right-solid-full.svg" alt="" aria-hidden="true" />
+                </button>
+            </div>
+        </div>
+        <div class="application-calendar-weekdays" aria-hidden="true">
+            <span>Pzt</span><span>Sal</span><span>Çar</span><span>Per</span>
+            <span>Cum</span><span>Cmt</span><span>Paz</span>
+        </div>
+        <div class="application-calendar-days" role="grid" data-calendar-days></div>
+        <div class="application-calendar-footer">
+            <button type="button" class="application-calendar-apply" data-calendar-apply>Tarih Seç</button>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,56 @@
+.season-settings-page,
+.season-details-page,
+.season-form-page {
+    font-family: Outfit;
+}
+
+#season-settings-table .complex-table-heading-tools {
+    justify-content: flex-end;
+}
+
+#season-settings-table td,
+#season-settings-table th {
+    white-space: nowrap;
+}
+
+.season-detail-section h2 {
+    margin: 0 0 28px;
+    font-family: Outfit;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 30px;
+}
+
+.season-details-grid,
+.season-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 28px 32px;
+    margin: 0;
+}
+
+.season-form-grid .application-date-field {
+    min-width: 0;
+}
+
+
+.season-form .add-jury-actions {
+    margin-top: 32px;
+}
+
+@media (max-width: 760px) {
+    .season-details-grid,
+    .season-form-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .season-details-page .play-details-actions {
+        width: 100%;
+    }
+
+    .season-details-page .play-details-actions form,
+    .season-details-page .play-detail-action {
+        flex: 1 1 160px;
+    }
+}

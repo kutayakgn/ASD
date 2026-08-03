@@ -1,0 +1,60 @@
+@model YKBAfife.Models.ViewModels.SeasonFormViewModel
+<div class="season-form-grid">
+    <partial name="_DatePicker" model="@(new YKBAfife.Models.Components.DatePickerViewModel
+    {
+        Id = "season-start-date",
+        InputName = nameof(Model.SeasonStartDate),
+        Label = "Sezon Başlangıç Tarihi",
+        Value = Model.SeasonStartDate,
+        ValidationMessage = "Sezon başlangıç tarihi zorunludur."
+    })" />
+    <partial name="_DatePicker" model="@(new YKBAfife.Models.Components.DatePickerViewModel
+    {
+        Id = "kunye-registration-start-date",
+        InputName = nameof(Model.KunyeRegistrationStartDate),
+        Label = "Künye Kayıt Başlangıç Tarihi",
+        Value = Model.KunyeRegistrationStartDate,
+        ValidationMessage = "Künye kayıt başlangıç tarihi zorunludur."
+    })" />
+    <partial name="_DatePicker" model="@(new YKBAfife.Models.Components.DatePickerViewModel
+    {
+        Id = "kunye-registration-end-date",
+        InputName = nameof(Model.KunyeRegistrationEndDate),
+        Label = "Künye Kayıt Bitiş Tarihi",
+        Value = Model.KunyeRegistrationEndDate,
+        ValidationMessage = "Künye kayıt bitiş tarihi zorunludur."
+    })" />
+    <partial name="_DatePicker" model="@(new YKBAfife.Models.Components.DatePickerViewModel
+    {
+        Id = "voting-start-date",
+        InputName = nameof(Model.VotingStartDate),
+        Label = "Oylama Başlangıç Tarihi",
+        Value = Model.VotingStartDate,
+        ValidationMessage = "Oylama başlangıç tarihi zorunludur."
+    })" />
+    <partial name="_DatePicker" model="@(new YKBAfife.Models.Components.DatePickerViewModel
+    {
+        Id = "voting-end-date",
+        InputName = nameof(Model.VotingEndDate),
+        Label = "Oylama Bitiş Tarihi",
+        Value = Model.VotingEndDate,
+        ValidationMessage = "Oylama bitiş tarihi zorunludur."
+    })" />
+    <partial name="_DatePicker" model="@(new YKBAfife.Models.Components.DatePickerViewModel
+    {
+        Id = "season-end-date",
+        InputName = nameof(Model.SeasonEndDate),
+        Label = "Sezon Bitiş Tarihi",
+        Value = Model.SeasonEndDate,
+        ValidationMessage = "Sezon bitiş tarihi zorunludur."
+    })" />
+</div>
+<div data-season-existing-ranges hidden>
+    @foreach (var season in Model.OtherPublishedSeasons)
+    {
+        <span data-season-range
+              data-season-name="@season.SeasonName"
+              data-season-start="@season.SeasonStartDate.ToString("yyyy-MM-dd")"
+              data-season-end="@season.SeasonEndDate.ToString("yyyy-MM-dd")"></span>
+    }
+</div>

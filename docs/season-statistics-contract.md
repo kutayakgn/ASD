@@ -18,6 +18,25 @@ The initial rows begin with the 2018-2019 season. Their sample schedule is:
 - Kunye registration: September 1 through December 31.
 - Voting: January 1 through April 30 of the following year.
 
+## Management date rules
+
+Season management is available under `/diger-ayarlar`. A season name is derived as
+`SeasonStartDate.Year/SeasonEndDate.Year` and is never persisted separately.
+
+- `SeasonStartDate` must be strictly earlier than `SeasonEndDate`.
+- Published seasons use inclusive conflict detection: their start/end ranges may not
+  overlap or share even one boundary date. Editing excludes only the season being edited.
+- Kunye registration may start on the season start date but never before it.
+- Kunye registration end must be strictly later than its start and no later than
+  the season end date.
+- Voting start and end must remain inside the inclusive season boundaries, and
+  voting start must be strictly earlier than voting end.
+- Season deletion is always a soft delete (`IsPublished = 0`).
+- `PlayCount`, `ActivePlayCount`, and `VoteCount` remain database-managed values;
+  management forms must never accept or write these counters.
+
+Run `sql/enforce-season-management-date-rules.sql` on existing databases to align
+check constraints with these rules.
 ## Counters
 
 - `PlayCount`: published and active `Plays` whose `CreatedAt` is in the season interval.

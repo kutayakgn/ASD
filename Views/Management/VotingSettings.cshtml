@@ -1,0 +1,8 @@
+@model YKBAfife.Models.ViewModels.SeasonSettingsViewModel
+@{
+    ViewData["Title"] = "Diğer Ayarlar";
+}
+
+<section class="season-settings-page" aria-label="Diğer Ayarlar">
+    @await Component.InvokeAsync("ComplexTable", new { model = Model.Table })
+</section>

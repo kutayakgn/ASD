@@ -1,0 +1,43 @@
+@model YKBAfife.Models.ViewModels.SeasonDetailsViewModel
+@{
+    ViewData["Title"] = "Sezon Detay";
+}
+
+<section class="play-details-page season-details-page" aria-labelledby="season-details-title">
+    <a asp-action="VotingSettings" class="play-details-back">
+        <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
+        <span>Diğer Ayarlar'a Dön</span>
+    </a>
+
+    <header class="play-details-toolbar">
+        <h1 id="season-details-title">Sezon Detay</h1>
+        <div class="play-details-actions">
+            <form asp-action="DeleteSeason"
+                  asp-route-id="@Model.Id"
+                  method="post"
+                  data-generic-confirm
+                  data-confirm-message="Sezonu silmek istediğinize emin misiniz?"
+                  data-confirm-text="Evet"
+                  data-cancel-text="İptal">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="play-detail-action play-detail-action-secondary">Sezonu Sil</button>
+            </form>
+            <a asp-action="EditSeason"
+               asp-route-id="@Model.Id"
+               class="play-detail-action play-detail-action-primary">Sezonu Düzenle</a>
+        </div>
+    </header>
+
+    <section class="season-detail-section" aria-labelledby="season-information-title">
+        <h2 id="season-information-title">@Model.SeasonName Sezonu</h2>
+        <dl class="season-details-grid">
+            <div class="play-detail-field"><dt>Sezon Adı</dt><dd>@Model.SeasonName</dd></div>
+            <div class="play-detail-field"><dt>Sezon Başlangıç Tarihi</dt><dd>@Model.SeasonStartDate.ToString("dd.MM.yyyy")</dd></div>
+            <div class="play-detail-field"><dt>Künye Kayıt Başlangıç Tarihi</dt><dd>@Model.KunyeRegistrationStartDate.ToString("dd.MM.yyyy")</dd></div>
+            <div class="play-detail-field"><dt>Künye Kayıt Bitiş Tarihi</dt><dd>@Model.KunyeRegistrationEndDate.ToString("dd.MM.yyyy")</dd></div>
+            <div class="play-detail-field"><dt>Oylama Başlangıç Tarihi</dt><dd>@Model.VotingStartDate.ToString("dd.MM.yyyy")</dd></div>
+            <div class="play-detail-field"><dt>Oylama Bitiş Tarihi</dt><dd>@Model.VotingEndDate.ToString("dd.MM.yyyy")</dd></div>
+            <div class="play-detail-field"><dt>Sezon Bitiş Tarihi</dt><dd>@Model.SeasonEndDate.ToString("dd.MM.yyyy")</dd></div>
+        </dl>
+    </section>
+</section>

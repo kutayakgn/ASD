@@ -38,6 +38,7 @@ builder.Services.AddScoped<IRankingReportService, RankingReportService>();
 builder.Services.AddScoped<IJuryReportService, JuryReportService>();
 builder.Services.AddScoped<IAdminReportService, AdminReportService>();
 builder.Services.AddScoped<IArchiveComparisonReportService, ArchiveComparisonReportService>();
+builder.Services.AddScoped<ISeasonSettingsReportService, SeasonSettingsReportService>();
 builder.Services.AddScoped<ITicketSalesReportService, TicketSalesReportService>();
 builder.Services.AddScoped<IBlacklistReportService, BlacklistReportService>();
 builder.Services.AddScoped<IApplicationReportService, ApplicationReportService>();

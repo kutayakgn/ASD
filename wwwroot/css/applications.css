@@ -76,13 +76,33 @@
 
 .application-date-field {
     position: relative;
+    min-width: 0;
+    overflow: visible;
+}
+
+.application-date-field.is-open {
+    z-index: 40;
+}
+
+.has-open-date-picker-extension::after {
+    display: block;
+    width: 100%;
+    height: var(--date-picker-page-extension, 0px);
+    content: "";
+    pointer-events: none;
 }
 
 .application-date-input {
     position: relative;
+    width: 100%;
 }
 
 .application-date-input [data-date-display] {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    min-height: 46px;
+    box-sizing: border-box;
     padding-right: 52px !important;
     cursor: pointer;
 }
@@ -113,8 +133,13 @@
 }
 
 .application-calendar {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    left: 0;
+    z-index: 50;
     width: 100%;
-    margin-top: 8px;
+    margin-top: 0;
     padding-bottom: 16px;
     background: #fff;
     border: 1px solid #171717;

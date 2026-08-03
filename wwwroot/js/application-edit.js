@@ -22,6 +22,29 @@
         const days = picker.querySelector("[data-calendar-days]");
         const apply = picker.querySelector("[data-calendar-apply]");
         if (!display || !value || !trigger || !panel || !title || !days || !apply) return;
+        const page = picker.closest(".admin-main") || document.querySelector(".admin-main") || document.body;
+        const clearPageExtension = () => window.requestAnimationFrame(() => {
+            if (page.querySelector(".application-date-field.is-open")) return;
+            page.classList.remove("has-open-date-picker-extension");
+            page.style.removeProperty("--date-picker-page-extension");
+        });
+        const extendPageForCalendar = () => window.requestAnimationFrame(() => {
+            page.classList.remove("has-open-date-picker-extension");
+            page.style.removeProperty("--date-picker-page-extension");
+            window.requestAnimationFrame(() => {
+                if (panel.hidden) return;
+                const calendarBottom = panel.getBoundingClientRect().bottom + window.scrollY;
+                const targetBottom = calendarBottom + 40;
+                const viewportBottom = window.scrollY + window.innerHeight;
+                if (targetBottom <= viewportBottom) return;
+
+                const pageBottom = page.getBoundingClientRect().bottom + window.scrollY;
+                const extension = Math.max(0, Math.ceil(targetBottom - pageBottom));
+                if (extension === 0) return;
+                page.style.setProperty("--date-picker-page-extension", `${extension}px`);
+                page.classList.add("has-open-date-picker-extension");
+            });
+        });
 
         let selectedDate = parseIso(value.value);
         let pendingDate = selectedDate ? new Date(selectedDate) : null;
@@ -68,6 +91,7 @@
             panel.hidden = true;
             picker.classList.remove("is-open");
             trigger.setAttribute("aria-expanded", "false");
+            clearPageExtension();
         };
 
         const open = () => {
@@ -79,7 +103,12 @@
             panel.hidden = false;
             picker.classList.add("is-open");
             trigger.setAttribute("aria-expanded", "true");
+            extendPageForCalendar();
         };
+
+        window.addEventListener("resize", () => {
+            if (!panel.hidden) extendPageForCalendar();
+        });
 
         const toggle = () => panel.hidden ? open() : close();
         trigger.addEventListener("click", toggle);

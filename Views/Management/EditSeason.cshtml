@@ -1,0 +1,38 @@
+@model YKBAfife.Models.ViewModels.SeasonFormViewModel
+@{
+    ViewData["Title"] = "Sezonu Düzenle";
+}
+
+<section class="play-details-page add-jury-page season-form-page" aria-labelledby="edit-season-title">
+    <a asp-action="SeasonDetails" asp-route-id="@Model.Id" class="play-details-back">
+        <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
+        <span>Sezon Detayına Dön</span>
+    </a>
+
+    <header class="play-details-toolbar">
+        <h1 id="edit-season-title">Sezonu Düzenle</h1>
+    </header>
+
+    <form asp-action="EditSeason"
+          asp-route-id="@Model.Id"
+          method="post"
+          class="add-jury-form season-form"
+          novalidate
+          data-season-form
+          data-season-form-mode="edit"
+          data-confirm-message="Sezonu güncellemek istediğinize emin misiniz?">
+        @Html.AntiForgeryToken()
+        <input asp-for="Id" type="hidden" />
+        <div asp-validation-summary="ModelOnly" class="add-jury-validation-summary" role="alert"></div>
+        <partial name="_SeasonFormFields" model="Model" />
+        <div class="add-jury-actions">
+            <a asp-action="SeasonDetails" asp-route-id="@Model.Id" class="add-jury-cancel">İptal</a>
+            <button type="submit" class="add-jury-submit">Kaydet</button>
+        </div>
+    </form>
+</section>
+
+@section Scripts {
+    <script src="~/js/date-picker.js" asp-append-version="true"></script>
+    <script src="~/js/season-form.js" asp-append-version="true"></script>
+}

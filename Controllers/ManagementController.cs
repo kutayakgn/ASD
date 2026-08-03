@@ -20,6 +20,7 @@ public sealed partial class ManagementController(
     AfifeContext context,
     IJuryReportService juryReportService,
     IArchiveComparisonReportService archiveComparisonReportService,
+    ISeasonSettingsReportService seasonSettingsReportService,
     ITicketSalesReportService ticketSalesReportService,
     IBlacklistReportService blacklistReportService,
     IApplicationReportService applicationReportService,
@@ -2457,8 +2458,259 @@ public sealed partial class ManagementController(
         return RedirectToAction(nameof(Blacklists));
     }
 
-    [HttpGet("oylama-ayarlari")]
-    public IActionResult VotingSettings() => Page("Oylama Ayarları", "Oylama dönemi ve puanlama ayarlarını yönetin.");
+    [HttpGet("diger-ayarlar")]
+    public async Task<IActionResult> VotingSettings(CancellationToken cancellationToken)
+    {
+        var report = await seasonSettingsReportService.GetPageAsync(new SeasonSettingsTableQuery(), cancellationToken);
+        return View(new SeasonSettingsViewModel
+        {
+            Table = SeasonSettingsComplexTableFactory.Create(report)
+        });
+    }
+
+    [HttpPost("diger-ayarlar/sezonlar/tablo")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SeasonSettingsTable(
+        [FromForm] SeasonSettingsTableQuery query,
+        CancellationToken cancellationToken)
+    {
+        var report = await seasonSettingsReportService.GetPageAsync(query, cancellationToken);
+        return ViewComponent("ComplexTable", new
+        {
+            model = SeasonSettingsComplexTableFactory.Create(report)
+        });
+    }
+
+    [HttpGet("diger-ayarlar/sezon-ekle")]
+    public async Task<IActionResult> AddSeason(CancellationToken cancellationToken)
+    {
+        var today = DateOnly.FromDateTime(TurkeyTime.Now);
+        var model = new SeasonFormViewModel
+        {
+            SeasonStartDate = today,
+            KunyeRegistrationStartDate = today,
+            KunyeRegistrationEndDate = today,
+            VotingStartDate = today,
+            VotingEndDate = today,
+            SeasonEndDate = today
+        };
+        model.OtherPublishedSeasons = await GetPublishedSeasonRangesAsync(null, cancellationToken);
+        return View(model);
+    }
+
+    [AdminMutationAudit]
+    [HttpPost("diger-ayarlar/sezon-ekle")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AddSeason(SeasonFormViewModel model, CancellationToken cancellationToken)
+    {
+        await ValidateSeasonAvailabilityAsync(model, null, cancellationToken);
+        if (!ModelState.IsValid)
+        {
+            SetSeasonValidationPopup();
+            return View(model);
+        }
+
+        context.Seasons.Add(new Season
+        {
+            Id = Guid.NewGuid(),
+            SeasonStartDate = model.SeasonStartDate!.Value,
+            KunyeRegistrationStartDate = model.KunyeRegistrationStartDate!.Value,
+            KunyeRegistrationEndDate = model.KunyeRegistrationEndDate!.Value,
+            VotingStartDate = model.VotingStartDate!.Value,
+            VotingEndDate = model.VotingEndDate!.Value,
+            SeasonEndDate = model.SeasonEndDate!.Value,
+            PlayCount = 0,
+            ActivePlayCount = 0,
+            VoteCount = 0,
+            IsPublished = true
+        });
+
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException exception)
+        {
+            logger.LogWarning(exception, "Sezon kaydı oluşturulamadı.");
+            TempData["GenericPopup.Type"] = "fail";
+            TempData["GenericPopup.Message"] = "Sezon kaydı oluşturulamadı. Tarih aralıklarını ve çakışan sezonları kontrol ediniz.";
+            return View(model);
+        }
+
+        TempData["GenericPopup.Type"] = "success";
+        TempData["GenericPopup.Message"] = "Sezon başarıyla eklendi.";
+        TempData["GenericPopup.RedirectUrl"] = Url.Action(nameof(VotingSettings));
+        return RedirectToAction(nameof(AddSeason));
+    }
+
+    [HttpGet("diger-ayarlar/sezonlar/{id:guid}")]
+    public async Task<IActionResult> SeasonDetails(Guid id, CancellationToken cancellationToken)
+    {
+        var model = await context.Seasons.AsNoTracking()
+            .Where(season => season.Id == id && season.IsPublished)
+            .Select(season => new SeasonDetailsViewModel
+            {
+                Id = season.Id,
+                SeasonStartDate = season.SeasonStartDate,
+                KunyeRegistrationStartDate = season.KunyeRegistrationStartDate,
+                KunyeRegistrationEndDate = season.KunyeRegistrationEndDate,
+                VotingStartDate = season.VotingStartDate,
+                VotingEndDate = season.VotingEndDate,
+                SeasonEndDate = season.SeasonEndDate
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+        return model is null ? NotFound() : View(model);
+    }
+
+    [HttpGet("diger-ayarlar/sezonlar/{id:guid}/duzenle")]
+    public async Task<IActionResult> EditSeason(Guid id, CancellationToken cancellationToken)
+    {
+        var model = await context.Seasons.AsNoTracking()
+            .Where(season => season.Id == id && season.IsPublished)
+            .Select(season => new SeasonFormViewModel
+            {
+                Id = season.Id,
+                SeasonStartDate = season.SeasonStartDate,
+                KunyeRegistrationStartDate = season.KunyeRegistrationStartDate,
+                KunyeRegistrationEndDate = season.KunyeRegistrationEndDate,
+                VotingStartDate = season.VotingStartDate,
+                VotingEndDate = season.VotingEndDate,
+                SeasonEndDate = season.SeasonEndDate
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+        if (model is null) return NotFound();
+
+        model.OtherPublishedSeasons = await GetPublishedSeasonRangesAsync(id, cancellationToken);
+        return View(model);
+    }
+
+    [AdminMutationAudit]
+    [HttpPost("diger-ayarlar/sezonlar/{id:guid}/duzenle")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EditSeason(
+        Guid id,
+        SeasonFormViewModel model,
+        CancellationToken cancellationToken)
+    {
+        if (model.Id != id) return BadRequest();
+        await ValidateSeasonAvailabilityAsync(model, id, cancellationToken);
+
+        var season = await context.Seasons.SingleOrDefaultAsync(
+            item => item.Id == id && item.IsPublished,
+            cancellationToken);
+        if (season is null) return NotFound();
+
+        if (!ModelState.IsValid)
+        {
+            SetSeasonValidationPopup();
+            return View(model);
+        }
+
+        var hasChanges = season.SeasonStartDate != model.SeasonStartDate!.Value ||
+            season.KunyeRegistrationStartDate != model.KunyeRegistrationStartDate!.Value ||
+            season.KunyeRegistrationEndDate != model.KunyeRegistrationEndDate!.Value ||
+            season.VotingStartDate != model.VotingStartDate!.Value ||
+            season.VotingEndDate != model.VotingEndDate!.Value ||
+            season.SeasonEndDate != model.SeasonEndDate!.Value;
+        if (!hasChanges)
+        {
+            TempData["GenericPopup.Type"] = "fail";
+            TempData["GenericPopup.Message"] = "Herhangi bir değişiklik yapmadınız.";
+            return View(model);
+        }
+
+        season.SeasonStartDate = model.SeasonStartDate.Value;
+        season.KunyeRegistrationStartDate = model.KunyeRegistrationStartDate!.Value;
+        season.KunyeRegistrationEndDate = model.KunyeRegistrationEndDate!.Value;
+        season.VotingStartDate = model.VotingStartDate!.Value;
+        season.VotingEndDate = model.VotingEndDate!.Value;
+        season.SeasonEndDate = model.SeasonEndDate!.Value;
+
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException exception)
+        {
+            logger.LogWarning(exception, "{SeasonId} sezon kaydı güncellenemedi.", id);
+            TempData["GenericPopup.Type"] = "fail";
+            TempData["GenericPopup.Message"] = "Sezon güncellenemedi. Tarih aralıklarını ve çakışan sezonları kontrol ediniz.";
+            return View(model);
+        }
+
+        TempData["GenericPopup.Type"] = "success";
+        TempData["GenericPopup.Message"] = "Sezon başarıyla güncellendi.";
+        TempData["GenericPopup.RedirectUrl"] = Url.Action(nameof(SeasonDetails), new { id });
+        return RedirectToAction(nameof(EditSeason), new { id });
+    }
+
+    [AdminMutationAudit]
+    [HttpPost("diger-ayarlar/sezonlar/{id:guid}/sil")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteSeason(Guid id, CancellationToken cancellationToken)
+    {
+        var season = await context.Seasons.SingleOrDefaultAsync(
+            item => item.Id == id && item.IsPublished,
+            cancellationToken);
+        if (season is null) return NotFound();
+
+        season.IsPublished = false;
+        await context.SaveChangesAsync(cancellationToken);
+
+        TempData["GenericPopup.Type"] = "success";
+        TempData["GenericPopup.Message"] = "Sezon başarıyla silindi.";
+        return RedirectToAction(nameof(VotingSettings));
+    }
+
+    private async Task ValidateSeasonAvailabilityAsync(
+        SeasonFormViewModel model,
+        Guid? excludedId,
+        CancellationToken cancellationToken)
+    {
+        model.OtherPublishedSeasons = await GetPublishedSeasonRangesAsync(excludedId, cancellationToken);
+        if (!model.SeasonStartDate.HasValue || !model.SeasonEndDate.HasValue ||
+            model.SeasonStartDate.Value >= model.SeasonEndDate.Value)
+        {
+            return;
+        }
+
+        var conflict = model.OtherPublishedSeasons.FirstOrDefault(season =>
+            model.SeasonStartDate.Value <= season.SeasonEndDate &&
+            model.SeasonEndDate.Value >= season.SeasonStartDate);
+        if (conflict is null) return;
+
+        var exactRange = model.SeasonStartDate.Value == conflict.SeasonStartDate &&
+            model.SeasonEndDate.Value == conflict.SeasonEndDate;
+        ModelState.AddModelError(string.Empty, exactRange
+            ? $"{conflict.SeasonName} sezonuyla aynı başlangıç ve bitiş tarihleri kullanılamaz."
+            : $"Sezon tarihleri {conflict.SeasonName} sezonuyla çakışıyor. Sezonlar ortak tarihe sahip olamaz.");
+    }
+
+    private async Task<IReadOnlyList<SeasonDateRangeViewModel>> GetPublishedSeasonRangesAsync(
+        Guid? excludedId,
+        CancellationToken cancellationToken) => await context.Seasons.AsNoTracking()
+            .Where(season => season.IsPublished && (!excludedId.HasValue || season.Id != excludedId.Value))
+            .OrderBy(season => season.SeasonStartDate)
+            .Select(season => new SeasonDateRangeViewModel
+            {
+                Id = season.Id,
+                SeasonStartDate = season.SeasonStartDate,
+                SeasonEndDate = season.SeasonEndDate
+            })
+            .ToArrayAsync(cancellationToken);
+
+    private void SetSeasonValidationPopup()
+    {
+        var message = string.Join("\n", ModelState.Values
+            .SelectMany(value => value.Errors)
+            .Select(error => error.ErrorMessage)
+            .Where(error => !string.IsNullOrWhiteSpace(error))
+            .Distinct());
+        TempData["GenericPopup.Type"] = "fail";
+        TempData["GenericPopup.Message"] = string.IsNullOrWhiteSpace(message)
+            ? "Sezon tarihlerini kontrol ediniz."
+            : message;
+    }
 
     [HttpGet("arsiv-karsilastirma")]
     public async Task<IActionResult> ArchiveComparison(CancellationToken cancellationToken)
