@@ -243,7 +243,8 @@ BEGIN
         [RecordType] [bit] NOT NULL CONSTRAINT [DF_Plays_RecordType] DEFAULT (0),
         [SourceFormId] [uniqueidentifier] NULL,
         [IsActive] [bit] NOT NULL CONSTRAINT [DF_Plays_IsActive] DEFAULT (1),
-        CONSTRAINT [PK_Plays] PRIMARY KEY CLUSTERED ([Id])
+        CONSTRAINT [PK_Plays] PRIMARY KEY CLUSTERED ([Id]),
+        CONSTRAINT [CK_Plays_AdminRecord_StatusCode] CHECK ([RecordType] = 0 OR [StatusCode] <> 1)
     );
 END;
 GO

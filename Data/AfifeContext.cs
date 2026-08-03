@@ -166,6 +166,9 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
                 table.HasCheckConstraint(
                     "CK_Plays_KunyeMustRemainPublished",
                     "[RecordType] = 1 OR [IsPublished] = 1");
+                table.HasCheckConstraint(
+                    "CK_Plays_AdminRecord_StatusCode",
+                    "[RecordType] = 0 OR [StatusCode] <> 1");
             });
             entity.Property(x => x.RecordType)
                 .Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
