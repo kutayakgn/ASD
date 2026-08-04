@@ -1,0 +1,74 @@
+@model YKBAfife.Models.ViewModels.AnnouncementDetailsViewModel
+@{
+    ViewData["Title"] = "Duyuru Detay";
+}
+
+<section class="play-details-page announcement-details-page" aria-labelledby="announcement-details-title">
+    <a asp-action="VotingSettings" class="play-details-back">
+        <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
+        <span>Diğer Ayarlar'a Dön</span>
+    </a>
+
+    <header class="play-details-toolbar">
+        <h1 id="announcement-details-title">Duyuru Detay</h1>
+        <div class="play-details-actions">
+            <a asp-action="EditAnnouncement" asp-route-id="@Model.Id"
+               class="play-detail-action play-detail-action-primary">Duyuruyu Düzenle</a>
+        </div>
+    </header>
+
+    <section class="season-detail-section" aria-labelledby="announcement-information-title">
+        <h2 id="announcement-information-title">Duyuru Bilgileri</h2>
+        <dl class="season-details-grid announcement-details-grid">
+            <div class="play-detail-field"><dt>Duyuru Konum ID</dt><dd>@Model.AnnouncementLocationId</dd></div>
+            <div class="play-detail-field"><dt>Metin</dt><dd>@Display(Model.Text)</dd></div>
+            <div class="play-detail-field"><dt>Buton Metni</dt><dd>@Display(Model.ButtonText)</dd></div>
+            <div class="play-detail-field"><dt>Buton Bağlantısı</dt><dd>@Display(Model.ButtonLink)</dd></div>
+            <div class="play-detail-field">
+                <dt>Arka Plan Rengi</dt>
+                <dd class="play-status-detail-color">
+                    @if (!string.IsNullOrWhiteSpace(Model.BackgroundColor))
+                    {
+                        <span style="background-color:@Model.BackgroundColor" aria-hidden="true"></span>@Model.BackgroundColor
+                    }
+                    else
+                    {
+                        <text>—</text>
+                    }
+                </dd>
+            </div>
+            <div class="play-detail-field announcement-image-detail">
+                <dt>Görsel</dt>
+                <dd>
+                    @if (Model.HasImage)
+                    {
+                        <img src="@Url.Action("AnnouncementImage", new { id = Model.Id, kind = "content" })"
+                             alt="Duyuru görseli" />
+                    }
+                    else
+                    {
+                        <text>—</text>
+                    }
+                </dd>
+            </div>
+            <div class="play-detail-field announcement-image-detail">
+                <dt>Arka Plan Görseli</dt>
+                <dd>
+                    @if (Model.HasBackgroundImage)
+                    {
+                        <img src="@Url.Action("AnnouncementImage", new { id = Model.Id, kind = "background" })"
+                             alt="Duyuru arka plan görseli" />
+                    }
+                    else
+                    {
+                        <text>—</text>
+                    }
+                </dd>
+            </div>
+        </dl>
+    </section>
+</section>
+
+@functions {
+    private static string Display(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+}

@@ -1090,3 +1090,30 @@ body.has-photo-preview {
         width: 100%;
     }
 }
+.announcement-details-grid {
+    align-items: start;
+}
+
+.announcement-image-detail dd {
+    margin-top: 10px;
+}
+
+.announcement-image-detail img {
+    display: block;
+    width: min(100%, 420px);
+    max-height: 280px;
+    border: 1px solid #e3dfd3;
+    object-fit: contain;
+    background: #f8f7f3;
+}
+
+.announcement-form-page .add-jury-photo-field {
+    grid-column: auto;
+}
+
+@media (max-width: 700px) {
+    .announcement-image-detail img {
+        width: 100%;
+        max-height: 240px;
+    }
+}

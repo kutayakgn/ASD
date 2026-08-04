@@ -86,6 +86,7 @@ public sealed class AdminActionAuditLogger(
             "AddSeason" or "EditSeason" or "DeleteSeason" => "Seasons",
             "AddAdditionalVoting" or "EditAdditionalVoting" or "DeleteAdditionalVoting" => "AdditionalVotings",
             "EditPlayStatus" => "PlayStatuses",
+            "EditAnnouncement" => "Announcements",
             _ => null
         };
     }

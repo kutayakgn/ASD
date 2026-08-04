@@ -2477,11 +2477,23 @@ public sealed partial class ManagementController(
                 StatusColor = status.StatusColor ?? "#6B7280"
             })
             .ToArrayAsync(cancellationToken);
+        var announcements = await context.Announcements.AsNoTracking()
+            .Where(item => item.IsPublished)
+            .OrderBy(item => item.AnnouncementLocationId)
+            .ThenBy(item => item.CreatedAt)
+            .Select(item => new AnnouncementSettingsRowViewModel
+            {
+                Id = item.Id,
+                AnnouncementLocationId = item.AnnouncementLocationId,
+                Text = item.Text ?? string.Empty
+            })
+            .ToArrayAsync(cancellationToken);
         return View(new VotingSettingsViewModel
         {
             SeasonTable = SeasonSettingsComplexTableFactory.Create(seasonReport),
             AdditionalVotingTable = AdditionalVotingComplexTableFactory.Create(additionalVotingReport),
-            PlayStatusTable = PlayStatusSettingsComplexTableFactory.Create(playStatuses)
+            PlayStatusTable = PlayStatusSettingsComplexTableFactory.Create(playStatuses),
+            AnnouncementTable = AnnouncementSettingsComplexTableFactory.Create(announcements)
         });
     }
 

@@ -1,0 +1,123 @@
+@model YKBAfife.Models.ViewModels.EditAnnouncementViewModel
+@{
+    ViewData["Title"] = "Duyuruyu Düzenle";
+}
+
+<section class="play-details-page add-jury-page announcement-form-page" aria-labelledby="edit-announcement-title">
+    <a asp-action="AnnouncementDetails" asp-route-id="@Model.Id" class="play-details-back">
+        <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
+        <span>Duyuru Detayına Dön</span>
+    </a>
+
+    <header class="play-details-toolbar">
+        <h1 id="edit-announcement-title">Duyuruyu Düzenle</h1>
+    </header>
+
+    <form asp-action="EditAnnouncement" asp-route-id="@Model.Id" method="post"
+          enctype="multipart/form-data" class="add-jury-form" novalidate
+          data-generic-confirm data-confirm-message="Duyuruyu güncellemek istediğinize emin misiniz?"
+          data-confirm-text="Evet" data-cancel-text="İptal">
+        @Html.AntiForgeryToken()
+        <input asp-for="Id" type="hidden" />
+        <input asp-for="RemoveImage" type="hidden" data-announcement-remove-image="content" />
+        <input asp-for="RemoveBackgroundImage" type="hidden" data-announcement-remove-image="background" />
+        <div asp-validation-summary="ModelOnly" class="add-jury-validation-summary" role="alert"></div>
+
+        <div class="add-jury-grid">
+            <div class="add-jury-field">
+                <label asp-for="AnnouncementLocationId"></label>
+                <input asp-for="AnnouncementLocationId" type="number" min="1" required />
+                <span asp-validation-for="AnnouncementLocationId"></span>
+            </div>
+            <div class="add-jury-field">
+                <label asp-for="Text"></label>
+                <input asp-for="Text" maxlength="255" />
+                <span asp-validation-for="Text"></span>
+            </div>
+            <div class="add-jury-field">
+                <label asp-for="ButtonText"></label>
+                <input asp-for="ButtonText" maxlength="255" />
+                <span asp-validation-for="ButtonText"></span>
+            </div>
+            <div class="add-jury-field">
+                <label asp-for="ButtonLink"></label>
+                <input asp-for="ButtonLink" maxlength="2048" placeholder="/announcements/duyuru" />
+                <span asp-validation-for="ButtonLink"></span>
+            </div>
+            <div class="add-jury-field">
+                <label asp-for="BackgroundColor"></label>
+                <input asp-for="BackgroundColor" maxlength="9" placeholder="#F5F1E8" />
+                <span asp-validation-for="BackgroundColor"></span>
+            </div>
+
+            <div class="add-jury-field add-jury-photo-field" data-announcement-image-upload="content">
+                <label asp-for="Image"></label>
+                <div class="add-jury-upload" data-announcement-upload-control>
+                    <button type="button" class="add-jury-upload-picker" aria-label="Duyuru görseli seç"
+                            data-announcement-image-picker>
+                        <span data-announcement-file-name>@(Model.HasExistingImage ? Model.ExistingImageFileName : "Dosya Ekle")</span>
+                    </button>
+                    <button type="button" class="add-jury-upload-icon" aria-label="Dosya ekle"
+                            data-announcement-image-primary>
+                        <img src="~/icons/upload.svg" alt="" aria-hidden="true" data-announcement-image-primary-icon />
+                    </button>
+                </div>
+                <input asp-for="Image" type="file" class="visually-hidden"
+                       accept="image/jpeg,image/png,image/webp" data-announcement-image-input
+                       data-existing-image-url="@Model.ExistingImageUrl"
+                       data-existing-image-name="@Model.ExistingImageFileName" />
+                <div class="add-jury-photo-actions" data-announcement-image-actions hidden>
+                    <button type="button" class="add-jury-photo-action" data-announcement-image-view>
+                        <img src="~/icons/eye.svg" alt="" aria-hidden="true" /><span>Görseli Görüntüle</span>
+                    </button>
+                    <button type="button" class="add-jury-photo-action" data-announcement-image-replace>
+                        <img src="~/icons/upload.svg" alt="" aria-hidden="true" /><span>Farklı Görsel Ekle</span>
+                    </button>
+                </div>
+                <span asp-validation-for="Image"></span>
+            </div>
+
+            <div class="add-jury-field add-jury-photo-field" data-announcement-image-upload="background">
+                <label asp-for="BackgroundImage"></label>
+                <div class="add-jury-upload" data-announcement-upload-control>
+                    <button type="button" class="add-jury-upload-picker" aria-label="Arka plan görseli seç"
+                            data-announcement-image-picker>
+                        <span data-announcement-file-name>@(Model.HasExistingBackgroundImage ? Model.ExistingBackgroundImageFileName : "Dosya Ekle")</span>
+                    </button>
+                    <button type="button" class="add-jury-upload-icon" aria-label="Dosya ekle"
+                            data-announcement-image-primary>
+                        <img src="~/icons/upload.svg" alt="" aria-hidden="true" data-announcement-image-primary-icon />
+                    </button>
+                </div>
+                <input asp-for="BackgroundImage" type="file" class="visually-hidden"
+                       accept="image/jpeg,image/png,image/webp" data-announcement-image-input
+                       data-existing-image-url="@Model.ExistingBackgroundImageUrl"
+                       data-existing-image-name="@Model.ExistingBackgroundImageFileName" />
+                <div class="add-jury-photo-actions" data-announcement-image-actions hidden>
+                    <button type="button" class="add-jury-photo-action" data-announcement-image-view>
+                        <img src="~/icons/eye.svg" alt="" aria-hidden="true" /><span>Görseli Görüntüle</span>
+                    </button>
+                    <button type="button" class="add-jury-photo-action" data-announcement-image-replace>
+                        <img src="~/icons/upload.svg" alt="" aria-hidden="true" /><span>Farklı Görsel Ekle</span>
+                    </button>
+                </div>
+                <span asp-validation-for="BackgroundImage"></span>
+            </div>
+        </div>
+
+        <div class="add-jury-actions">
+            <a asp-action="AnnouncementDetails" asp-route-id="@Model.Id" class="add-jury-cancel">İptal</a>
+            <button type="submit" class="add-jury-submit">Kaydet</button>
+        </div>
+    </form>
+
+    <div class="add-jury-photo-modal" data-announcement-image-modal hidden>
+        <div class="add-jury-photo-dialog" role="dialog" aria-modal="true" aria-label="Görsel önizleme">
+            <img src="" alt="Duyuru görseli önizlemesi" data-announcement-image-preview />
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script src="~/js/announcement-form.js" asp-append-version="true"></script>
+}
