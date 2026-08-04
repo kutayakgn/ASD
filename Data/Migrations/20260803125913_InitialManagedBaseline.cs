@@ -22,8 +22,26 @@ namespace YKBAfife.Data.Migrations
                 """)
                 .Annotation(MigrationSqlResources.ReviewedDataSafeSqlAnnotation, true);
             migrationBuilder.Sql("""
+                /*
+                   A legacy Kunye database can contain Form before Users or the
+                   rest of the Afife tables. Treat any managed business table as
+                   an existing baseline so the missing-table path runs instead of
+                   attempting to recreate Form.
+                */
                 DECLARE @baselineExists sql_variant =
-                    CASE WHEN OBJECT_ID(N'dbo.Users', N'U') IS NOT NULL THEN 1 ELSE 0 END;
+                    CASE WHEN EXISTS
+                    (
+                        SELECT 1
+                        FROM sys.tables AS t
+                        INNER JOIN sys.schemas AS s ON s.schema_id = t.schema_id
+                        WHERE s.name = N'dbo'
+                          AND t.name IN
+                          (
+                              N'Form', N'Users', N'Plays', N'AwardCategories',
+                              N'PlayAwardCategories', N'JuryVotes', N'Roles',
+                              N'PlayStatuses', N'Announcements', N'Images'
+                          )
+                    ) THEN 1 ELSE 0 END;
                 EXEC sys.sp_set_session_context
                     @key = N'AfifeBaselineAlreadyExists',
                     @value = @baselineExists;
