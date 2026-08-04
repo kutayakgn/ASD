@@ -1,0 +1,16 @@
+{
+    "ConnectionStrings": {
+        "AfifeConnectionString": "Server=SUNUCU;Database=YkbAfife;Trusted_Connection=True;TrustServerCertificate=True"
+    },
+  "DatabaseMigration": {
+    "ApplyOnStartup": true,
+    "LockTimeoutMilliseconds": 120000
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*"
+}
