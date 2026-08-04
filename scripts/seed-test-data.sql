@@ -13,7 +13,7 @@
 SET NOCOUNT ON;
 SET XACT_ABORT ON;
 
-DECLARE @ExpectedDatabaseName sysname = N'AfifeAdmin_Test';
+DECLARE @ExpectedDatabaseName sysname = N'YkbAfife_Test';
 DECLARE @AllowTestData bit = 0;
 
 IF @AllowTestData <> 1

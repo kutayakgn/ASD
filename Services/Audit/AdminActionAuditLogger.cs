@@ -18,8 +18,8 @@ public sealed class AdminActionAuditLogger(
     {
         try
         {
-            var connectionString = configuration.GetConnectionString("AfifeAdmin")
-                ?? throw new InvalidOperationException("Connection string 'AfifeAdmin' was not found.");
+            var connectionString = configuration.GetConnectionString("AfifeConnectionString")
+                ?? throw new InvalidOperationException("Connection string 'AfifeConnectionString' was not found.");
             await using var connection = new SqlConnection(connectionString);
             await connection.OpenAsync(cancellationToken);
             await using var command = connection.CreateCommand();

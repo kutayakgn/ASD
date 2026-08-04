@@ -20,8 +20,8 @@ builder.Services.AddControllersWithViews(options =>
     options.Filters.Add<AdminActionAuditFilter>();
 });
 
-var connectionString = builder.Configuration.GetConnectionString("AfifeAdmin")
-    ?? throw new InvalidOperationException("Connection string 'AfifeAdmin' was not found.");
+var connectionString = builder.Configuration.GetConnectionString("AfifeConnectionString")
+    ?? throw new InvalidOperationException("Connection string 'AfifeConnectionString' was not found.");
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<AdminAuditConnectionInterceptor>();

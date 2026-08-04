@@ -9,18 +9,15 @@ public sealed class AfifeContextDesignTimeFactory : IDesignTimeDbContextFactory<
 {
     public AfifeContext CreateDbContext(string[] args)
     {
-        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
-            ?? "Development";
         var configuration = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.json", optional: false)
-            .AddJsonFile($"appsettings.{environment}.json", optional: true)
             .AddEnvironmentVariables()
             .Build();
 
-        var connectionString = configuration.GetConnectionString("AfifeAdmin")
+        var connectionString = configuration.GetConnectionString("AfifeConnectionString")
             ?? throw new InvalidOperationException(
-                "Connection string 'AfifeAdmin' was not found.");
+                "Connection string 'AfifeConnectionString' was not found.");
 
         var options = new DbContextOptionsBuilder<AfifeContext>()
             .UseSqlServer(connectionString)
