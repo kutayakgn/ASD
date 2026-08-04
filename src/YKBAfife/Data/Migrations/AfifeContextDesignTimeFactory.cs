@@ -16,7 +16,7 @@ public sealed class AfifeContextDesignTimeFactory : IDesignTimeDbContextFactory<
             .Build();
 
         var connectionString = configuration.GetConnectionString("AfifeConnectionString")
-            ?? "Server=(localdb)\\MSSQLLocalDB;Database=AfifeAdmin;Trusted_Connection=True;TrustServerCertificate=True";
+            ?? "Server=(localdb)\\MSSQLLocalDB;Database=YkbAfife;Trusted_Connection=True;TrustServerCertificate=True";
 
         var options = new DbContextOptionsBuilder<AfifeContext>()
             .UseSqlServer(connectionString)
