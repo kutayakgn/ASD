@@ -1,6 +1,6 @@
 {
     "ConnectionStrings": {
-        "AfifeConnectionString": "Server=SUNUCU;Database=YkbAfife;Trusted_Connection=True;TrustServerCertificate=True"
+        "AfifeConnectionString": "Server=SUNUCU;Database=YkbAfifeTest;Trusted_Connection=True;TrustServerCertificate=True"
     },
   "DatabaseMigration": {
     "ApplyOnStartup": true,
