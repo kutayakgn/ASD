@@ -1257,43 +1257,43 @@ ALTER TABLE [dbo].[FormLifecycleStates] CHECK CONSTRAINT [FK_FormLifecycleStates
 GO
 ALTER TABLE [dbo].[JuryAssignedPlays]  WITH CHECK ADD  CONSTRAINT [FK_JuryAssignedPlays_Plays] FOREIGN KEY([PlayId])
 REFERENCES [dbo].[Plays] ([Id])
-ON UPDATE CASCADE
+ON UPDATE NO ACTION
 GO
 ALTER TABLE [dbo].[JuryAssignedPlays] CHECK CONSTRAINT [FK_JuryAssignedPlays_Plays]
 GO
 ALTER TABLE [dbo].[JuryAssignedPlays]  WITH CHECK ADD  CONSTRAINT [FK_JuryAssignedPlays_Users] FOREIGN KEY([JuryId])
 REFERENCES [dbo].[Users] ([Id])
-ON UPDATE CASCADE
+ON UPDATE NO ACTION
 GO
 ALTER TABLE [dbo].[JuryAssignedPlays] CHECK CONSTRAINT [FK_JuryAssignedPlays_Users]
 GO
 ALTER TABLE [dbo].[JuryGameTicketFees]  WITH CHECK ADD  CONSTRAINT [FK_JuryGameTicketFees_Plays] FOREIGN KEY([PlayId])
 REFERENCES [dbo].[Plays] ([Id])
-ON UPDATE CASCADE
+ON UPDATE NO ACTION
 GO
 ALTER TABLE [dbo].[JuryGameTicketFees] CHECK CONSTRAINT [FK_JuryGameTicketFees_Plays]
 GO
 ALTER TABLE [dbo].[JuryGameTicketFees]  WITH CHECK ADD  CONSTRAINT [FK_JuryGameTicketFees_Users] FOREIGN KEY([UserId])
 REFERENCES [dbo].[Users] ([Id])
-ON UPDATE CASCADE
+ON UPDATE NO ACTION
 GO
 ALTER TABLE [dbo].[JuryGameTicketFees] CHECK CONSTRAINT [FK_JuryGameTicketFees_Users]
 GO
 ALTER TABLE [dbo].[JuryVotes]  WITH CHECK ADD  CONSTRAINT [FK_JuryVotes_PlayAwardCategories] FOREIGN KEY([PlayAwardCategoryId])
 REFERENCES [dbo].[PlayAwardCategories] ([Id])
-ON UPDATE CASCADE
+ON UPDATE NO ACTION
 GO
 ALTER TABLE [dbo].[JuryVotes] CHECK CONSTRAINT [FK_JuryVotes_PlayAwardCategories]
 GO
 ALTER TABLE [dbo].[JuryVotes]  WITH CHECK ADD  CONSTRAINT [FK_JuryVotes_Users] FOREIGN KEY([JuryId])
 REFERENCES [dbo].[Users] ([Id])
-ON UPDATE CASCADE
+ON UPDATE NO ACTION
 GO
 ALTER TABLE [dbo].[JuryVotes] CHECK CONSTRAINT [FK_JuryVotes_Users]
 GO
 ALTER TABLE [dbo].[PlayAwardCategories]  WITH CHECK ADD  CONSTRAINT [FK_PlayAwardCategories_AwardCategories] FOREIGN KEY([AwardCategoryCode])
 REFERENCES [dbo].[AwardCategories] ([CategoryCode])
-ON UPDATE CASCADE
+ON UPDATE NO ACTION
 GO
 ALTER TABLE [dbo].[PlayAwardCategories] CHECK CONSTRAINT [FK_PlayAwardCategories_AwardCategories]
 GO
@@ -1304,7 +1304,7 @@ ALTER TABLE [dbo].[PlayAwardCategories] CHECK CONSTRAINT [FK_PlayAwardCategories
 GO
 ALTER TABLE [dbo].[PlayAwardCategories]  WITH CHECK ADD  CONSTRAINT [FK_PlayAwardCategories_Plays] FOREIGN KEY([PlayId])
 REFERENCES [dbo].[Plays] ([Id])
-ON UPDATE CASCADE
+ON UPDATE NO ACTION
 GO
 ALTER TABLE [dbo].[PlayAwardCategories] CHECK CONSTRAINT [FK_PlayAwardCategories_Plays]
 GO
@@ -1315,7 +1315,7 @@ ALTER TABLE [dbo].[Plays] CHECK CONSTRAINT [FK_Plays_Form_SourceFormId]
 GO
 ALTER TABLE [dbo].[Plays]  WITH CHECK ADD  CONSTRAINT [FK_Plays_PlayStatuses] FOREIGN KEY([StatusCode])
 REFERENCES [dbo].[PlayStatuses] ([StatusCode])
-ON UPDATE CASCADE
+ON UPDATE NO ACTION
 GO
 ALTER TABLE [dbo].[Plays] CHECK CONSTRAINT [FK_Plays_PlayStatuses]
 GO
@@ -1331,7 +1331,7 @@ ALTER TABLE [dbo].[Rankings] CHECK CONSTRAINT [FK_Rankings_Plays]
 GO
 ALTER TABLE [dbo].[Users]  WITH CHECK ADD  CONSTRAINT [FK_Users_Group] FOREIGN KEY([GroupCode])
 REFERENCES [dbo].[Group] ([Code])
-ON UPDATE CASCADE
+ON UPDATE NO ACTION
 GO
 ALTER TABLE [dbo].[Users] CHECK CONSTRAINT [FK_Users_Group]
 GO
@@ -1342,13 +1342,13 @@ ALTER TABLE [dbo].[Users] CHECK CONSTRAINT [FK_Users_Images_PhotoImageId]
 GO
 ALTER TABLE [dbo].[Users]  WITH CHECK ADD  CONSTRAINT [FK_Users_Roles] FOREIGN KEY([RoleCode])
 REFERENCES [dbo].[Roles] ([RoleCode])
-ON UPDATE CASCADE
+ON UPDATE NO ACTION
 GO
 ALTER TABLE [dbo].[Users] CHECK CONSTRAINT [FK_Users_Roles]
 GO
 ALTER TABLE [dbo].[UsersLog]  WITH CHECK ADD  CONSTRAINT [FK_UsersLog_Users_UserId] FOREIGN KEY([UserId])
 REFERENCES [dbo].[Users] ([Id])
-ON UPDATE CASCADE
+ON UPDATE NO ACTION
 GO
 ALTER TABLE [dbo].[UsersLog] CHECK CONSTRAINT [FK_UsersLog_Users_UserId]
 GO

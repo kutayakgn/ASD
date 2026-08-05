@@ -262,6 +262,52 @@ IF COL_LENGTH(N'dbo.Announcements', N'BackgroundImage') IS NOT NULL
       CROSS APPLY (SELECT TOP (1) Id FROM dbo.Images WHERE FileName = LEFT(a.BackgroundImage, 255)
         AND ContentType = N''application/x-afife-legacy-reference'' AND CreatedBy = a.Id ORDER BY CreatedAt DESC) i
       WHERE a.BackgroundImageId IS NULL AND NULLIF(LTRIM(RTRIM(a.BackgroundImage)), N'''') IS NOT NULL;';
+/* Recreate canonical cascading FKs as NO ACTION without touching business rows. */
+DECLARE @CanonicalCascadeForeignKeys TABLE
+(
+    ConstraintName sysname NOT NULL,
+    ParentTable nvarchar(260) NOT NULL
+);
+
+INSERT INTO @CanonicalCascadeForeignKeys (ConstraintName, ParentTable)
+VALUES
+    (N'FK_JuryAssignedPlays_Plays', N'[dbo].[JuryAssignedPlays]'),
+    (N'FK_JuryAssignedPlays_Users', N'[dbo].[JuryAssignedPlays]'),
+    (N'FK_JuryGameTicketFees_Plays', N'[dbo].[JuryGameTicketFees]'),
+    (N'FK_JuryGameTicketFees_Users', N'[dbo].[JuryGameTicketFees]'),
+    (N'FK_JuryVotes_PlayAwardCategories', N'[dbo].[JuryVotes]'),
+    (N'FK_JuryVotes_Users', N'[dbo].[JuryVotes]'),
+    (N'FK_PlayAwardCategories_AwardCategories', N'[dbo].[PlayAwardCategories]'),
+    (N'FK_PlayAwardCategories_Plays', N'[dbo].[PlayAwardCategories]'),
+    (N'FK_Plays_PlayStatuses', N'[dbo].[Plays]'),
+    (N'FK_Users_Group', N'[dbo].[Users]'),
+    (N'FK_Users_Roles', N'[dbo].[Users]'),
+    (N'FK_UsersLog_Users_UserId', N'[dbo].[UsersLog]');
+
+DECLARE @ConstraintName sysname;
+DECLARE @ParentTable nvarchar(260);
+DECLARE @DropForeignKeySql nvarchar(max);
+
+DECLARE canonical_fk_cursor CURSOR LOCAL FAST_FORWARD FOR
+SELECT expected.ConstraintName, expected.ParentTable
+FROM @CanonicalCascadeForeignKeys AS expected
+INNER JOIN sys.foreign_keys AS currentFk
+    ON currentFk.name = expected.ConstraintName
+WHERE currentFk.delete_referential_action <> 0
+   OR currentFk.update_referential_action <> 0;
+
+OPEN canonical_fk_cursor;
+FETCH NEXT FROM canonical_fk_cursor INTO @ConstraintName, @ParentTable;
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    SET @DropForeignKeySql =
+        N'ALTER TABLE ' + @ParentTable + N' DROP CONSTRAINT [' +
+        REPLACE(@ConstraintName, N']', N']]') + N'];';
+    EXEC sys.sp_executesql @DropForeignKeySql;
+    FETCH NEXT FROM canonical_fk_cursor INTO @ConstraintName, @ParentTable;
+END;
+CLOSE canonical_fk_cursor;
+DEALLOCATE canonical_fk_cursor;
 /* Alternate keys are required FK targets and remain globally unique contracts. */
 IF OBJECT_ID(N'dbo.UQ_AwardCategories_CategoryCode', N'UQ') IS NULL
     ALTER TABLE dbo.AwardCategories ADD CONSTRAINT UQ_AwardCategories_CategoryCode UNIQUE (CategoryCode);

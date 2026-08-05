@@ -92,6 +92,11 @@ internal static partial class DatabaseSchemaValidator
             }
         }
 
+        foreach (var foreignKey in catalog.CascadingForeignKeys)
+        {
+            missing.Add($"foreign key {foreignKey} must use ON UPDATE/DELETE NO ACTION");
+        }
+
         var unexpectedTriggers = catalog.Triggers.Except(
             expectedTriggers, StringComparer.OrdinalIgnoreCase);
         foreach (var trigger in unexpectedTriggers)
@@ -203,7 +208,11 @@ internal static partial class DatabaseSchemaValidator
             UNION ALL
             SELECT N'P', p.name FROM sys.procedures p
             UNION ALL
-            SELECT N'R', tr.name FROM sys.triggers tr WHERE tr.parent_class = 1;
+            SELECT N'R', tr.name FROM sys.triggers tr WHERE tr.parent_class = 1
+            UNION ALL
+            SELECT N'F', fk.name FROM sys.foreign_keys fk
+            WHERE fk.delete_referential_action <> 0
+               OR fk.update_referential_action <> 0;
             """;
 
         var result = new Catalog();
@@ -222,6 +231,7 @@ internal static partial class DatabaseSchemaValidator
                 "K" => result.Constraints,
                 "P" => result.Procedures,
                 "R" => result.Triggers,
+                "F" => result.CascadingForeignKeys,
                 _ => throw new DataException($"Unknown schema catalog kind '{kind}'.")
             }).Add(name);
         }
@@ -237,6 +247,7 @@ internal static partial class DatabaseSchemaValidator
         public HashSet<string> Constraints { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> Procedures { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> Triggers { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public HashSet<string> CascadingForeignKeys { get; } = new(StringComparer.OrdinalIgnoreCase);
     }
 
     [GeneratedRegex(@"CREATE\s+(?:UNIQUE\s+)?(?:NONCLUSTERED\s+)?INDEX\s+\[(?<name>[^]]+)\]",
