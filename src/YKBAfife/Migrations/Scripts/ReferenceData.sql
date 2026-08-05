@@ -91,32 +91,23 @@ IF EXISTS
 )
     THROW 51033, 'Reference bootstrap blocked: a canonical AwardCategories Id is assigned to another code.', 1;
 
+INSERT INTO dbo.AwardCategories
+    (Id, CategoryName, CategoryCode, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy, IsPublished)
+SELECT source.Id, source.CategoryName, source.CategoryCode,
+       '2026-07-16T15:39:19.4137221', NULL, NULL, NULL, 1
+FROM @AwardCategories AS source
+WHERE NOT EXISTS
+(
+    SELECT 1 FROM dbo.AwardCategories AS target
+    WHERE target.CategoryCode = source.CategoryCode
+);
+
 IF COL_LENGTH(N'dbo.AwardCategories', N'MultiCandidate') IS NOT NULL
    AND COL_LENGTH(N'dbo.AwardCategories', N'HasRoleAndPhoto') IS NOT NULL
 BEGIN
-    INSERT INTO dbo.AwardCategories
-        (Id, CategoryName, CategoryCode, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy,
-         IsPublished, MultiCandidate, HasRoleAndPhoto)
-    SELECT source.Id, source.CategoryName, source.CategoryCode,
-           '2026-07-16T15:39:19.4137221', NULL, NULL, NULL,
-           1, source.MultiCandidate, source.HasRoleAndPhoto
-    FROM @AwardCategories AS source
-    WHERE NOT EXISTS
-    (
-        SELECT 1 FROM dbo.AwardCategories AS target
-        WHERE target.CategoryCode = source.CategoryCode
-    );
-END;
-ELSE
-BEGIN
-    INSERT INTO dbo.AwardCategories
-        (Id, CategoryName, CategoryCode, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy, IsPublished)
-    SELECT source.Id, source.CategoryName, source.CategoryCode,
-           '2026-07-16T15:39:19.4137221', NULL, NULL, NULL, 1
-    FROM @AwardCategories AS source
-    WHERE NOT EXISTS
-    (
-        SELECT 1 FROM dbo.AwardCategories AS target
-        WHERE target.CategoryCode = source.CategoryCode
-    );
+    EXEC sys.sp_executesql N'
+    UPDATE dbo.AwardCategories
+    SET MultiCandidate = CASE WHEN CategoryCode IN (1003, 1004, 1005, 1006, 1012) THEN 1 ELSE 0 END,
+        HasRoleAndPhoto = CASE WHEN CategoryCode IN (1002, 1003, 1004, 1005, 1006, 1012) THEN 1 ELSE 0 END
+    WHERE CategoryCode BETWEEN 1001 AND 1012;';
 END;

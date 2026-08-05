@@ -32,11 +32,12 @@ IF COL_LENGTH(N'dbo.AwardCategories', N'MultiCandidate') IS NULL
 IF COL_LENGTH(N'dbo.AwardCategories', N'HasRoleAndPhoto') IS NULL
     ALTER TABLE dbo.AwardCategories ADD HasRoleAndPhoto bit NOT NULL CONSTRAINT DF_AwardCategories_HasRoleAndPhoto DEFAULT (0) WITH VALUES;
 
-/* Backfill only the newly introduced behavior flags from immutable category codes. */
+/* Compile after additive columns exist; SQL Server binds static column names per batch. */
+EXEC sys.sp_executesql N'
 UPDATE dbo.AwardCategories
 SET MultiCandidate = CASE WHEN CategoryCode IN (1003, 1004, 1005, 1006, 1012) THEN 1 ELSE 0 END,
     HasRoleAndPhoto = CASE WHEN CategoryCode IN (1002, 1003, 1004, 1005, 1006, 1012) THEN 1 ELSE 0 END
-WHERE CategoryCode BETWEEN 1001 AND 1012;
+WHERE CategoryCode BETWEEN 1001 AND 1012;';
 
 IF COL_LENGTH(N'dbo.Configs', N'IsPublished') IS NULL
     ALTER TABLE dbo.Configs ADD IsPublished bit NOT NULL CONSTRAINT DF_Configs_IsPublished DEFAULT (1) WITH VALUES;
@@ -91,19 +92,15 @@ IF COL_LENGTH(N'dbo.Plays', N'IsActive') IS NULL
    Admin records. This is the only provenance compatible with an unpublished
    play because Kunye records must remain published.
 */
+EXEC sys.sp_executesql N'
 UPDATE dbo.Plays
 SET JuriOylamaStatus = 0,
     KunyeGirisStatus = 0,
     StatusCode = CASE WHEN StatusCode = 1 THEN 2 ELSE StatusCode END,
     IsActive = CASE WHEN IsPublished = 0 THEN 0 ELSE IsActive END
-WHERE RecordType = 1;
+WHERE RecordType = 1;';
 
-ALTER TABLE dbo.Plays ALTER COLUMN TheaterName nvarchar(255) NOT NULL;
-ALTER TABLE dbo.Plays ALTER COLUMN Phone nvarchar(255) NULL;
-ALTER TABLE dbo.Plays ALTER COLUMN ContactPersonName nvarchar(255) NULL;
-ALTER TABLE dbo.Plays ALTER COLUMN ContactPersonPhone nvarchar(255) NULL;
-ALTER TABLE dbo.Plays ALTER COLUMN Address nvarchar(255) NULL;
-ALTER TABLE dbo.Plays ALTER COLUMN Email nvarchar(255) NULL;
+/* Legacy string columns may be wider. Keep them to prevent truncation/data loss. */
 
 GO
 
