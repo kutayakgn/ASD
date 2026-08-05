@@ -262,52 +262,74 @@ IF COL_LENGTH(N'dbo.Announcements', N'BackgroundImage') IS NOT NULL
       CROSS APPLY (SELECT TOP (1) Id FROM dbo.Images WHERE FileName = LEFT(a.BackgroundImage, 255)
         AND ContentType = N''application/x-afife-legacy-reference'' AND CreatedBy = a.Id ORDER BY CreatedAt DESC) i
       WHERE a.BackgroundImageId IS NULL AND NULLIF(LTRIM(RTRIM(a.BackgroundImage)), N'''') IS NOT NULL;';
-/* Recreate canonical cascading FKs as NO ACTION without touching business rows. */
-DECLARE @CanonicalCascadeForeignKeys TABLE
-(
-    ConstraintName sysname NOT NULL,
-    ParentTable nvarchar(260) NOT NULL
-);
-
-INSERT INTO @CanonicalCascadeForeignKeys (ConstraintName, ParentTable)
-VALUES
-    (N'FK_JuryAssignedPlays_Plays', N'[dbo].[JuryAssignedPlays]'),
-    (N'FK_JuryAssignedPlays_Users', N'[dbo].[JuryAssignedPlays]'),
-    (N'FK_JuryGameTicketFees_Plays', N'[dbo].[JuryGameTicketFees]'),
-    (N'FK_JuryGameTicketFees_Users', N'[dbo].[JuryGameTicketFees]'),
-    (N'FK_JuryVotes_PlayAwardCategories', N'[dbo].[JuryVotes]'),
-    (N'FK_JuryVotes_Users', N'[dbo].[JuryVotes]'),
-    (N'FK_PlayAwardCategories_AwardCategories', N'[dbo].[PlayAwardCategories]'),
-    (N'FK_PlayAwardCategories_Plays', N'[dbo].[PlayAwardCategories]'),
-    (N'FK_Plays_PlayStatuses', N'[dbo].[Plays]'),
-    (N'FK_Users_Group', N'[dbo].[Users]'),
-    (N'FK_Users_Roles', N'[dbo].[Users]'),
-    (N'FK_UsersLog_Users_UserId', N'[dbo].[UsersLog]');
-
+/* Preserve every FK relationship while replacing cascading actions with NO ACTION. */
+DECLARE @ForeignKeyObjectId int;
 DECLARE @ConstraintName sysname;
-DECLARE @ParentTable nvarchar(260);
-DECLARE @DropForeignKeySql nvarchar(max);
+DECLARE @ParentTable nvarchar(520);
+DECLARE @ReferencedTable nvarchar(520);
+DECLARE @ParentColumns nvarchar(max);
+DECLARE @ReferencedColumns nvarchar(max);
+DECLARE @NormalizeForeignKeySql nvarchar(max);
 
-DECLARE canonical_fk_cursor CURSOR LOCAL FAST_FORWARD FOR
-SELECT expected.ConstraintName, expected.ParentTable
-FROM @CanonicalCascadeForeignKeys AS expected
-INNER JOIN sys.foreign_keys AS currentFk
-    ON currentFk.name = expected.ConstraintName
-WHERE currentFk.delete_referential_action <> 0
-   OR currentFk.update_referential_action <> 0;
+DECLARE cascading_fk_cursor CURSOR LOCAL FAST_FORWARD FOR
+SELECT foreignKey.object_id
+FROM sys.foreign_keys AS foreignKey
+INNER JOIN sys.tables AS parentTable
+    ON parentTable.object_id = foreignKey.parent_object_id
+INNER JOIN sys.schemas AS parentSchema
+    ON parentSchema.schema_id = parentTable.schema_id
+WHERE parentSchema.name = N'dbo'
+  AND
+  (
+      foreignKey.delete_referential_action <> 0
+      OR foreignKey.update_referential_action <> 0
+  );
 
-OPEN canonical_fk_cursor;
-FETCH NEXT FROM canonical_fk_cursor INTO @ConstraintName, @ParentTable;
+OPEN cascading_fk_cursor;
+FETCH NEXT FROM cascading_fk_cursor INTO @ForeignKeyObjectId;
 WHILE @@FETCH_STATUS = 0
 BEGIN
-    SET @DropForeignKeySql =
-        N'ALTER TABLE ' + @ParentTable + N' DROP CONSTRAINT [' +
-        REPLACE(@ConstraintName, N']', N']]') + N'];';
-    EXEC sys.sp_executesql @DropForeignKeySql;
-    FETCH NEXT FROM canonical_fk_cursor INTO @ConstraintName, @ParentTable;
+    SELECT
+        @ConstraintName = foreignKey.name,
+        @ParentTable = QUOTENAME(parentSchema.name) + N'.' + QUOTENAME(parentTable.name),
+        @ReferencedTable = QUOTENAME(referencedSchema.name) + N'.' + QUOTENAME(referencedTable.name)
+    FROM sys.foreign_keys AS foreignKey
+    INNER JOIN sys.tables AS parentTable
+        ON parentTable.object_id = foreignKey.parent_object_id
+    INNER JOIN sys.schemas AS parentSchema
+        ON parentSchema.schema_id = parentTable.schema_id
+    INNER JOIN sys.tables AS referencedTable
+        ON referencedTable.object_id = foreignKey.referenced_object_id
+    INNER JOIN sys.schemas AS referencedSchema
+        ON referencedSchema.schema_id = referencedTable.schema_id
+    WHERE foreignKey.object_id = @ForeignKeyObjectId;
+
+    SELECT
+        @ParentColumns = STRING_AGG(QUOTENAME(parentColumn.name), N', ')
+            WITHIN GROUP (ORDER BY foreignKeyColumn.constraint_column_id),
+        @ReferencedColumns = STRING_AGG(QUOTENAME(referencedColumn.name), N', ')
+            WITHIN GROUP (ORDER BY foreignKeyColumn.constraint_column_id)
+    FROM sys.foreign_key_columns AS foreignKeyColumn
+    INNER JOIN sys.columns AS parentColumn
+        ON parentColumn.object_id = foreignKeyColumn.parent_object_id
+       AND parentColumn.column_id = foreignKeyColumn.parent_column_id
+    INNER JOIN sys.columns AS referencedColumn
+        ON referencedColumn.object_id = foreignKeyColumn.referenced_object_id
+       AND referencedColumn.column_id = foreignKeyColumn.referenced_column_id
+    WHERE foreignKeyColumn.constraint_object_id = @ForeignKeyObjectId;
+
+    SET @NormalizeForeignKeySql =
+        N'ALTER TABLE ' + @ParentTable + N' DROP CONSTRAINT ' + QUOTENAME(@ConstraintName) + N'; ' +
+        N'ALTER TABLE ' + @ParentTable + N' WITH CHECK ADD CONSTRAINT ' + QUOTENAME(@ConstraintName) +
+        N' FOREIGN KEY (' + @ParentColumns + N') REFERENCES ' + @ReferencedTable +
+        N' (' + @ReferencedColumns + N') ON UPDATE NO ACTION ON DELETE NO ACTION; ' +
+        N'ALTER TABLE ' + @ParentTable + N' CHECK CONSTRAINT ' + QUOTENAME(@ConstraintName) + N';';
+
+    EXEC sys.sp_executesql @NormalizeForeignKeySql;
+    FETCH NEXT FROM cascading_fk_cursor INTO @ForeignKeyObjectId;
 END;
-CLOSE canonical_fk_cursor;
-DEALLOCATE canonical_fk_cursor;
+CLOSE cascading_fk_cursor;
+DEALLOCATE cascading_fk_cursor;
 /* Alternate keys are required FK targets and remain globally unique contracts. */
 IF OBJECT_ID(N'dbo.UQ_AwardCategories_CategoryCode', N'UQ') IS NULL
     ALTER TABLE dbo.AwardCategories ADD CONSTRAINT UQ_AwardCategories_CategoryCode UNIQUE (CategoryCode);
