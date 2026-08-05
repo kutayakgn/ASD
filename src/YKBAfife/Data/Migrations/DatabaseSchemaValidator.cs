@@ -133,7 +133,7 @@ internal static partial class DatabaseSchemaValidator
         if (missing.Count > 0)
         {
             throw new InvalidOperationException(
-                "Database schema drift detected. Missing objects: " +
+                "Database schema drift detected. Missing or invalid objects: " +
                 string.Join(", ", missing.Order(StringComparer.OrdinalIgnoreCase)));
         }
     }
@@ -172,9 +172,17 @@ internal static partial class DatabaseSchemaValidator
 
         foreach (var expected in RequiredReferenceRows)
         {
-            if (!actual.TryGetValue(expected.Key, out var row) || row != expected.Value)
+            if (!actual.TryGetValue(expected.Key, out var row))
             {
-                invalid.Add($"reference data {expected.Key.Type} code {expected.Key.Code}");
+                invalid.Add($"reference data {expected.Key.Type} code {expected.Key.Code} is missing");
+                continue;
+            }
+
+            if (row != expected.Value)
+            {
+                invalid.Add(
+                    $"reference data {expected.Key.Type} code {expected.Key.Code} " +
+                    $"expected [{expected.Value}] but found [{row}]");
             }
         }
     }
