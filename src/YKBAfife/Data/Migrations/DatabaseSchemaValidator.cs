@@ -41,6 +41,20 @@ internal static partial class DatabaseSchemaValidator
                     missing.Add($"column {tableKey}.{column}");
                 }
             }
+
+            if (entityType.FindPrimaryKey() is not null &&
+                !catalog.PrimaryKeyTables.Contains(tableKey))
+            {
+                missing.Add($"primary key on {tableKey}");
+            }
+
+            var hasIsPublished = entityType.GetProperties().Any(property =>
+                string.Equals(property.GetColumnName(storeObject), "IsPublished",
+                    StringComparison.OrdinalIgnoreCase));
+            if (hasIsPublished && !catalog.IsPublishedDefaultOneTables.Contains(tableKey))
+            {
+                missing.Add($"default 1 for {tableKey}.IsPublished");
+            }
         }
 
         var schemaSql = MigrationSqlResources.Read("InitialSchema.sql");
@@ -53,9 +67,16 @@ internal static partial class DatabaseSchemaValidator
         }
         foreach (Match match in ConstraintRegex().Matches(schemaSql))
         {
-            if (!catalog.Constraints.Contains(match.Groups["name"].Value))
+            var constraintName = match.Groups["name"].Value;
+            if (constraintName.StartsWith("PK_", StringComparison.OrdinalIgnoreCase) ||
+                constraintName.EndsWith("_IsPublished_SoftDelete", StringComparison.OrdinalIgnoreCase))
             {
-                missing.Add($"constraint {match.Groups["name"].Value}");
+                continue;
+            }
+
+            if (!catalog.Constraints.Contains(constraintName))
+            {
+                missing.Add($"constraint {constraintName}");
             }
         }
 
@@ -212,7 +233,22 @@ internal static partial class DatabaseSchemaValidator
             UNION ALL
             SELECT N'F', fk.name FROM sys.foreign_keys fk
             WHERE fk.delete_referential_action <> 0
-               OR fk.update_referential_action <> 0;
+               OR fk.update_referential_action <> 0
+            UNION ALL
+            SELECT N'Q', s.name + N'.' + t.name
+            FROM sys.key_constraints pk
+            JOIN sys.tables t ON t.object_id = pk.parent_object_id
+            JOIN sys.schemas s ON s.schema_id = t.schema_id
+            WHERE pk.type = N'PK'
+            UNION ALL
+            SELECT N'B', s.name + N'.' + t.name
+            FROM sys.default_constraints dc
+            JOIN sys.columns c ON c.object_id = dc.parent_object_id
+                              AND c.column_id = dc.parent_column_id
+            JOIN sys.tables t ON t.object_id = dc.parent_object_id
+            JOIN sys.schemas s ON s.schema_id = t.schema_id
+            WHERE c.name = N'IsPublished'
+              AND REPLACE(REPLACE(REPLACE(dc.definition, N'(', N''), N')', N''), N' ', N'') = N'1';
             """;
 
         var result = new Catalog();
@@ -232,6 +268,8 @@ internal static partial class DatabaseSchemaValidator
                 "P" => result.Procedures,
                 "R" => result.Triggers,
                 "F" => result.CascadingForeignKeys,
+                "Q" => result.PrimaryKeyTables,
+                "B" => result.IsPublishedDefaultOneTables,
                 _ => throw new DataException($"Unknown schema catalog kind '{kind}'.")
             }).Add(name);
         }
@@ -248,6 +286,8 @@ internal static partial class DatabaseSchemaValidator
         public HashSet<string> Procedures { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> Triggers { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> CascadingForeignKeys { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public HashSet<string> PrimaryKeyTables { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public HashSet<string> IsPublishedDefaultOneTables { get; } = new(StringComparer.OrdinalIgnoreCase);
     }
 
     [GeneratedRegex(@"CREATE\s+(?:UNIQUE\s+)?(?:NONCLUSTERED\s+)?INDEX\s+\[(?<name>[^]]+)\]",
