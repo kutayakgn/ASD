@@ -20,6 +20,10 @@ BEGIN
     INSERT INTO dbo.Roles (Id, RoleName, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy, IsPublished, RoleCode)
     VALUES ('10000000-0000-0000-0000-000000000002', N'Jüri', '2026-07-16T15:39:19.4137221', NULL, NULL, NULL, 1, 2);
 END;
+UPDATE dbo.Roles
+SET RoleName = CASE RoleCode WHEN 1 THEN N'Koordinatör' WHEN 2 THEN N'Jüri' END,
+    IsPublished = 1
+WHERE RoleCode IN (1, 2);
 
 DECLARE @PlayStatuses TABLE
 (
@@ -57,6 +61,12 @@ WHERE NOT EXISTS
     SELECT 1 FROM dbo.PlayStatuses AS target
     WHERE target.StatusCode = source.StatusCode
 );
+UPDATE target
+SET StatusName = source.StatusName,
+    StatusColor = source.StatusColor,
+    IsPublished = 1
+FROM dbo.PlayStatuses AS target
+INNER JOIN @PlayStatuses AS source ON source.StatusCode = target.StatusCode;
 
 DECLARE @AwardCategories TABLE
 (
@@ -101,6 +111,11 @@ WHERE NOT EXISTS
     SELECT 1 FROM dbo.AwardCategories AS target
     WHERE target.CategoryCode = source.CategoryCode
 );
+UPDATE target
+SET CategoryName = source.CategoryName,
+    IsPublished = 1
+FROM dbo.AwardCategories AS target
+INNER JOIN @AwardCategories AS source ON source.CategoryCode = target.CategoryCode;
 
 IF COL_LENGTH(N'dbo.AwardCategories', N'MultiCandidate') IS NOT NULL
    AND COL_LENGTH(N'dbo.AwardCategories', N'HasRoleAndPhoto') IS NOT NULL
