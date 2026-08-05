@@ -53,6 +53,7 @@ namespace YKBAfife.Data.Migrations
             MigrationSqlResources.Execute(migrationBuilder, "InitialSchema.sql", skipWhenBaselineExists: true);
             MigrationSqlResources.Execute(migrationBuilder, "PrepareLegacyForm.sql", onlyWhenBaselineExists: true);
             MigrationSqlResources.ExecuteMissingTables(migrationBuilder, "InitialSchema.sql");
+            MigrationSqlResources.Execute(migrationBuilder, "ReferenceData.sql");
             MigrationSqlResources.Execute(migrationBuilder, "LegacyUpgrade.sql", onlyWhenBaselineExists: true);
             MigrationSqlResources.ExecuteMissingSchemaObjects(migrationBuilder, "InitialSchema.sql");
 
