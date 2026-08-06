@@ -739,16 +739,10 @@ BEGIN
         WHERE candidate.AwardCategoryCode = 1001
           AND
           (
-              (
-                  candidate.RoleCode = 0
-                  AND
-                  (
-                      play.RecordType <> 0
-                      OR candidate.Role IS NOT NULL
-                      OR candidate.IsCurrent <> 1
-                      OR candidate.Candidate <> play.TheaterName
-                  )
-              )
+              play.RecordType <> 0
+              OR ISNULL(candidate.Role, N'') <> N'Tiyatro'
+              OR candidate.Candidate <> play.TheaterName
+              OR (candidate.RoleCode = 0 AND candidate.IsCurrent <> 1)
               OR
               (
                   candidate.RoleCode <> 0
@@ -758,8 +752,6 @@ BEGIN
                       OR previousCandidate.PlayId <> candidate.PlayId
                       OR previousCandidate.AwardCategoryCode <> candidate.AwardCategoryCode
                       OR previousCandidate.RoleCode <> candidate.RoleCode
-                      OR ISNULL(previousCandidate.Role, N'') <> ISNULL(candidate.Role, N'')
-                      OR previousCandidate.Candidate <> candidate.Candidate
                   )
               )
           )
@@ -907,6 +899,7 @@ BEGIN
     UPDATE defaultCategory
     SET
         defaultCategory.Candidate = currentPlay.TheaterName,
+        defaultCategory.Role = N'Tiyatro',
         defaultCategory.UpdatedAt = DATEADD(HOUR, 3, SYSUTCDATETIME()),
         defaultCategory.UpdatedBy = currentPlay.UpdatedBy
     FROM dbo.PlayAwardCategories AS defaultCategory
@@ -914,8 +907,12 @@ BEGIN
     INNER JOIN deleted AS previousPlay ON previousPlay.Id = currentPlay.Id
     WHERE currentPlay.RecordType = 0
       AND defaultCategory.AwardCategoryCode = 1001
-      AND defaultCategory.RoleCode = 0
-      AND currentPlay.TheaterName <> previousPlay.TheaterName;
+      AND
+      (
+          currentPlay.TheaterName <> previousPlay.TheaterName
+          OR defaultCategory.Candidate <> currentPlay.TheaterName
+          OR ISNULL(defaultCategory.Role, N'') <> N'Tiyatro'
+      );
 
     INSERT INTO dbo.PlayAwardCategories
     (
@@ -933,7 +930,7 @@ BEGIN
         play.TheaterName,
         1001,
         1,
-        NULL,
+        N'Tiyatro',
         0,
         NULL
     FROM inserted AS play

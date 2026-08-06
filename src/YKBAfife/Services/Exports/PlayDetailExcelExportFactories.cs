@@ -15,7 +15,7 @@ public static class PlayVoteExcelExportFactory
         [
             new() { Header = "Jüri Adı", Width = 28 },
             new() { Header = "Kategori Adı", Width = 42 },
-            new() { Header = "Role Adı", Width = 24 },
+            new() { Header = "Rol Adı", Width = 24 },
             new() { Header = "Jüri Puanı", Width = 14, Alignment = ExcelExportAlignment.Center },
             new() { Header = "Oy Tarihi", Width = 22 },
             new() { Header = "IsActive", Width = 12, Alignment = ExcelExportAlignment.Center }
@@ -46,8 +46,8 @@ public static class CandidateExcelExportFactory
         Columns =
         [
             new() { Header = "Ödül Kategorisi", Width = 42 },
-            new() { Header = "Adı Soyadı", Width = 28 },
-            new() { Header = "Role Adı", Width = 24 },
+            new() { Header = "Aday Adı", Width = 28 },
+            new() { Header = "Rol Adı", Width = 24 },
             new() { Header = "Rol Değişimi", Width = 16 },
             new() { Header = "Eklenme Tarihi", Width = 22 },
             new() { Header = "Statü", Width = 14 }

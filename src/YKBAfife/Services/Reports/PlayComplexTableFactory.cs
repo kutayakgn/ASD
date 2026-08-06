@@ -149,7 +149,7 @@ public static class PlayComplexTableFactory
                         <img src="/icons/yellow-info-circle-filled.svg" alt="" aria-hidden="true" />
                     </button>
                     <template data-play-similar-content>
-                        <span>Benzer isimde oyun mevcut. Benzer oyun/oyunlar: </span>{{links}}
+                        <span>Benzer isimde oyun mevcut: </span>{{links}}
                     </template>
                 </span>
                 """);

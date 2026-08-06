@@ -55,8 +55,8 @@ public static class CandidateComplexTableFactory
                 Columns =
                 [
                     new() { Title = "Ödül Kategorisi", Key = CandidateSortColumns.Category, ColWidth = 23 },
-                    new() { Title = "Adı Soyadı", Key = CandidateSortColumns.Candidate, ColWidth = 19 },
-                    new() { Title = "Role Adı", Key = CandidateSortColumns.Role, ColWidth = 15 },
+                    new() { Title = "Aday Adı", Key = CandidateSortColumns.Candidate, ColWidth = 19 },
+                    new() { Title = "Rol Adı", Key = CandidateSortColumns.Role, ColWidth = 15 },
                     new() { Title = "Rol Değişimi", Key = CandidateSortColumns.Replacement, ColWidth = 15 },
                     new() { Title = "Eklenme Tarihi", Key = CandidateSortColumns.CreatedAt, ColWidth = 16 },
                     new() { Title = "Statü", Key = CandidateSortColumns.Status, ColWidth = 12, CssClass = "candidate-status-column" }
