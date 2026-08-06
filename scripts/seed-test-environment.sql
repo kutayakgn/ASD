@@ -63,6 +63,13 @@ DECLARE @Now datetime2(7) = DATEADD(HOUR, 3, SYSUTCDATETIME());
 DECLARE @CorrelationId uniqueidentifier = NEWID();
 DECLARE @BatchToken varchar(12) = LOWER(LEFT(REPLACE(CONVERT(varchar(36), NEWID()), '-', ''), 12));
 DECLARE @PasswordHash nvarchar(500) = N'oDajqYzI1FXAP9N3WLa2B4PNn0pYLTdgy52ZUCsOQ7k/EiYF';
+DECLARE @HasLegacyActiveRoleIndex bit = CASE WHEN EXISTS
+(
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.PlayAwardCategories')
+      AND name = N'UX_PlayAwardCategories_Active_Play_Category_RoleCode'
+) THEN 1 ELSE 0 END;
 
 EXEC sys.sp_set_session_context @key=N'AdminCorrelationId', @value=@CorrelationId;
 EXEC sys.sp_set_session_context @key=N'AdminUsername', @value=N'test-environment-seed';
@@ -287,7 +294,8 @@ BEGIN TRY
     WHERE NOT EXISTS
     (
         SELECT 1 FROM dbo.PlayAwardCategories AS existing WHERE existing.Id = candidate.Id
-    );
+    )
+      AND (@HasLegacyActiveRoleIndex = 0 OR candidate.IsCurrent = 1);
 
     /* Published assignments include active and inactive juries; jury 19/20 are soft-deleted and excluded. */
     INSERT INTO dbo.JuryAssignedPlays
@@ -367,6 +375,8 @@ BEGIN TRY
             ELSE 5 + (candidate.PlayNo % 10)
         END
     FROM @Candidates AS candidate
+    INNER JOIN dbo.PlayAwardCategories AS persistedCandidate
+        ON persistedCandidate.Id = candidate.Id
     WHERE candidate.IsPublished = 1;
 
     INSERT INTO dbo.JuryVotes
