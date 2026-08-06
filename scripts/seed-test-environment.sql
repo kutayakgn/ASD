@@ -12,7 +12,8 @@
       - Never deletes or updates pre-existing business rows.
       - Does not write Announcements, AwardCategories, Images, Manager,
         PlayStatuses, or Roles.
-      - Uses stable IDs and logical existence checks, so reruns are idempotent.
+      - Every run uses a unique batch token and fresh GUID values, so existing
+        seed or business rows cannot cause duplicate-key/FK identity conflicts.
       - Trigger-managed Rankings and season counters are expected to recalculate.
 */
 
@@ -60,6 +61,7 @@ IF EXISTS
 
 DECLARE @Now datetime2(7) = DATEADD(HOUR, 3, SYSUTCDATETIME());
 DECLARE @CorrelationId uniqueidentifier = NEWID();
+DECLARE @BatchToken varchar(12) = LOWER(LEFT(REPLACE(CONVERT(varchar(36), NEWID()), '-', ''), 12));
 DECLARE @PasswordHash nvarchar(500) = N'oDajqYzI1FXAP9N3WLa2B4PNn0pYLTdgy52ZUCsOQ7k/EiYF';
 
 EXEC sys.sp_set_session_context @key=N'AdminCorrelationId', @value=@CorrelationId;
@@ -104,6 +106,29 @@ VALUES
     (18, 'E1000000-0000-0000-0000-000000000018', N'Selin',   N'Tunç',       N'test.juri18', N'test.juri18@afife.test', N'5551000018', 0, 1),
     (19, 'E1000000-0000-0000-0000-000000000019', N'Tolga',   N'Bulut',      N'test.juri19', N'test.juri19@afife.test', N'5551000019', 0, 0),
     (20, 'E1000000-0000-0000-0000-000000000020', N'Zeynep',  N'Kara',       N'test.juri20', N'test.juri20@afife.test', N'5551000020', 0, 0);
+WHILE EXISTS
+(
+    SELECT 1
+    FROM @Juries AS seed
+    INNER JOIN dbo.Users AS existing
+        ON existing.RoleCode = 2
+       AND existing.IsPublished = 1
+       AND
+       (
+           existing.Username = seed.Username + N'.' + @BatchToken
+           OR existing.Email = REPLACE(
+               seed.Email, N'@afife.test', N'.' + @BatchToken + N'@afife.test')
+       )
+)
+BEGIN
+    SET @BatchToken = LOWER(LEFT(
+        REPLACE(CONVERT(varchar(36), NEWID()), '-', ''), 12));
+END;
+
+UPDATE @Juries
+SET Id = NEWID(),
+    Username = Username + N'.' + @BatchToken,
+    Email = REPLACE(Email, N'@afife.test', N'.' + @BatchToken + N'@afife.test');
 
 DECLARE @Plays TABLE
 (
@@ -141,34 +166,22 @@ VALUES
     (14, 'E2000000-0000-0000-0000-000000000014', N'Bilet Kontrol Oyunu',  N'Kontrol Tiyatrosu', 'test-bilet-kontrol-oyunu',  6, '2026-05-02T20:00:00', 1, 0, 0, 1, 1),
     (15, 'E2000000-0000-0000-0000-000000000015', N'Silinmiş Admin Oyunu', N'Arşiv Sahnesi',     'test-silinmis-admin-oyunu', 3, '2026-05-10T20:00:00', 1, 0, 0, 0, 0);
 
-IF EXISTS
+WHILE EXISTS
 (
     SELECT 1
-    FROM @Juries AS seed
-    INNER JOIN dbo.Users AS existing
-        ON (existing.Username = seed.Username OR existing.Email = seed.Email)
-       AND existing.RoleCode = 2
-       AND existing.IsPublished = 1
-       AND existing.Id <> seed.Id
+    FROM @Plays AS seed
+    INNER JOIN dbo.Plays AS existing
+        ON existing.Slug = seed.Slug + '-' + @BatchToken
 )
-    THROW 53005, N'Test jüri kullanıcı adı veya e-postası başka bir yayımlanmış kayıtta kullanılıyor.', 1;
+BEGIN
+    SET @BatchToken = LOWER(LEFT(
+        REPLACE(CONVERT(varchar(36), NEWID()), '-', ''), 12));
+END;
 
-IF EXISTS
-(
-    SELECT 1 FROM @Juries AS seed
-    INNER JOIN dbo.Users AS existing ON existing.Id = seed.Id
-    WHERE existing.RoleCode <> 2
-)
-    THROW 53006, N'Test jüri GUID değerlerinden biri jüri olmayan mevcut bir kullanıcıya ait.', 1;
-
-IF EXISTS
-(
-    SELECT 1 FROM @Plays AS seed
-    INNER JOIN dbo.Plays AS existing ON existing.Id = seed.Id
-    WHERE existing.RecordType <> seed.RecordType
-)
-    THROW 53007, N'Test oyun GUID değerlerinden biri farklı RecordType değerli mevcut bir oyuna ait.', 1;
-
+UPDATE @Plays
+SET Id = NEWID(),
+    PlayName = PlayName + N' [' + @BatchToken + N']',
+    Slug = Slug + '-' + @BatchToken;
 BEGIN TRY
     BEGIN TRANSACTION;
 
@@ -258,6 +271,8 @@ BEGIN TRY
         ('E3400000-0000-0000-0000-000000000002', 2,  1003, N'Ayşe Olgun',      N'Başrol', 1, 0, 1, 1),
         ('E3400000-0000-0000-0000-000000000003', 3,  1003, N'Belgin Öz',       N'Başrol', 1, 0, 0, 1);
 
+    UPDATE @Candidates SET Id = NEWID();
+
     INSERT INTO dbo.PlayAwardCategories
     (
         Id, PlayId, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy, IsPublished,
@@ -338,15 +353,15 @@ BEGIN TRY
     SELECT
         candidate.PlayNo, candidate.Id, candidate.AwardCategoryCode,
         CASE
-            WHEN candidate.Id = 'E3300000-0000-0000-0000-000000000001' THEN 6
-            WHEN candidate.Id = 'E3200000-0000-0000-0000-000000000002' THEN 5
+            WHEN candidate.PlayNo = 1 AND candidate.AwardCategoryCode = 1004 AND candidate.IsCurrent = 1 THEN 6
+            WHEN candidate.PlayNo = 2 AND candidate.AwardCategoryCode = 1003 AND candidate.IsCurrent = 1 THEN 5
             ELSE 1
         END,
         CASE
-            WHEN candidate.Id = 'E3400000-0000-0000-0000-000000000001' THEN 5
-            WHEN candidate.Id = 'E3300000-0000-0000-0000-000000000001' THEN 15
-            WHEN candidate.Id = 'E3400000-0000-0000-0000-000000000002' THEN 4
-            WHEN candidate.Id = 'E3200000-0000-0000-0000-000000000002' THEN 14
+            WHEN candidate.PlayNo = 1 AND candidate.AwardCategoryCode = 1004 AND candidate.IsCurrent = 0 THEN 5
+            WHEN candidate.PlayNo = 1 AND candidate.AwardCategoryCode = 1004 AND candidate.IsCurrent = 1 THEN 15
+            WHEN candidate.PlayNo = 2 AND candidate.AwardCategoryCode = 1003 AND candidate.IsCurrent = 0 THEN 4
+            WHEN candidate.PlayNo = 2 AND candidate.AwardCategoryCode = 1003 AND candidate.IsCurrent = 1 THEN 14
             WHEN candidate.AwardCategoryCode = 1002 THEN 4 + (candidate.PlayNo % 10)
             WHEN candidate.AwardCategoryCode = 1003 THEN 3 + (candidate.PlayNo % 12)
             ELSE 5 + (candidate.PlayNo % 10)
@@ -400,15 +415,20 @@ BEGIN TRY
         IsPublished, Score, JuryId, IsActive
     )
     SELECT
-        NEWID(), 'E3300000-0000-0000-0000-000000000001',
+        NEWID(), currentCandidate.Id,
         DATEADD(DAY, 30, play.CreatedAt), NULL, NULL, NULL, 1, 9, jury.Id, 1
     FROM @Juries AS jury
     INNER JOIN @Plays AS play ON play.PlayNo = 1
+    CROSS APPLY
+    (
+        SELECT Id FROM @Candidates
+        WHERE PlayNo = 1 AND AwardCategoryCode = 1004 AND IsCurrent = 1
+    ) AS currentCandidate
     WHERE jury.JuryNo = 1
       AND NOT EXISTS
       (
           SELECT 1 FROM dbo.JuryVotes AS existing
-          WHERE existing.PlayAwardCategoryId = 'E3300000-0000-0000-0000-000000000001'
+          WHERE existing.PlayAwardCategoryId = currentCandidate.Id
             AND existing.JuryId = jury.Id
       );
 
@@ -515,9 +535,9 @@ BEGIN TRY
     INNER JOIN dbo.AwardCategories AS category
         ON category.CategoryCode = candidate.AwardCategoryCode
     INNER JOIN dbo.Users AS jury ON jury.Id = vote.JuryId
-    WHERE play.Id = 'E2000000-0000-0000-0000-000000000001'
+    WHERE play.Id = (SELECT Id FROM @Plays WHERE PlayNo = 1)
       AND candidate.AwardCategoryCode = 1004
-      AND jury.Id = 'E1000000-0000-0000-0000-000000000001'
+      AND jury.Id = (SELECT Id FROM @Juries WHERE JuryNo = 1)
     ORDER BY vote.CreatedAt;
 END TRY
 BEGIN CATCH
