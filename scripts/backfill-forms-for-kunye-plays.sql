@@ -101,7 +101,7 @@ BEGIN
     SET @ApplicationPrefix = UPPER(LEFT(REPLACE(CONVERT(varchar(36), NEWID()), '-', ''), 2));
 END;
 
-UPDATE seed
+UPDATE @Backfill
 SET ApplicationNumber =
     @ApplicationPrefix + RIGHT('0000' + CONVERT(varchar(4), RowNo), 4);
 
