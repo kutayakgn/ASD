@@ -56,6 +56,10 @@
             if (restoreSearchFocus) {
                 const nextInput = nextSection.querySelector("[data-complex-table-search]");
                 if (nextInput) {
+                    const submittedSearch = formData.get("search");
+                    if (typeof submittedSearch === "string") {
+                        nextInput.value = submittedSearch.slice(0, nextInput.maxLength);
+                    }
                     nextInput.focus({ preventScroll: true });
                     const position = nextInput.value.length;
                     nextInput.setSelectionRange(position, position);

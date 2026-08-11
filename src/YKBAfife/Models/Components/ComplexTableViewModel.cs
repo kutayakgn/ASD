@@ -8,6 +8,7 @@ public sealed class ComplexTableViewModel
     public string DataActionName { get; init; } = string.Empty;
     public string CurrentTabKey { get; init; } = string.Empty;
     public string SearchPlaceholder { get; init; } = "Ara";
+    public int SearchMaxLength { get; init; } = 50;
     public string ExportControllerName { get; init; } = string.Empty;
     public string ExportActionName { get; init; } = string.Empty;
     public string ExportButtonText { get; init; } = "Excel'e Aktar";
@@ -86,6 +87,7 @@ public sealed class ComplexTableCellViewModel
     public string Link { get; init; } = string.Empty;
     public string ModalUrl { get; init; } = string.Empty;
     public string AccessibleLabel { get; init; } = string.Empty;
+    public bool ShowNavigationIcon { get; init; }
     public string ToggleUrl { get; init; } = string.Empty;
     public bool ToggleChecked { get; init; }
     public bool ToggleDisabled { get; init; }

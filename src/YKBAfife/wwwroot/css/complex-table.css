@@ -85,7 +85,7 @@ p {
 .jury-voting-table-search-input {
     width: 100%;
     min-height: 2.75rem;
-    padding: 10px 72px 10px 8px;
+    padding: 10px 84px 10px 8px;
     color: #171717;
     background-color: #fff;
     background-image: url("/icons/magnifier-icon.svg");
@@ -109,19 +109,23 @@ p {
 .complex-table-search-clear {
     position: absolute;
     top: 50%;
-    right: 40px;
+    right: 32px;
     display: inline-grid;
     place-items: center;
-    width: 24px;
-    height: 24px;
+    width: 42px;
+    height: 20px;
     padding: 0;
-    color: #6d7180;
     background: transparent;
     border: 0;
-    font-size: 21px;
-    line-height: 1;
+    border-right: 1px solid #d9d9d9;
+    margin-right: 8px;
     transform: translateY(-50%);
 }
+
+    .complex-table-search-clear img {
+        width: 16px;
+        height: 16px;
+    }
 
 .jury-voting-table-search-input:placeholder-shown + .complex-table-search-clear {
     display: none;
@@ -129,7 +133,6 @@ p {
 
 .complex-table-search-clear:hover,
 .complex-table-search-clear:focus-visible {
-    color: #171717;
     outline: none;
 }
 
@@ -144,22 +147,31 @@ p {
     margin: 0;
 }
 
+.modal-body .jury-voting-table-wrapper {
+    overflow-x: auto;
+    padding: 0px;
+}
+
 .jury-voting-table-wrapper {
     overflow-x: auto;
     padding: 0px 16px;
 }
+
 #adaylar .jury-voting-table-wrapper {
     overflow-x: auto;
     padding: 0px;
 }
+
 #ranking-votes-table .jury-voting-table-wrapper {
     overflow-x: auto;
     padding: 0px;
 }
+
 #ranking-votes-table .complex-table-summary-wrapper {
     overflow-x: auto;
     padding: 0px;
 }
+
 tr {
     border: none;
 }
@@ -183,7 +195,9 @@ tr {
         line-height: 22px;
         text-align: left;
     }
-
+    .modal-body .jury-voting-table td {
+        padding: 12px 24px;
+    }
     .jury-voting-table td {
         padding: 12px 16px;
         background: #fff;
@@ -228,10 +242,34 @@ tr {
     }
 
 .complex-table-empty {
-    height: 32px !important;
-    color: #747783 !important;
+    padding: 16px !important;
+    color: #171717 !important;
     text-align: center;
 }
+
+.complex-table-empty-state {
+    display: flex;
+    width: 100%;
+    min-height: 240px;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+
+    .complex-table-empty-state img {
+        width: 300px;
+        max-width: 100%;
+        height: 200px;
+        object-fit: contain;
+    }
+
+    .complex-table-empty-state p {
+        margin: 16px 0 0;
+        color: #171717;
+        font-size: 14px;
+        font-weight: 400;
+        line-height: 20px;
+    }
 
 .jury-voting-pagination {
     display: flex;
@@ -321,12 +359,13 @@ tr {
     text-decoration: none;
     transition: background .3s ease-in-out;
 }
-.excel-export-button img {
-   width:12px;
-   height:12px;
-   margin:0;
-   padding:0;
-}
+
+    .excel-export-button img {
+        width: 12px;
+        height: 12px;
+        margin: 0;
+        padding: 0;
+    }
 
     .excel-export-button:not(:disabled):hover {
         background: #918150;
@@ -383,6 +422,8 @@ tr {
     width: 100%;
     padding: 12px 16px;
     align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     color: #171717;
     background: transparent;
     border: initial;
@@ -394,12 +435,18 @@ tr {
     transition: color .15s ease-in-out, text-decoration-color .15s ease-in-out;
 }
 
-    .complex-table-cell-action:hover,
-    .complex-table-cell-action:focus-visible {
-        color: #918150;
-        text-decoration-color: currentColor;
-        outline: none;
-    }
+.complex-table-cell-navigation-icon {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
+}
+
+.complex-table-cell-action:hover,
+.complex-table-cell-action:focus-visible {
+    color: #918150;
+    text-decoration-color: currentColor;
+    outline: none;
+}
 
 .complex-table-cell-button[aria-busy="true"] {
     opacity: .55;
@@ -408,7 +455,11 @@ tr {
 
 .play-viewers-modal .modal-dialog {
     width: min(calc(100% - 32px), 680px);
-    max-width: 680px;
+    max-width: 640px;
+}
+
+.play-viewers-modal.show {
+    padding-right: 0 !important;
 }
 
 .play-viewers-modal .modal-content {
@@ -423,6 +474,7 @@ tr {
     padding: 16px 24px;
     color: #171717;
     background: #c8c0a7;
+    align-items:center;
     border: 0;
 }
 
@@ -507,6 +559,7 @@ tr {
     text-decoration: none;
     transition: color .15s ease-in-out, background-color .15s ease-in-out, border-color .15s ease-in-out;
 }
+
     .complex-table-header-action img {
         width: 16px;
         height: 16px;
@@ -520,236 +573,236 @@ tr {
         outline: none;
     }
 
-    @media (max-width: 760px) {
-        .complex-table-heading {
-            align-items: stretch;
-            flex-direction: column;
-        }
+@media (max-width: 760px) {
+    .complex-table-heading {
+        align-items: stretch;
+        flex-direction: column;
+    }
 
-        .complex-table-heading-tools {
+    .complex-table-heading-tools {
+        width: 100%;
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+        .complex-table-heading-tools .jury-voting-table-search-form {
             width: 100%;
-            align-items: stretch;
-            flex-direction: column;
+            flex-basis: auto;
         }
 
-            .complex-table-heading-tools .jury-voting-table-search-form {
-                width: 100%;
-                flex-basis: auto;
-            }
+    .complex-table-header-action {
+        width: 100%;
+    }
+}
 
-        .complex-table-header-action {
-            width: 100%;
-        }
+.complex-table-edit-col, .complex-table-edit-column {
+    width: var(--complex-table-edit-width, 48px);
+}
+
+.jury-voting-table th.complex-table-edit-column, .jury-voting-table td.complex-table-edit-column {
+    padding: 8px;
+    text-align: center;
+}
+
+.complex-table-edit-button {
+    display: inline-grid;
+    width: fit-content;
+    height: fit-content;
+    padding: 0;
+    place-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: 2px;
+    transition: background-color .15s ease-in-out;
+}
+
+    .complex-table-edit-button:hover, .complex-table-edit-button:focus-visible {
+        background: #e9e5da;
+        outline: 2px solid #918150;
+        outline-offset: -2px;
     }
 
-    .complex-table-edit-col, .complex-table-edit-column {
-        width: var(--complex-table-edit-width, 48px);
+    .complex-table-edit-button img {
+        width: 20px;
+        height: 20px;
     }
 
-    .jury-voting-table th.complex-table-edit-column, .jury-voting-table td.complex-table-edit-column {
-        padding: 8px;
-        text-align: center;
-    }
+.ticket-fee-modal .modal-dialog {
+    width: min(calc(100% - 32px), 640px);
+    max-width: 640px;
+}
 
-    .complex-table-edit-button {
-        display: inline-grid;
-        width: fit-content;
-        height: fit-content;
-        padding: 0;
-        place-items: center;
-        background: transparent;
-        border: 0;
-        border-radius: 2px;
-        transition: background-color .15s ease-in-out;
-    }
+.ticket-fee-modal .modal-content {
+    border: 0;
+    border-radius: 0;
+    font-family: Outfit;
+}
 
-        .complex-table-edit-button:hover, .complex-table-edit-button:focus-visible {
-            background: #e9e5da;
-            outline: 2px solid #918150;
-            outline-offset: -2px;
-        }
+.ticket-fee-modal-header {
+    padding: 18px 24px;
+    background: #c8c0a7;
+    border: 0;
+}
 
-        .complex-table-edit-button img {
-            width: 20px;
-            height: 20px;
-        }
-
-    .ticket-fee-modal .modal-dialog {
-        width: min(calc(100% - 32px), 640px);
-        max-width: 640px;
-    }
-
-    .ticket-fee-modal .modal-content {
-        border: 0;
-        border-radius: 0;
-        font-family: Outfit;
-    }
-
-    .ticket-fee-modal-header {
-        padding: 18px 24px;
-        background: #c8c0a7;
-        border: 0;
-    }
-
-        .ticket-fee-modal-header h2 {
-            margin: 0;
-            color: #171717;
-            font-family: LimeLight;
-            font-size: 24px;
-            font-weight: 400;
-            line-height: 32px;
-        }
-
-        .ticket-fee-modal-header .btn-close {
-            width: 16px;
-            height: 16px;
-            margin: 0;
-            padding: 0;
-            background-size: 16px;
-            opacity: 1;
-        }
-
-    .ticket-fee-modal-body {
-        padding: 16px;
-    }
-
-    .ticket-fee-context {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 16px;
-        font-size: 14px;
+    .ticket-fee-modal-header h2 {
+        margin: 0;
+        color: #171717;
+        font-family: LimeLight;
+        font-size: 24px;
         font-weight: 400;
-        line-height: 20px;
+        line-height: 32px;
     }
 
-        .ticket-fee-context div, .ticket-fee-field {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-            .ticket-fee-context span, .ticket-fee-field label {
-                color: #171717;
-                font-size: 16px;
-                line-height: 22px;
-                font-weight: 600;
-            }
-
-
-
-    .ticket-fee-modal-body hr {
-        margin: 16px 0;
-        background: #BDBDBD;
-        height: 1px;
+    .ticket-fee-modal-header .btn-close {
+        width: 16px;
+        height: 16px;
+        margin: 0;
+        padding: 0;
+        background-size: 16px;
         opacity: 1;
     }
 
+.ticket-fee-modal-body {
+    padding: 16px;
+}
+
+.ticket-fee-context {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 20px;
+}
+
+    .ticket-fee-context div, .ticket-fee-field {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+        .ticket-fee-context span, .ticket-fee-field label {
+            color: #171717;
+            font-size: 16px;
+            line-height: 22px;
+            font-weight: 600;
+        }
+
+
+
+.ticket-fee-modal-body hr {
+    margin: 16px 0;
+    background: #BDBDBD;
+    height: 1px;
+    opacity: 1;
+}
+
+.ticket-fee-input-row {
+    display: grid;
+    grid-template-columns: 47px minmax(0, 1fr);
+    align-items: center;
+    gap: 18px;
+}
+
+.ticket-fee-icon {
+    display: grid;
+    width: 47px;
+    height: 70px;
+    place-items: center;
+    background: #f4f2ed;
+}
+
+    .ticket-fee-icon img {
+        width: 47px;
+        height: 70px;
+    }
+
+.ticket-fee-input-wrap {
+    display: flex;
+    align-items: center;
+    border: 1px solid #bdbdbd;
+}
+
+    .ticket-fee-input-wrap:focus-within {
+        border-color: #171717;
+    }
+
+    .ticket-fee-input-wrap input {
+        width: 92%;
+        min-height: 44px;
+        padding: 10px 12px;
+        border: 0;
+        outline: 0;
+    }
+
+    .ticket-fee-input-wrap span {
+        padding: 0 12px;
+        color: #616161;
+        border-left: 1px solid #ddd8cb;
+    }
+
+.ticket-fee-modal-footer {
+    gap: 10px;
+    flex-direction: column;
+    padding: 0 16px 16px;
+    border: 0;
+}
+
+.ticket-fee-cancel-button, .ticket-fee-save-button {
+    min-width: 104px;
+    width: 100%;
+    padding: 10px 18px;
+    border: 1px solid #171717;
+    font-size: 14px;
+    margin: 0;
+    font-weight: 600;
+}
+
+.ticket-fee-cancel-button {
+    color: #171717;
+    background: #fff;
+}
+
+.ticket-fee-save-button {
+    color: #fff;
+    background: #171717;
+}
+
+    .ticket-fee-save-button:hover, .ticket-fee-save-button:focus-visible {
+        background: #918150;
+        border-color: #918150;
+    }
+
+@media (max-width: 575.98px) {
+    .ticket-fee-modal .modal-dialog {
+        width: calc(100% - 20px);
+        margin: 10px;
+    }
+
+    .ticket-fee-context {
+        grid-template-columns: 1fr;
+    }
+
     .ticket-fee-input-row {
-        display: grid;
-        grid-template-columns: 47px minmax(0, 1fr);
-        align-items: center;
-        gap: 18px;
+        grid-template-columns: 44px minmax(0, 1fr);
     }
 
     .ticket-fee-icon {
-        display: grid;
         width: 47px;
         height: 70px;
-        place-items: center;
-        background: #f4f2ed;
     }
+}
 
-        .ticket-fee-icon img {
-            width: 47px;
-            height: 70px;
-        }
+.complex-table-delete-col,
+.complex-table-delete-column {
+    width: var(--complex-table-delete-width, 48px);
+}
 
-    .ticket-fee-input-wrap {
-        display: flex;
-        align-items: center;
-        border: 1px solid #bdbdbd;
-    }
-
-        .ticket-fee-input-wrap:focus-within {
-            border-color: #171717;
-        }
-
-        .ticket-fee-input-wrap input {
-            width: 92%;
-            min-height: 44px;
-            padding: 10px 12px;
-            border: 0;
-            outline: 0;
-        }
-
-        .ticket-fee-input-wrap span {
-            padding: 0 12px;
-            color: #616161;
-            border-left: 1px solid #ddd8cb;
-        }
-
-    .ticket-fee-modal-footer {
-        gap: 10px;
-        flex-direction: column;
-        padding: 0 16px 16px;
-        border: 0;
-    }
-
-    .ticket-fee-cancel-button, .ticket-fee-save-button {
-        min-width: 104px;
-        width: 100%;
-        padding: 10px 18px;
-        border: 1px solid #171717;
-        font-size: 14px;
-        margin: 0;
-        font-weight: 600;
-    }
-
-    .ticket-fee-cancel-button {
-        color: #171717;
-        background: #fff;
-    }
-
-    .ticket-fee-save-button {
-        color: #fff;
-        background: #171717;
-    }
-
-        .ticket-fee-save-button:hover, .ticket-fee-save-button:focus-visible {
-            background: #918150;
-            border-color: #918150;
-        }
-
-    @media (max-width: 575.98px) {
-        .ticket-fee-modal .modal-dialog {
-            width: calc(100% - 20px);
-            margin: 10px;
-        }
-
-        .ticket-fee-context {
-            grid-template-columns: 1fr;
-        }
-
-        .ticket-fee-input-row {
-            grid-template-columns: 44px minmax(0, 1fr);
-        }
-
-        .ticket-fee-icon {
-            width: 47px;
-            height: 70px;
-        }
-    }
-
-    .complex-table-delete-col,
-    .complex-table-delete-column {
-        width: var(--complex-table-delete-width, 48px);
-    }
-
-    .jury-voting-table th.complex-table-delete-column,
-    .jury-voting-table td.complex-table-delete-column {
-        padding: 6px;
-        text-align: center;
-    }
+.jury-voting-table th.complex-table-delete-column,
+.jury-voting-table td.complex-table-delete-column {
+    padding: 6px;
+    text-align: center;
+}
 
 .complex-table-select-filter {
     display: grid;
@@ -757,43 +810,45 @@ tr {
     gap: 6px;
 }
 
-.complex-table-select-filter label {
-    font-size: 13px;
-    font-weight: 500;
-}
+    .complex-table-select-filter label {
+        font-size: 13px;
+        font-weight: 500;
+    }
 
 .complex-table-select-filter-control {
     position: relative;
 }
 
-.complex-table-select-filter-control select {
-    width: 100%;
-    min-height: 42px;
-    padding: 9px 38px 9px 12px;
-    color: #171717;
-    background: #fff;
-    border: 1px solid #bdbdbd;
-    border-radius: 0;
-    appearance: none;
-    font: inherit;
-}
+    .complex-table-select-filter-control select {
+        width: 100%;
+        min-height: 42px;
+        padding: 9px 38px 9px 12px;
+        color: #171717;
+        background: #fff;
+        border: 1px solid #bdbdbd;
+        border-radius: 0;
+        appearance: none;
+        font: inherit;
+    }
 
-.complex-table-select-filter-control > img {
-    position: absolute;
-    top: 50%;
-    right: 12px;
-    width: 16px;
-    height: 16px;
-    pointer-events: none;
-    transform: translateY(-50%);
-}
+    .complex-table-select-filter-control > img {
+        position: absolute;
+        top: 50%;
+        right: 12px;
+        width: 16px;
+        height: 16px;
+        pointer-events: none;
+        transform: translateY(-50%);
+    }
 
 #adaylar .complex-table-heading {
     padding: 0px 0px 16px 0px;
 }
+
 #adaylar .complex-table-summary-wrapper {
     padding: 0px 0px;
 }
+
 .complex-table-select-filter-control[data-complex-table-select] {
     position: relative;
     width: 100%;
@@ -814,33 +869,33 @@ tr {
     text-align: left;
 }
 
-.complex-table-select-trigger:focus-visible {
-    border-color: #171717;
-    outline: 1px solid #171717;
-    outline-offset: 1px;
-}
+    .complex-table-select-trigger:focus-visible {
+        border-color: #171717;
+        outline: 1px solid #171717;
+        outline-offset: 1px;
+    }
 
-.complex-table-select-trigger > span {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
+    .complex-table-select-trigger > span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
 
-.complex-table-select-trigger > img {
-    width: 16px;
-    height: 16px;
-    flex: 0 0 16px;
-    transition: transform .2s ease;
-}
+    .complex-table-select-trigger > img {
+        width: 16px;
+        height: 16px;
+        flex: 0 0 16px;
+        transition: transform .2s ease;
+    }
 
 .complex-table-select-filter-control.is-open {
     z-index: 50;
 }
 
-.complex-table-select-filter-control.is-open .complex-table-select-trigger > img {
-    transform: rotate(180deg);
-}
+    .complex-table-select-filter-control.is-open .complex-table-select-trigger > img {
+        transform: rotate(180deg);
+    }
 
 .complex-table-select-menu {
     position: absolute;
@@ -855,9 +910,9 @@ tr {
     box-shadow: 0 12px 28px rgba(23, 23, 23, .14);
 }
 
-.complex-table-select-menu[hidden] {
-    display: none !important;
-}
+    .complex-table-select-menu[hidden] {
+        display: none !important;
+    }
 
 .complex-table-select-option {
     display: block;
@@ -872,16 +927,16 @@ tr {
     text-align: left;
 }
 
-.complex-table-select-option:last-child {
-    border-bottom: 0;
-}
+    .complex-table-select-option:last-child {
+        border-bottom: 0;
+    }
 
-.complex-table-select-option:hover,
-.complex-table-select-option:focus-visible,
-.complex-table-select-option[aria-selected="true"] {
-    background: #e9e5da;
-    outline: none;
-}
+    .complex-table-select-option:hover,
+    .complex-table-select-option:focus-visible,
+    .complex-table-select-option[aria-selected="true"] {
+        background: #e9e5da;
+        outline: none;
+    }
 
 .play-candidates-table-select-filter {
     width: min(420px, 100%);

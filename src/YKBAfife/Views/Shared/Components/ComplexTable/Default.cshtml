@@ -142,11 +142,14 @@
                                        class="jury-voting-table-search-input"
                                        placeholder="@Model.SearchPlaceholder"
                                        autocomplete="off"
+                                       maxlength="@Model.SearchMaxLength"
                                        data-complex-table-search />
                                 <button type="button"
                                         class="complex-table-search-clear"
                                         aria-label="Aramay&#305; temizle"
-                                        data-complex-table-clear>&times;</button>
+                                        data-complex-table-clear>
+                                    <img src="~/icons/x-black.svg" alt="" aria-hidden="true" />
+                                </button>
                             </div>
                         }
                         @foreach (var action in activeTab.HeaderActions)
@@ -286,14 +289,26 @@
                                                 {
                                                     <a href="@cell.Link"
                                                        class="complex-table-cell-action"
-                                                       aria-label="@(string.IsNullOrWhiteSpace(cell.AccessibleLabel) ? null : cell.AccessibleLabel)">@cell.Content</a>
+                                                       aria-label="@(string.IsNullOrWhiteSpace(cell.AccessibleLabel) ? null : cell.AccessibleLabel)">
+                                                        <span>@cell.Content</span>
+                                                        @if (cell.ShowNavigationIcon)
+                                                        {
+                                                            <img class="complex-table-cell-navigation-icon" src="~/icons/angle-right-solid-full.svg" alt="" aria-hidden="true" />
+                                                        }
+                                                    </a>
                                                 }
                                                 else if (!string.IsNullOrWhiteSpace(cell.ModalUrl))
                                                 {
                                                     <button type="button"
                                                             class="complex-table-cell-action complex-table-cell-button"
                                                             data-play-viewers-modal-url="@cell.ModalUrl"
-                                                            aria-label="@(string.IsNullOrWhiteSpace(cell.AccessibleLabel) ? null : cell.AccessibleLabel)">@cell.Content</button>
+                                                            aria-label="@(string.IsNullOrWhiteSpace(cell.AccessibleLabel) ? null : cell.AccessibleLabel)">
+                                                        <span>@cell.Content</span>
+                                                        @if (cell.ShowNavigationIcon)
+                                                        {
+                                                            <img class="complex-table-cell-navigation-icon" src="~/icons/angle-right-solid-full.svg" alt="" aria-hidden="true" />
+                                                        }
+                                                    </button>
                                                 }
                                                 else if (cell.IsHtml)
                                                 {
@@ -360,7 +375,15 @@
                     }
                     else
                     {
-                        <tr><td colspan="@(activeTab.Columns.Count + (Model.IsEditableRows ? 1 : 0) + (Model.IsDeleteColActive ? 1 : 0) + (Model.IsNavigationColActive ? 1 : 0) + (Model.IsIconColActive ? 1 : 0))" class="complex-table-empty">@activeTab.EmptyMessage</td></tr>
+                        <tr>
+                            <td colspan="@(activeTab.Columns.Count + (Model.IsEditableRows ? 1 : 0) + (Model.IsDeleteColActive ? 1 : 0) + (Model.IsNavigationColActive ? 1 : 0) + (Model.IsIconColActive ? 1 : 0))"
+                                class="complex-table-empty">
+                                <div class="complex-table-empty-state" role="status">
+                                    <img src="~/images/no-data.svg" alt="" aria-hidden="true" />
+                                    <p>Kayıt bulunamadı.</p>
+                                </div>
+                            </td>
+                        </tr>
                     }
                 </tbody>
             </table>

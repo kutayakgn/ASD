@@ -59,7 +59,7 @@
                             aria-haspopup="listbox"
                             aria-expanded="false"
                             data-candidate-select-trigger>
-                        <span class="is-placeholder" data-candidate-select-label>Kategori seçiniz</span>
+                        <span class="is-placeholder" data-candidate-select-label>Ödül Kategorisi Seçin</span>
                         <img src="~/icons/angle-down.svg" alt="" aria-hidden="true" />
                     </button>
                     <div class="add-candidate-select-menu" role="listbox" data-candidate-select-menu hidden>
@@ -111,7 +111,12 @@
 
             <div class="add-candidate-field">
                 <label asp-for="Input.Candidate">Adı Soyadı</label>
-                <input asp-for="Input.Candidate" autocomplete="off" minlength="2" maxlength="250" required />
+                <input asp-for="Input.Candidate"
+                       autocomplete="off"
+                       minlength="2"
+                       maxlength="250"
+                       placeholder="Adı Soyadı Yazınız"
+                       required />
             </div>
 
             <div class="add-jury-field add-jury-photo-field add-candidate-photo-field" data-candidate-photo-field hidden>
