@@ -39,6 +39,7 @@ public sealed class JuryReportService(AfifeContext context) : IJuryReportService
             Email = user.Email,
             FullName = (user.FirstName + " " + user.LastName).Trim(),
             Phone = user.Phone ?? "-",
+            IsJuryPresident = user.IsJuryPresident,
             WatchCount = isCurrent
                 ? watchedPlays.Count(watch => watch.JuryId == user.Id)
                 : 0,

@@ -77,6 +77,15 @@
                 <span asp-validation-for="IsActive"></span>
             </fieldset>
 
+            <fieldset class="add-jury-status">
+                <legend>Jüri Başkanlığı</legend>
+                <label class="add-jury-option">
+                    <input asp-for="IsJuryPresident" type="checkbox" />
+                    <span>Bu jüriyi Jüri Başkanı olarak belirle</span>
+                </label>
+                <span asp-validation-for="IsJuryPresident"></span>
+            </fieldset>
+
             <div class="add-jury-field add-jury-photo-field">
                 <label asp-for="Photo"></label>
                 <div class="add-jury-upload" data-jury-upload-control>

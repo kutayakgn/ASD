@@ -1570,6 +1570,11 @@ namespace YKBAfife.Data.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
 
+                    b.Property<bool>("IsJuryPresident")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.Property<bool>("IsPublished")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
@@ -1611,6 +1616,11 @@ namespace YKBAfife.Data.Migrations
                     b.HasIndex("GroupCode")
                         .HasDatabaseName("IX_Users_GroupCode");
 
+                    b.HasIndex("IsJuryPresident")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Users_OnePublishedJuryPresident")
+                        .HasFilter("[IsPublished] = 1 AND [IsJuryPresident] = 1");
+
                     b.HasIndex("PhotoImageId")
                         .HasDatabaseName("IX_Users_PhotoImageId");
 
@@ -1627,7 +1637,10 @@ namespace YKBAfife.Data.Migrations
                         .HasDatabaseName("UX_Users_RoleCode_Username_Published")
                         .HasFilter("[IsPublished] = 1");
 
-                    b.ToTable("Users", "dbo");
+                    b.ToTable("Users", "dbo", t =>
+                        {
+                            t.HasCheckConstraint("CK_Users_JuryPresident", "[IsJuryPresident] = 0 OR ([RoleCode] = 2 AND [IsActive] = 1)");
+                        });
 
                     b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
                 });

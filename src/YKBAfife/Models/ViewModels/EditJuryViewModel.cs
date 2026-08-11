@@ -39,6 +39,9 @@ public sealed class EditJuryViewModel
     [Display(Name = "Statü")]
     public bool? IsActive { get; set; }
 
+    [Display(Name = "Jüri Başkanı")]
+    public bool IsJuryPresident { get; set; }
+
     [Display(Name = "Fotoğraf Ekle")]
     public IFormFile? Photo { get; set; }
 

@@ -104,6 +104,10 @@
                     <span>@(Model.IsActive ? "Güncel Jüri" : "Geçmiş Jüri")</span>
                 </dd>
             </div>
+            <div class="play-detail-field">
+                <dt>Jüri Başkanlığı</dt>
+                <dd>@(Model.IsJuryPresident ? "Jüri Başkanı" : "Jüri")</dd>
+            </div>
         </dl>
     </div>
     <div class="play-details-divider" role="separator"></div>

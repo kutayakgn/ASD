@@ -238,6 +238,7 @@ internal static class AfifeRelationalModelConfiguration
             e.Property(x => x.PasswordHash).HasMaxLength(500);
             e.Property(x => x.Email).HasMaxLength(255);
             e.Property(x => x.IsActive).HasDefaultValue(true);
+            e.Property(x => x.IsJuryPresident).HasDefaultValue(false);
         });
 
         foreach (var type in new[] {
@@ -315,6 +316,9 @@ internal static class AfifeRelationalModelConfiguration
         modelBuilder.Entity<User>().HasIndex(x => x.GroupCode).HasDatabaseName("IX_Users_GroupCode");
         modelBuilder.Entity<User>().HasIndex(x => x.PhotoImageId).HasDatabaseName("IX_Users_PhotoImageId");
         modelBuilder.Entity<User>().HasIndex(x => x.RoleCode).HasDatabaseName("IX_Users_RoleCode");
+        modelBuilder.Entity<User>().HasIndex(x => x.IsJuryPresident)
+            .IsUnique().HasFilter("[IsPublished] = 1 AND [IsJuryPresident] = 1")
+            .HasDatabaseName("UX_Users_OnePublishedJuryPresident");
         modelBuilder.Entity<UserLog>().HasIndex(x => new { x.CorrelationId, x.OccurredAt })
             .IsDescending(false, true).HasDatabaseName("IX_UsersLog_CorrelationId");
         modelBuilder.Entity<UserLog>().HasIndex(x => new { x.OccurredAt, x.Application })
@@ -402,6 +406,10 @@ internal static class AfifeRelationalModelConfiguration
     }
     private static void ConfigureChecks(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<User>().ToTable("Users", "dbo", t =>
+            t.HasCheckConstraint(
+                "CK_Users_JuryPresident",
+                "[IsJuryPresident] = 0 OR ([RoleCode] = 2 AND [IsActive] = 1)"));
         modelBuilder.Entity<Play>().ToTable("Plays", "dbo", t =>
         {
             t.UseSqlOutputClause(false);

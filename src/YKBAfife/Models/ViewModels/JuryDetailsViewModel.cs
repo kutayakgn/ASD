@@ -10,6 +10,7 @@ public sealed class JuryDetailsViewModel
     public string Phone { get; init; } = string.Empty;
     public bool HasPhoto { get; init; }
     public bool IsActive { get; init; }
+    public bool IsJuryPresident { get; init; }
     public DateTime? LastLoginAt { get; init; }
     public DateTime? LastPasswordChangeAt { get; init; }
     public int SuccessfulLoginCount { get; init; }

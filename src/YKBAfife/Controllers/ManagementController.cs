@@ -73,6 +73,7 @@ public sealed partial class ManagementController(
                 user.Phone,
                 user.PhotoImageId,
                 user.IsActive,
+                user.IsJuryPresident,
                 user.CreatedAt,
                 user.CreatedBy,
                 user.UpdatedAt,
@@ -132,6 +133,7 @@ public sealed partial class ManagementController(
             Phone = jury.Phone ?? "-",
             HasPhoto = jury.PhotoImageId.HasValue,
             IsActive = jury.IsActive,
+            IsJuryPresident = jury.IsJuryPresident,
             LastLoginAt = metrics?.LastLoginAt,
             LastPasswordChangeAt = metrics?.LastPasswordChangeAt,
             SuccessfulLoginCount = metrics?.SuccessfulLoginCount ?? 0,
@@ -220,6 +222,7 @@ public sealed partial class ManagementController(
 
         jury.IsPublished = false;
         jury.IsActive = false;
+        jury.IsJuryPresident = false;
         jury.UpdatedAt = TurkeyTime.Now;
         jury.UpdatedBy = currentUserId;
         await context.SaveChangesAsync(cancellationToken);
@@ -243,7 +246,8 @@ public sealed partial class ManagementController(
                 Email = user.Email,
                 FullName = (user.FirstName + " " + user.LastName).Trim(),
                 Phone = user.Phone ?? string.Empty,
-                IsActive = user.IsActive
+                IsActive = user.IsActive,
+                IsJuryPresident = user.IsJuryPresident
             })
             .SingleOrDefaultAsync(cancellationToken);
 
@@ -296,6 +300,13 @@ public sealed partial class ManagementController(
         ModelState.Clear();
         TryValidateModel(model);
 
+        if (model.IsJuryPresident && model.IsActive != true)
+        {
+            ModelState.AddModelError(
+                nameof(model.IsJuryPresident),
+                "Jüri Başkanı yalnızca güncel bir jüri olabilir.");
+        }
+
         if (await context.Users.AsNoTracking().AnyAsync(
                 user => user.Id != id && user.Username == model.Username,
                 cancellationToken))
@@ -347,6 +358,8 @@ public sealed partial class ManagementController(
             return Challenge();
         }
 
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+
         var oldEmail = jury.Email;
         var passwordChanged = model.Password is not null;
         var fullNameParts = model.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -356,6 +369,7 @@ public sealed partial class ManagementController(
         jury.Email = model.Email;
         jury.Phone = model.Phone;
         jury.IsActive = model.IsActive!.Value;
+        jury.IsJuryPresident = model.IsJuryPresident;
         jury.UpdatedAt = TurkeyTime.Now;
         jury.UpdatedBy = currentUserId;
         if (passwordChanged)
@@ -397,7 +411,13 @@ public sealed partial class ManagementController(
             }
         }
 
+        if (model.IsJuryPresident)
+        {
+            await ClearOtherJuryPresidentAsync(jury.Id, currentUserId, cancellationToken);
+        }
+
         await context.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
 
         if (!string.Equals(oldEmail, jury.Email, StringComparison.OrdinalIgnoreCase))
@@ -452,6 +472,13 @@ public sealed partial class ManagementController(
 
         ModelState.Clear();
         TryValidateModel(model);
+
+        if (model.IsJuryPresident && model.IsActive != true)
+        {
+            ModelState.AddModelError(
+                nameof(model.IsJuryPresident),
+                "Jüri Başkanı yalnızca güncel bir jüri olabilir.");
+        }
 
         if (!ModelState.IsValid)
         {
@@ -510,6 +537,8 @@ public sealed partial class ManagementController(
             return Challenge();
         }
 
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+
         var fullNameParts = model.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var lastName = fullNameParts[^1];
         var firstName = string.Join(' ', fullNameParts[..^1]);
@@ -546,10 +575,17 @@ public sealed partial class ManagementController(
             CreatedBy = currentUserId,
             IsPublished = true,
             IsActive = model.IsActive!.Value,
+            IsJuryPresident = model.IsJuryPresident,
             RoleCode = 2
         });
 
+        if (model.IsJuryPresident)
+        {
+            await ClearOtherJuryPresidentAsync(juryId, currentUserId, cancellationToken);
+        }
+
         await context.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
 
         TempData["GenericPopup.Type"] = "success";
@@ -585,6 +621,21 @@ public sealed partial class ManagementController(
         model.ExistingPhotoFileName = fileName;
         model.ExistingPhotoUrl = Url.Action(nameof(JuryPhoto), new { id = model.Id }) ?? string.Empty;
     }
+
+    private Task ClearOtherJuryPresidentAsync(
+        Guid selectedJuryId,
+        Guid currentUserId,
+        CancellationToken cancellationToken) =>
+        context.Users
+            .Where(user =>
+                user.Id != selectedJuryId &&
+                user.IsPublished &&
+                user.RoleCode == 2 &&
+                user.IsJuryPresident)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(user => user.IsJuryPresident, false)
+                .SetProperty(user => user.UpdatedAt, TurkeyTime.Now)
+                .SetProperty(user => user.UpdatedBy, currentUserId), cancellationToken);
     private static bool IsSupportedPhoto(byte[] data, string contentType)
     {
         if (contentType == "image/jpeg")

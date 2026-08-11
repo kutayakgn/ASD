@@ -36,7 +36,7 @@ public static class JuryComplexTableFactory
                 [
                     Cell(row.Username),
                     Cell(row.Email),
-                    Cell(row.FullName),
+                    Cell(FullName(row)),
                     Cell(row.Phone),
                     Cell(row.WatchCount.ToString(CultureInfo.CurrentCulture)),
                     Cell(row.CreatedAt?.ToString("dd.MM.yyyy", CultureInfo.CurrentCulture) ?? "-")
@@ -45,7 +45,7 @@ public static class JuryComplexTableFactory
                 [
                     Cell(row.Username),
                     Cell(row.Email),
-                    Cell(row.FullName),
+                    Cell(FullName(row)),
                     Cell(row.Phone)
                 ]
         }).ToArray();
@@ -95,4 +95,8 @@ public static class JuryComplexTableFactory
     }
 
     private static ComplexTableCellViewModel Cell(string content) => new() { Content = content };
+
+    private static string FullName(JuryTableRowViewModel row) => row.IsJuryPresident
+        ? $"{row.FullName} (Jüri Başkanı)"
+        : row.FullName;
 }

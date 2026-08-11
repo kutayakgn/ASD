@@ -438,6 +438,7 @@ CREATE TABLE [dbo].[PlayAwardCategories](
 	[RoleCode] [int] NOT NULL,
 	[PhotoImageId] [uniqueidentifier] NULL,
 	[IsActive] [bit] NOT NULL,
+	[IsJuryPresident] [bit] NOT NULL,
  CONSTRAINT [PK_PlayAwardCategories] PRIMARY KEY CLUSTERED 
 (
 	[Id] ASC
@@ -954,6 +955,12 @@ CREATE NONCLUSTERED INDEX [IX_Users_RoleCode] ON [dbo].[Users]
 	[RoleCode] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
+CREATE UNIQUE NONCLUSTERED INDEX [UX_Users_OnePublishedJuryPresident] ON [dbo].[Users]
+(
+	[IsJuryPresident] ASC
+)
+WHERE ([IsPublished]=(1) AND [IsJuryPresident]=(1))
+GO
 SET ANSI_PADDING ON
 GO
 /****** Object:  Index [UX_Users_RoleCode_Email_Published]    Script Date: 3.08.2026 15:17:26 ******/
@@ -1138,6 +1145,9 @@ GO
 ALTER TABLE [dbo].[Users] ADD  CONSTRAINT [DF_Users_IsPublished_SoftDelete]  DEFAULT ((1)) FOR [IsPublished]
 GO
 ALTER TABLE [dbo].[Users] ADD  DEFAULT ((1)) FOR [IsActive]
+GO
+ALTER TABLE [dbo].[Users] ADD CONSTRAINT [DF_Users_IsJuryPresident]
+DEFAULT ((0)) FOR [IsJuryPresident]
 GO
 ALTER TABLE [dbo].[UsersLog] ADD  CONSTRAINT [DF_UsersLog_Username]  DEFAULT (N'') FOR [Username]
 GO
@@ -1345,6 +1355,11 @@ REFERENCES [dbo].[Roles] ([RoleCode])
 ON UPDATE NO ACTION
 GO
 ALTER TABLE [dbo].[Users] CHECK CONSTRAINT [FK_Users_Roles]
+GO
+ALTER TABLE [dbo].[Users] WITH CHECK ADD CONSTRAINT [CK_Users_JuryPresident]
+CHECK ([IsJuryPresident] = 0 OR ([RoleCode] = 2 AND [IsActive] = 1))
+GO
+ALTER TABLE [dbo].[Users] CHECK CONSTRAINT [CK_Users_JuryPresident]
 GO
 ALTER TABLE [dbo].[UsersLog]  WITH CHECK ADD  CONSTRAINT [FK_UsersLog_Users_UserId] FOREIGN KEY([UserId])
 REFERENCES [dbo].[Users] ([Id])

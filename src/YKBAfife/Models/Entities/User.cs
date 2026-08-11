@@ -21,6 +21,7 @@ public class User
     public Guid? UpdatedBy { get; set; }
     public bool IsPublished { get; set; }
     public bool IsActive { get; set; }
+    public bool IsJuryPresident { get; set; }
     public int RoleCode { get; set; }
     public int? GroupCode { get; set; }
 

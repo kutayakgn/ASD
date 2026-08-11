@@ -43,13 +43,19 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
 
         modelBuilder.Entity<User>(entity =>
         {
-            entity.ToTable("Users", "dbo");
+            entity.ToTable("Users", "dbo", table =>
+                table.HasCheckConstraint(
+                    "CK_Users_JuryPresident",
+                    "[IsJuryPresident] = 0 OR ([RoleCode] = 2 AND [IsActive] = 1)"));
             entity.HasIndex(x => new { x.RoleCode, x.Username })
                 .IsUnique()
                 .HasFilter("[IsPublished] = 1");
             entity.HasIndex(x => new { x.RoleCode, x.Email })
                 .IsUnique()
                 .HasFilter("[IsPublished] = 1");
+            entity.HasIndex(x => x.IsJuryPresident)
+                .IsUnique()
+                .HasFilter("[IsPublished] = 1 AND [IsJuryPresident] = 1");
             entity.HasOne(x => x.PhotoImage)
                 .WithMany(x => x.UserPhotos)
                 .HasForeignKey(x => x.PhotoImageId)

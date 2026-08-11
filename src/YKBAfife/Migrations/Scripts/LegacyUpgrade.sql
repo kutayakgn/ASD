@@ -64,6 +64,21 @@ BEGIN
     ALTER TABLE dbo.Users ADD IsActive bit NULL;
     EXEC(N'UPDATE dbo.Users SET IsActive = IsPublished; ALTER TABLE dbo.Users ALTER COLUMN IsActive bit NOT NULL;');
 END;
+IF COL_LENGTH(N'dbo.Users', N'IsJuryPresident') IS NULL
+    ALTER TABLE dbo.Users ADD IsJuryPresident bit NOT NULL
+        CONSTRAINT DF_Users_IsJuryPresident DEFAULT (0) WITH VALUES;
+IF NOT EXISTS
+(
+    SELECT 1 FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.Users')
+      AND name = N'UX_Users_OnePublishedJuryPresident'
+)
+    CREATE UNIQUE INDEX UX_Users_OnePublishedJuryPresident
+        ON dbo.Users(IsJuryPresident)
+        WHERE IsPublished = 1 AND IsJuryPresident = 1;
+IF OBJECT_ID(N'dbo.CK_Users_JuryPresident', N'C') IS NULL
+    ALTER TABLE dbo.Users WITH CHECK ADD CONSTRAINT CK_Users_JuryPresident
+        CHECK (IsJuryPresident = 0 OR (RoleCode = 2 AND IsActive = 1));
 IF COL_LENGTH(N'dbo.Announcements', N'ImageId') IS NULL
     ALTER TABLE dbo.Announcements ADD ImageId uniqueidentifier NULL;
 IF COL_LENGTH(N'dbo.Announcements', N'BackgroundImageId') IS NULL
