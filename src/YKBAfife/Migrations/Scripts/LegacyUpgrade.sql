@@ -67,6 +67,7 @@ END;
 IF COL_LENGTH(N'dbo.Users', N'IsJuryPresident') IS NULL
     ALTER TABLE dbo.Users ADD IsJuryPresident bit NOT NULL
         CONSTRAINT DF_Users_IsJuryPresident DEFAULT (0) WITH VALUES;
+GO
 IF NOT EXISTS
 (
     SELECT 1 FROM sys.indexes
@@ -76,6 +77,7 @@ IF NOT EXISTS
     CREATE UNIQUE INDEX UX_Users_OnePublishedJuryPresident
         ON dbo.Users(IsJuryPresident)
         WHERE IsPublished = 1 AND IsJuryPresident = 1;
+GO
 IF OBJECT_ID(N'dbo.CK_Users_JuryPresident', N'C') IS NULL
     ALTER TABLE dbo.Users WITH CHECK ADD CONSTRAINT CK_Users_JuryPresident
         CHECK (IsJuryPresident = 0 OR (RoleCode = 2 AND IsActive = 1));
