@@ -367,3 +367,4 @@ FodyWeavers.xsd
 # Environment-owned configuration and local documentation
 appsettings*.json
 *.md
+/.codex-temp/diag
