@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using YKBAfife.Data;
+using YKBAfife.Helpers;
 using YKBAfife.Models.Components;
 using YKBAfife.Models.ViewModels;
 
@@ -29,7 +30,9 @@ public sealed class AddCandidateViewComponent(AfifeContext context) : ViewCompon
 
         var categories = await context.AwardCategories
             .AsNoTracking()
-            .Where(category => category.IsPublished && category.CategoryCode != 1001)
+            .Where(category => category.IsPublished &&
+                               category.CategoryCode != CandidateCategoryPolicy.BestPlayCategoryCode &&
+                               category.CategoryCode != CandidateCategoryPolicy.BestDirectorCategoryCode)
             .OrderBy(category => category.CategoryName)
             .Select(category => new AddCandidateCategoryOptionViewModel
             {
@@ -47,7 +50,8 @@ public sealed class AddCandidateViewComponent(AfifeContext context) : ViewCompon
                     candidate.PlayId == playId.Value &&
                     candidate.IsPublished &&
                     candidate.IsCurrent &&
-                    candidate.AwardCategoryCode != 1001)
+                    candidate.AwardCategoryCode != CandidateCategoryPolicy.BestPlayCategoryCode &&
+                    candidate.AwardCategoryCode != CandidateCategoryPolicy.BestDirectorCategoryCode)
                 .OrderBy(candidate => candidate.Candidate)
                 .Select(candidate => new
                 {

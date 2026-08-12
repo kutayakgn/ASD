@@ -237,6 +237,7 @@ CREATE TABLE [dbo].[Form](
 	[LightDesign] [nvarchar](1000) NULL,
 	[StageMusic] [nvarchar](1000) NULL,
 	[Choreography] [nvarchar](1000) NULL,
+	[YoungGenerationArtist] [nvarchar](max) NULL,
 	[IsPublished] [bit] NOT NULL,
 	[Id] [uniqueidentifier] NOT NULL,
 	[LegacyId] [int] NULL,

@@ -373,24 +373,26 @@ body {
     min-width: 0;
 }
 
-.play-detail-field dt {
-    margin: 0 0 8px;
-    color: #777064;
-    font-family: Outfit;
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 18px;
-}
+    .play-detail-field dt {
+        margin: 0 0 8px;
+        color: #171717;
+        font-family: Outfit;
+        font-size: 16px;
+        font-style: normal;
+        font-weight: 600;
+        line-height: 22px;
+    }
 
-.play-detail-field dd {
-    margin: 0;
-    color: #171717;
-    font-family: Outfit;
-    font-size: 16px;
-    font-weight: 600;
-    line-height: 24px;
-    overflow-wrap: anywhere;
-}
+    .play-detail-field dd {
+        margin: 0;
+        color: #171717;
+        font-family: Outfit;
+        font-size: 14px;
+        font-style: normal;
+        font-weight: 400;
+        line-height: 20px;
+        overflow-wrap: anywhere;
+    }
 
 .play-candidates-section {
     min-height: 1px;
@@ -441,9 +443,9 @@ body {
 .play-details-divider { height: 1px; margin: 24px 0 24px 0; background: #d8d4ca; }
 .add-candidate { font-family: Outfit; }
 .add-candidate-header h2 { margin: 0 0 16px; font-family: LimeLight; font-size: 28px; font-weight: 400; line-height: 36px; }
-.add-candidate-mode-group, .add-candidate-status { display: flex; margin: 0; padding: 0; border: 0; gap: 24px; }
+.add-candidate-mode-group, .add-candidate-status { display: flex; margin: 0; padding: 0; border: 0; gap: 4px; }
 .add-candidate-mode-group { margin-bottom: 16px; }
-.add-candidate-mode, .add-candidate-status label { display: inline-flex; align-items: center; gap: 9px; cursor: pointer; font-weight: 600; }
+.add-candidate-mode, .add-candidate-status label { display: inline-flex; align-items: center; gap: 9px; cursor: pointer; font-weight: 400; }
 .add-candidate-mode input, .add-candidate-status input { width: 18px; height: 18px; margin: 0; accent-color: #171717; }
 .add-candidate-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
 .add-candidate-field { display: flex; min-width: 0; flex-direction: column; gap: 8px; }
@@ -451,7 +453,8 @@ body {
 .add-candidate-field input, .add-candidate-field select { width: 100%; min-height: 44px; padding: 10px 12px; color: #171717; background: #fff; border: 1px solid #bdbdbd; border-radius: 0; }
 .add-candidate-field select:disabled { color: #656565; background: #f3f2ef; opacity: 1; }
 .add-candidate-status { min-height: 70px; flex-wrap: wrap; align-content: flex-start; }
-.add-candidate-status legend { width: 100%; margin-bottom: 8px; }
+.add-candidate-status { column-gap: 40px; row-gap: 0; }
+.add-candidate-status legend { width: 100%; margin-bottom: 12px; }
 .add-candidate-actions { display: flex; justify-content: flex-end; margin-top: 28px; }
 .add-candidate-submit { min-width: 120px; min-height: 42px; padding: 10px 20px; color: #fff; background: #171717; border: 1px solid #171717; font-weight: 600; }
 .add-candidate-submit:hover, .add-candidate-submit:focus-visible { background: #918150; border-color: #918150; outline: none; }
@@ -969,10 +972,16 @@ body.has-photo-preview {
 
 .add-candidate-select.is-disabled .add-candidate-select-trigger,
 .add-candidate-select-trigger:disabled {
-    color: #656565;
-    background: #f3f2ef;
+    color: #BDBDBD;
+    background: #F5F5F5;
     cursor: not-allowed;
     opacity: 1;
+    border: none;
+    font-family: Outfit;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 20px;
 }
 
 .add-candidate-select-menu {

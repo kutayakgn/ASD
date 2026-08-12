@@ -36,7 +36,7 @@ public sealed partial class ManagementController
             select new { Candidate = candidate, Play = play, Category = category }
         ).SingleOrDefaultAsync(cancellationToken);
         if (data is null) return NotFound();
-        if (data.Candidate.AwardCategoryCode == 1001) return BadRequest();
+        if (CandidateCategoryPolicy.IsSystemManaged(data.Candidate.AwardCategoryCode)) return BadRequest();
 
         model.Candidate = model.Candidate?.Trim() ?? string.Empty;
         model.Role = string.IsNullOrWhiteSpace(model.Role) ? null : model.Role.Trim();
@@ -177,7 +177,9 @@ public sealed partial class ManagementController
             join play in context.Plays.AsNoTracking() on candidate.PlayId equals play.Id
             join category in context.AwardCategories.AsNoTracking()
                 on candidate.AwardCategoryCode equals category.CategoryCode
-            where candidate.Id == id && candidate.IsPublished && candidate.AwardCategoryCode != 1001 &&
+            where candidate.Id == id && candidate.IsPublished &&
+                  candidate.AwardCategoryCode != CandidateCategoryPolicy.BestPlayCategoryCode &&
+                  candidate.AwardCategoryCode != CandidateCategoryPolicy.BestDirectorCategoryCode &&
                   play.IsPublished && category.IsPublished
             select new { Candidate = candidate, Play = play, Category = category }
         ).SingleOrDefaultAsync(cancellationToken);

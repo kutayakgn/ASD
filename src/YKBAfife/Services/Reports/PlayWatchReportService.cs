@@ -249,6 +249,12 @@ public sealed class PlayWatchReportService(AfifeContext context) : IPlayWatchRep
 
     private static PlayWatchTableQuery Normalize(PlayWatchTableQuery query)
     {
+        var search = (query.Search ?? string.Empty).Trim();
+        if (search.Length > 50)
+        {
+            search = search[..50];
+        }
+
         var tab = query.Tab == PlayWatchTabs.UnderFour
             ? PlayWatchTabs.UnderFour
             : PlayWatchTabs.FourOrMore;
@@ -260,7 +266,7 @@ public sealed class PlayWatchReportService(AfifeContext context) : IPlayWatchRep
         return new PlayWatchTableQuery
         {
             Tab = tab,
-            Search = query.Search?.Trim() ?? string.Empty,
+            Search = search,
             SortBy = sortBy,
             SortDirection = string.Equals(query.SortDirection, "asc", StringComparison.OrdinalIgnoreCase)
                 ? "asc"

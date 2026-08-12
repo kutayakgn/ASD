@@ -13,13 +13,13 @@ public sealed class DatabaseMigrationHostedService(
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         var applyOnStartup = configuration.GetValue("DatabaseMigration:ApplyOnStartup", false);
-        if (environment.IsDevelopment() || !applyOnStartup)
-        {
-            logger.LogInformation(
-                "Automatic database migration is disabled for environment {EnvironmentName}.",
-                environment.EnvironmentName);
-            return;
-        }
+        //if (environment.IsDevelopment() || !applyOnStartup)
+        //{
+        //    logger.LogInformation(
+        //        "Automatic database migration is disabled for environment {EnvironmentName}.",
+        //        environment.EnvironmentName);
+        //    return;
+        //}
         await using var scope = scopeFactory.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<AfifeContext>();
         var connection = (SqlConnection)context.Database.GetDbConnection();

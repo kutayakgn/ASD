@@ -315,7 +315,7 @@ public sealed partial class ManagementController(
         }
 
         if (await context.Users.AsNoTracking().AnyAsync(
-                user => user.Id != id && user.Email == model.Email,
+                user => user.Id != id && user.RoleCode == 2 && user.Email == model.Email,
                 cancellationToken))
         {
             ModelState.AddModelError(nameof(model.Email), "Bu e-posta adresi zaten kullanılıyor.");
@@ -493,7 +493,7 @@ public sealed partial class ManagementController(
         }
 
         if (await context.Users.AsNoTracking().AnyAsync(
-                user => user.Email == model.Email,
+                user => user.RoleCode == 2 && user.Email == model.Email,
                 cancellationToken))
         {
             ModelState.AddModelError(nameof(model.Email), "Bu e-posta adresi zaten kullanılıyor.");
@@ -1407,7 +1407,7 @@ public sealed partial class ManagementController(
             item => item.Id == id && item.IsPublished,
             cancellationToken);
         if (candidate is null) return NotFound();
-        if (candidate.AwardCategoryCode == 1001)
+        if (CandidateCategoryPolicy.IsSystemManaged(candidate.AwardCategoryCode))
         {
             return BadRequest(new
             {
@@ -1446,7 +1446,7 @@ public sealed partial class ManagementController(
                 ? NotFound(new { message = "Aday kaydı bulunamadı." })
                 : NotFound();
         }
-        if (candidate.AwardCategoryCode == 1001)
+        if (CandidateCategoryPolicy.IsSystemManaged(candidate.AwardCategoryCode))
         {
             const string protectedCategoryMessage = "Sistem tarafından yönetilen oyun kategorisi silinemez.";
             if (IsAjaxRequest())
@@ -1601,7 +1601,8 @@ public sealed partial class ManagementController(
                 .SingleOrDefaultAsync(
                     item => item.IsPublished &&
                             item.CategoryCode == input.AwardCategoryCode.Value &&
-                            item.CategoryCode != 1001,
+                            item.CategoryCode != CandidateCategoryPolicy.BestPlayCategoryCode &&
+                            item.CategoryCode != CandidateCategoryPolicy.BestDirectorCategoryCode,
                     cancellationToken)
             : null;
         if (category is null)

@@ -35,13 +35,15 @@ public static class PlayWatchComplexTableFactory
                 {
                     Content = row.PlayName,
                     Link = $"/oyunlar/{Uri.EscapeDataString(SlugHelper.Resolve(row.Slug, row.PlayName))}?returnUrl=%2F",
-                    AccessibleLabel = $"{row.PlayName} oyun detayını aç"
+                    AccessibleLabel = $"{row.PlayName} oyun detayını aç",
+                    ShowNavigationIcon = true
                 },
                 new ComplexTableCellViewModel
                 {
                     Content = row.ViewCount.ToString(CultureInfo.CurrentCulture),
                     ModalUrl = $"/oyun-izlenmeleri/{row.PlayId:D}/juriler",
-                    AccessibleLabel = $"{row.PlayName} oyununu izleyen {row.ViewCount} jüri üyesini göster"
+                    AccessibleLabel = $"{row.PlayName} oyununu izleyen {row.ViewCount} jüri üyesini göster",
+                    ShowNavigationIcon = true
                 }
             ]
         }).ToArray();
@@ -70,13 +72,14 @@ public static class PlayWatchComplexTableFactory
             DataActionName = "PlayWatchTable",
             CurrentTabKey = report.CurrentTab,
             SearchPlaceholder = "Oyun adı ara",
+            SearchMaxLength = 50,
             MinimumTableWidth = 720,
             ExportControllerName = "Home",
             ExportActionName = "Export",
             IsExportEnabled = report.TotalCount > 0,
             Tabs =
             [
-                CreateTab(PlayWatchTabs.FourOrMore, "4 Kez ve Üzeri İzlenen Oyunlar"),
+                CreateTab(PlayWatchTabs.FourOrMore, "4 Ve Üzeri İzlenen Oyunlar"),
                 CreateTab(PlayWatchTabs.UnderFour, "4'ten Az İzlenen Oyunlar")
             ],
             SummaryContent =
@@ -85,14 +88,15 @@ public static class PlayWatchComplexTableFactory
                 {
                     Text = report.TotalCount.ToString(CultureInfo.CurrentCulture),
                     IsEmphasized = true
-                },
-                new() { Text = " kayıt bulundu. Bulunan kayıtlarda toplam " },
+                },  new() { Text = " kayıt ", IsEmphasized = true },
+                new() { Text = "bulundu. Bulunan kayıtlarda toplam ", IsEmphasized = false },
                 new()
                 {
                     Text = report.TotalViewCount.ToString(CultureInfo.CurrentCulture),
                     IsEmphasized = true
                 },
-                new() { Text = " izlenme sayısı mevcut." }
+                new() { Text = " izlenme sayısı", IsEmphasized = true },
+                new() { Text = " mevcut.", IsEmphasized = false }
             ]
         };
     }
