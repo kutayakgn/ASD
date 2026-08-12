@@ -64,7 +64,6 @@ public sealed partial class ManagementController
                 .Where(item => item.PlayId == data.Play.Id && item.IsPublished)
                 .ToListAsync(cancellationToken);
             var candidate = candidates.Single(item => item.Id == id);
-            var comparer = StringComparer.Create(new System.Globalization.CultureInfo("tr-TR"), true);
             var roleChanged = data.Category.HasRoleAndPhoto &&
                 !string.Equals(candidate.Role?.Trim(), model.Role, StringComparison.Ordinal);
             var roleGroup = candidates.Where(item =>
@@ -73,16 +72,6 @@ public sealed partial class ManagementController
 
             if (data.Category.HasRoleAndPhoto)
             {
-                var duplicateRole = candidates.Any(item =>
-                    (item.AwardCategoryCode != candidate.AwardCategoryCode ||
-                     item.RoleCode != candidate.RoleCode) &&
-                    comparer.Equals(item.Role?.Trim(), model.Role));
-                if (duplicateRole)
-                {
-                    await transaction.RollbackAsync(cancellationToken);
-                    return await EditCandidateFailureAsync(id, RoleDuplicateMessage, cancellationToken);
-                }
-
                 if (roleChanged && roleGroup.Length > 1 && !model.ConfirmRoleGroupUpdate)
                 {
                     await transaction.RollbackAsync(cancellationToken);

@@ -7,8 +7,6 @@ namespace YKBAfife.Controllers;
 
 public sealed partial class ManagementController
 {
-    private const string RoleDuplicateMessage = "Böyle bir rol zaten mevcut, lütfen başka bir rol için aday girişi yapın veya Oyun Detay ekranından Aday/Rol Değişim seçeneği ile ilerleyin";
-
     private async Task<IActionResult> CandidateDetailsCoreAsync(Guid id, CancellationToken cancellationToken)
     {
         var data = await (

@@ -357,6 +357,9 @@ internal static class AfifeRelationalModelConfiguration
             .HasDatabaseName("UX_PlayAwardCategories_Current_Play_Category_Role");
         modelBuilder.Entity<PlayAwardCategory>().HasIndex(x => new { x.PlayId, x.AwardCategoryCode, x.RoleCode, x.Candidate })
             .HasDatabaseName("UX_PlayAwardCategories_Play_Category_Role_Candidate");
+        modelBuilder.Entity<PlayAwardCategory>().HasIndex(x => new { x.PlayId, x.AwardCategoryCode, x.SourceFormCandidateOrder })
+            .IsUnique().HasFilter("[SourceFormCandidateOrder] IS NOT NULL AND [IsCurrent] = 1")
+            .HasDatabaseName("UX_PlayAwardCategories_FormSourceSlot");
         modelBuilder.Entity<PlayAwardCategory>().HasIndex(x => x.PlayId)
             .IsUnique().HasFilter("[AwardCategoryCode] = 1001 AND [RoleCode] = 0")
             .HasDatabaseName("UX_PlayAwardCategories_DefaultPlayCategory");

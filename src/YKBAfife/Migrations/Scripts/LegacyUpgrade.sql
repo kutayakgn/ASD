@@ -52,6 +52,8 @@ IF COL_LENGTH(N'dbo.Manager', N'IsPublished') IS NULL
     ALTER TABLE dbo.Manager ADD IsPublished bit NOT NULL CONSTRAINT DF_Manager_IsPublished DEFAULT (1) WITH VALUES;
 IF COL_LENGTH(N'dbo.PlayAwardCategories', N'PhotoImageId') IS NULL
     ALTER TABLE dbo.PlayAwardCategories ADD PhotoImageId uniqueidentifier NULL;
+IF COL_LENGTH(N'dbo.PlayAwardCategories', N'SourceFormCandidateOrder') IS NULL
+    ALTER TABLE dbo.PlayAwardCategories ADD SourceFormCandidateOrder int NULL;
 IF COL_LENGTH(N'dbo.PlayAwardCategories', N'IsActive') IS NULL
 BEGIN
     ALTER TABLE dbo.PlayAwardCategories ADD IsActive bit NULL;

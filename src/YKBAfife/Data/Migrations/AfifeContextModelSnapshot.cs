@@ -1291,6 +1291,9 @@ namespace YKBAfife.Data.Migrations
                     b.Property<int>("RoleCode")
                         .HasColumnType("int");
 
+                    b.Property<int?>("SourceFormCandidateOrder")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -1309,6 +1312,11 @@ namespace YKBAfife.Data.Migrations
                         .IsUnique()
                         .HasDatabaseName("UX_PlayAwardCategories_DefaultPlayCategory")
                         .HasFilter("[AwardCategoryCode] = 1001 AND [RoleCode] = 0");
+
+                    b.HasIndex("PlayId", "AwardCategoryCode", "SourceFormCandidateOrder")
+                        .IsUnique()
+                        .HasDatabaseName("UX_PlayAwardCategories_FormSourceSlot")
+                        .HasFilter("[SourceFormCandidateOrder] IS NOT NULL AND [IsCurrent] = 1");
 
                     b.HasIndex("PlayId", "AwardCategoryCode", "RoleCode", "Candidate")
                         .IsUnique()
