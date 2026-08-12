@@ -14,6 +14,15 @@ internal static partial class MigrationSqlResources
         bool skipWhenBaselineExists = false,
         bool onlyWhenBaselineExists = false)
     {
+        if (string.Equals(resourceFileName, "Programmability.sql", StringComparison.OrdinalIgnoreCase))
+        {
+            Execute(
+                migrationBuilder,
+                "ProgrammabilityPrerequisites.sql",
+                skipWhenBaselineExists,
+                onlyWhenBaselineExists);
+        }
+
         var sql = Read(resourceFileName);
 
         foreach (var batch in GoBatchRegex().Split(sql))
