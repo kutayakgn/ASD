@@ -19,6 +19,15 @@ try {
     $sqlHits = $sqlFiles | Select-String -Pattern "(?i)\b(DELETE\s+FROM|TRUNCATE\s+TABLE|DROP\s+TABLE|DROP\s+COLUMN)\b"
     if ($sqlHits) { throw "Physical data-loss SQL is forbidden: $($sqlHits -join [Environment]::NewLine)" }
 
+    $programmabilityPrerequisites = Join-Path $projectRoot "Migrations/Scripts/ProgrammabilityPrerequisites.sql"
+    if (-not (Test-Path $programmabilityPrerequisites)) {
+        throw "ProgrammabilityPrerequisites.sql is required before compiling procedures and triggers."
+    }
+    $migrationResourceHelper = Get-Content (Join-Path $projectRoot "Data/Migrations/MigrationSqlResources.cs") -Raw
+    if ($migrationResourceHelper -notmatch 'ProgrammabilityPrerequisites\.sql') {
+        throw "MigrationSqlResources must execute ProgrammabilityPrerequisites.sql before Programmability.sql."
+    }
+
     dotnet build $projectFile -c $Configuration --no-restore
     if ($LASTEXITCODE -ne 0) { throw "Build failed." }
 

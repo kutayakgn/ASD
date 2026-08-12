@@ -67,6 +67,9 @@ END;
 IF COL_LENGTH(N'dbo.Users', N'IsJuryPresident') IS NULL
     ALTER TABLE dbo.Users ADD IsJuryPresident bit NOT NULL
         CONSTRAINT DF_Users_IsJuryPresident DEFAULT (0) WITH VALUES;
+IF COL_LENGTH(N'dbo.Form', N'YoungGenerationArtist') IS NULL
+    EXEC sys.sp_executesql
+        N'ALTER TABLE dbo.Form ADD YoungGenerationArtist nvarchar(max) NULL;';
 GO
 IF NOT EXISTS
 (
