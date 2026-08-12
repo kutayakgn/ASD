@@ -1,0 +1,41 @@
+DATABASE MIGRATION VERSIONING
+
+Published history
+-----------------
+EF migration identifiers recorded in a shared/company database are immutable.
+Never rename, remove, reorder, or squash a migration after it has reached that
+database. The migrations before V1_0_0_FormCandidateLifecycleCheckpoint remain
+as the permanent legacy deployment chain.
+
+Versioned checkpoints
+---------------------
+New release migrations use this name after EF's sortable timestamp:
+
+    V<major>_<minor>_<patch>_<Purpose>
+
+Examples:
+
+    V1_0_0_FormCandidateLifecycleCheckpoint
+    V1_1_0_AddSeasonArchive
+    V1_1_1_RepairSeasonArchiveBackfill
+
+Use one checkpoint migration per deployable release instead of creating a
+migration for every small edit. Create it with:
+
+    powershell -ExecutionPolicy Bypass -File scripts/new-versioned-migration.ps1 `
+      -Version 1.1.0 -Purpose AddSeasonArchive
+
+Safe return to an earlier application version
+---------------------------------------------
+Database rollback never drops columns, tables, indexes, or rows.
+
+1. If the prior application is compatible with the additive schema, deploy its
+   binaries and leave the database at the newer checkpoint.
+2. If database behavior must also change, create a new patch checkpoint such as
+   V1_1_1_RestoreV1_0_0Behavior. Restore behavior with CREATE OR ALTER resources
+   and additive, data-preserving SQL.
+3. Never run database update <old migration> against company data. Compatibility
+   Down methods intentionally retain additive schema and are not physical rollback.
+
+Run scripts/validate-migrations.ps1 before every deployment and retain its
+idempotent SQL artifact with the application release.

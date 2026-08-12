@@ -440,7 +440,6 @@ CREATE TABLE [dbo].[PlayAwardCategories](
 	[SourceFormCandidateOrder] [int] NULL,
 	[PhotoImageId] [uniqueidentifier] NULL,
 	[IsActive] [bit] NOT NULL,
-	[IsJuryPresident] [bit] NOT NULL,
  CONSTRAINT [PK_PlayAwardCategories] PRIMARY KEY CLUSTERED 
 (
 	[Id] ASC
@@ -596,6 +595,7 @@ CREATE TABLE [dbo].[Users](
 	[GroupCode] [int] NULL,
 	[PhotoImageId] [uniqueidentifier] NULL,
 	[IsActive] [bit] NOT NULL,
+	[IsJuryPresident] [bit] NOT NULL,
  CONSTRAINT [PK_Users] PRIMARY KEY CLUSTERED 
 (
 	[Id] ASC

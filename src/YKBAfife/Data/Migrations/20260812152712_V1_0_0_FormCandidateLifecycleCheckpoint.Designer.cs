@@ -12,8 +12,8 @@ using YKBAfife.Data;
 namespace YKBAfife.Data.Migrations
 {
     [DbContext(typeof(AfifeContext))]
-    [Migration("20260812152712_TrackFormCandidateSourceSlots")]
-    partial class TrackFormCandidateSourceSlots
+    [Migration("20260812152712_V1_0_0_FormCandidateLifecycleCheckpoint")]
+    partial class V1_0_0_FormCandidateLifecycleCheckpoint
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

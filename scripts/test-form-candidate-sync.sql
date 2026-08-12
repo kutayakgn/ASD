@@ -112,6 +112,32 @@ DECLARE @FirstPhotoId uniqueidentifier =
 IF @FirstRoleCode IS NULL OR @SecondRoleCode IS NULL OR @FirstRoleCode = @SecondRoleCode
     THROW 52993, N'Aynı rol adındaki Form adayları benzersiz RoleCode alamadı.', 1;
 
+/* Recreate a legacy director row from the company database. The Form sync must
+   normalize the single-slot category without failing with SQL error 51304. */
+DISABLE TRIGGER dbo.TR_PlayAwardCategories_EnforceMultiplicity
+    ON dbo.PlayAwardCategories;
+
+UPDATE dbo.PlayAwardCategories
+SET Role = N'Legacy Yönetmen Rolü', RoleCode = 77
+WHERE PlayId = @PlayId AND AwardCategoryCode = 1002 AND IsCurrent = 1;
+
+ENABLE TRIGGER dbo.TR_PlayAwardCategories_EnforceMultiplicity
+    ON dbo.PlayAwardCategories;
+
+UPDATE dbo.Form
+SET Director = N'Formdan Güncel Yönetmen', UpdatedDate = SYSDATETIME()
+WHERE Id = @FormId;
+
+IF NOT EXISTS
+(
+    SELECT 1 FROM dbo.PlayAwardCategories
+    WHERE PlayId = @PlayId AND AwardCategoryCode = 1002
+      AND Candidate = N'Formdan Güncel Yönetmen'
+      AND Role IS NULL AND RoleCode = 0
+      AND IsCurrent = 1 AND IsPublished = 1
+)
+    THROW 52989, N'Legacy 1002 yönetmen kaydı kanonik tek slota dönüştürülmedi.', 1;
+
 /* Play/PAC edits are one-way and must not mutate Form. */
 UPDATE dbo.Plays SET PlayName = N'Admin Oyun Adı' WHERE Id = @PlayId;
 UPDATE dbo.PlayAwardCategories

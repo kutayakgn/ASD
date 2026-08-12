@@ -1,5 +1,15 @@
 SET XACT_ABORT ON;
 
+IF EXISTS
+(
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.PlayAwardCategories')
+      AND name = N'UX_PlayAwardCategories_PlayId_IsCurrent_AwardCategoryCode'
+)
+    DROP INDEX [UX_PlayAwardCategories_PlayId_IsCurrent_AwardCategoryCode]
+        ON [dbo].[PlayAwardCategories];
+
 IF TRY_CONVERT(bit, SESSION_CONTEXT(N'AfifeBaselineAlreadyExists')) <> 1
     RETURN;
 
