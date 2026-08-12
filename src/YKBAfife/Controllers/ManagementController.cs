@@ -1680,6 +1680,7 @@ public sealed partial class ManagementController(
 
             int roleCode;
             string? role;
+            int? sourceFormCandidateOrder = null;
             if (isChangeMode)
             {
                 if (!input.ReplacedCandidateId.HasValue)
@@ -1704,6 +1705,7 @@ public sealed partial class ManagementController(
 
                 roleCode = replacedCandidate.RoleCode;
                 role = replacedCandidate.Role;
+                sourceFormCandidateOrder = replacedCandidate.SourceFormCandidateOrder;
                 if (category.HasRoleAndPhoto && string.IsNullOrWhiteSpace(role))
                 {
                     await transaction.RollbackAsync(cancellationToken);
@@ -1732,17 +1734,6 @@ public sealed partial class ManagementController(
             else if (category.MultiCandidate)
             {
                 role = input.Role;
-                var roleAlreadyExists = publishedPlayCandidates.Any(item =>
-                    candidateTextComparer.Equals(item.Role?.Trim(), role));
-                if (roleAlreadyExists)
-                {
-                    await transaction.RollbackAsync(cancellationToken);
-                    return RedirectToCandidateSectionWithPopup(
-                        slug,
-                        "fail",
-                        RoleDuplicateMessage);
-                }
-
                 var usedRoleCodes = publishedPlayCandidates
                     .Where(item => item.RoleCode > 0)
                     .Select(item => item.RoleCode)
@@ -1794,7 +1785,8 @@ public sealed partial class ManagementController(
                 AwardCategoryCode = category.CategoryCode,
                 IsCurrent = true,
                 Role = role,
-                RoleCode = roleCode
+                RoleCode = roleCode,
+                SourceFormCandidateOrder = sourceFormCandidateOrder
             });
 
             await context.SaveChangesAsync(cancellationToken);

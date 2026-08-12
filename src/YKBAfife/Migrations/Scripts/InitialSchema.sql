@@ -437,6 +437,7 @@ CREATE TABLE [dbo].[PlayAwardCategories](
 	[IsCurrent] [bit] NOT NULL,
 	[Role] [nvarchar](200) NULL,
 	[RoleCode] [int] NOT NULL,
+	[SourceFormCandidateOrder] [int] NULL,
 	[PhotoImageId] [uniqueidentifier] NULL,
 	[IsActive] [bit] NOT NULL,
 	[IsJuryPresident] [bit] NOT NULL,
@@ -870,6 +871,15 @@ CREATE UNIQUE NONCLUSTERED INDEX [UX_PlayAwardCategories_Current_Play_Category_R
 )
 WHERE ([IsCurrent]=(1) AND [IsPublished]=(1))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [UX_PlayAwardCategories_FormSourceSlot] ******/
+CREATE UNIQUE NONCLUSTERED INDEX [UX_PlayAwardCategories_FormSourceSlot] ON [dbo].[PlayAwardCategories]
+(
+	[PlayId] ASC,
+	[AwardCategoryCode] ASC,
+	[SourceFormCandidateOrder] ASC
+)
+WHERE ([SourceFormCandidateOrder] IS NOT NULL AND [IsCurrent]=(1))
 GO
 /****** Object:  Index [UX_PlayAwardCategories_DefaultPlayCategory]    Script Date: 3.08.2026 15:17:26 ******/
 CREATE UNIQUE NONCLUSTERED INDEX [UX_PlayAwardCategories_DefaultPlayCategory] ON [dbo].[PlayAwardCategories]
