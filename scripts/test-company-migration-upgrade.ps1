@@ -16,6 +16,8 @@ if ($databaseName -notmatch '^YkbAfifeUpgradeTest_[a-f0-9]{32}$') {
 $server = '(localdb)\MSSQLLocalDB'
 $connectionString = "Server=$server;Database=$databaseName;Trusted_Connection=True;TrustServerCertificate=True"
 $previousConnection = $env:ConnectionStrings__AfifeConnectionString
+$previousUrls = $env:ASPNETCORE_URLS
+$application = $null
 
 Push-Location $repositoryRoot
 try {
@@ -63,14 +65,79 @@ IF
       AND IsPublished = 1 AND IsCurrent = 1
 ) <> 2
     THROW 52982, N'Category 1006 candidates do not have unique RoleCodes.', 1;
+
+IF EXISTS
+(
+    SELECT 1
+    FROM dbo.JuryVotes AS vote
+    INNER JOIN dbo.PlayAwardCategories AS candidate
+        ON candidate.Id = vote.PlayAwardCategoryId
+    WHERE candidate.PlayId = '44444444-4444-4444-4444-444444444444'
+      AND (vote.IsPublished = 1 OR vote.IsActive = 1)
+)
+    THROW 52983, N'Inactive Form legacy vote was not normalized.', 1;
+
+IF EXISTS
+(
+    SELECT 1 FROM dbo.PlayAwardCategories
+    WHERE Id = '55555555-5555-5555-5555-555555555555'
+      AND (IsPublished = 1 OR IsActive = 1)
+)
+    THROW 52984, N'Inactive Form legacy director was not normalized.', 1;
+
+EXEC dbo.usp_RefreshRankings;
 "@
     sqlcmd -I -S $server -d $databaseName -b -Q $verification
     if ($LASTEXITCODE -ne 0) { throw 'Upgraded database verification failed.' }
 
+    $stdoutPath = Join-Path $env:TEMP ($databaseName + '.stdout.log')
+    $stderrPath = Join-Path $env:TEMP ($databaseName + '.stderr.log')
+    $env:ASPNETCORE_URLS = 'http://127.0.0.1:0'
+    $application = Start-Process dotnet `
+        -ArgumentList @(
+            'run', '--project', $project, '--configuration', $Configuration,
+            '--no-build', '--no-launch-profile'
+        ) `
+        -WindowStyle Hidden `
+        -RedirectStandardOutput $stdoutPath `
+        -RedirectStandardError $stderrPath `
+        -PassThru
+
+    $startupValidated = $false
+    for ($attempt = 0; $attempt -lt 60; $attempt++) {
+        Start-Sleep -Milliseconds 250
+        if (Test-Path $stdoutPath) {
+            $startupOutput = Get-Content $stdoutPath -Raw
+            if ($startupOutput -match 'Database schema validation completed successfully') {
+                $startupValidated = $true
+                break
+            }
+        }
+        if ($application.HasExited) { break }
+    }
+
+    if (-not $application.HasExited) {
+        Stop-Process -Id $application.Id -Force
+        $application.WaitForExit()
+    }
+
+    if (-not $startupValidated) {
+        $startupOutput = if (Test-Path $stdoutPath) { Get-Content $stdoutPath -Raw } else { '' }
+        $startupError = if (Test-Path $stderrPath) { Get-Content $stderrPath -Raw } else { '' }
+        throw "Application startup/schema validation failed.`n$startupOutput`n$startupError"
+    }
+
     Write-Host "Company-style migration upgrade passed for $databaseName."
 }
 finally {
+    if ($null -ne $application -and -not $application.HasExited) {
+        Stop-Process -Id $application.Id -Force -ErrorAction SilentlyContinue
+        $application.WaitForExit()
+    }
     $env:ConnectionStrings__AfifeConnectionString = $previousConnection
+    $env:ASPNETCORE_URLS = $previousUrls
+    Remove-Item -LiteralPath (Join-Path $env:TEMP ($databaseName + '.stdout.log')) -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath (Join-Path $env:TEMP ($databaseName + '.stderr.log')) -Force -ErrorAction SilentlyContinue
     sqlcmd -I -S $server -d master -b -Q `
         "IF DB_ID(N'$databaseName') IS NOT NULL BEGIN ALTER DATABASE [$databaseName] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [$databaseName]; END;"
     Pop-Location
