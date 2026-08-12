@@ -1,27 +1,21 @@
 using System.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace YKBAfife.Data.Migrations;
 
 public sealed class DatabaseMigrationHostedService(
     IServiceScopeFactory scopeFactory,
     IConfiguration configuration,
-    IHostEnvironment environment,
     ILogger<DatabaseMigrationHostedService> logger) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        var applyOnStartup = configuration.GetValue("DatabaseMigration:ApplyOnStartup", false);
-        //if (environment.IsDevelopment() || !applyOnStartup)
-        //{
-        //    logger.LogInformation(
-        //        "Automatic database migration is disabled for environment {EnvironmentName}.",
-        //        environment.EnvironmentName);
-        //    return;
-        //}
         await using var scope = scopeFactory.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<AfifeContext>();
+        var migrator = context.GetService<IMigrator>();
         var connection = (SqlConnection)context.Database.GetDbConnection();
         await connection.OpenAsync(cancellationToken);
 
@@ -38,7 +32,22 @@ public sealed class DatabaseMigrationHostedService(
             {
                 logger.LogInformation("Applying {Count} migration(s): {Migrations}",
                     pending.Length, string.Join(", ", pending));
-                await context.Database.MigrateAsync(cancellationToken);
+
+                foreach (var migration in pending)
+                {
+                    logger.LogInformation("Applying database migration {Migration}.", migration);
+                    try
+                    {
+                        await migrator.MigrateAsync(migration, cancellationToken);
+                    }
+                    catch (Exception exception)
+                    {
+                        logger.LogError(exception,
+                            "Database migration {Migration} failed.", migration);
+                        throw;
+                    }
+                }
+
                 logger.LogInformation("Database migrations completed successfully.");
             }
 
