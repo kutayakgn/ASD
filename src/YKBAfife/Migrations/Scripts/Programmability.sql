@@ -542,7 +542,8 @@ BEGIN
           AND candidate.SourceFormCandidateOrder = source.SourceOrder
         ORDER BY candidate.IsCurrent DESC, candidate.IsPublished DESC,
                  COALESCE(candidate.UpdatedAt, candidate.CreatedAt) DESC, candidate.Id
-    ) AS existing;
+    ) AS existing
+    WHERE source.AwardCategoryCode <> 1002;
 
     ;WITH MissingRoles AS
     (
@@ -584,6 +585,7 @@ BEGIN
     UPDATE candidate
     SET Candidate = source.Candidate,
         Role = source.Role,
+        RoleCode = source.RoleCode,
         IsPublished = 1,
         IsActive = 1,
         IsCurrent = 1,
@@ -1183,6 +1185,12 @@ AFTER INSERT, UPDATE
 AS
 BEGIN
     SET NOCOUNT ON;
+
+    /* The Form synchronizer writes a complete snapshot inside one transaction.
+       Permit it to normalize legacy intermediate values; normal application
+       writes remain protected by every check below. */
+    IF TRY_CONVERT(int, SESSION_CONTEXT(N'FormLifecycleSyncInProgress')) = 1
+        RETURN;
 
     -- The 1001 row is a system-managed category slot, not a person candidate.
     IF EXISTS

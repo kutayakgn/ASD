@@ -5,7 +5,7 @@
 namespace YKBAfife.Data.Migrations
 {
     /// <inheritdoc />
-    public partial class TrackFormCandidateSourceSlots : Migration
+    public partial class V1_0_0_FormCandidateLifecycleCheckpoint : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
