@@ -348,6 +348,244 @@ BEGIN
 END;
 GO
 
+CREATE OR ALTER PROCEDURE [dbo].[usp_SynchronizeFormCandidates]
+WITH EXECUTE AS OWNER
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    DECLARE @Now datetime2(7) = DATEADD(HOUR, 3, SYSUTCDATETIME());
+
+    CREATE TABLE #CandidateSource
+    (
+        SourceOrder int NOT NULL,
+        PlayId uniqueidentifier NOT NULL,
+        AwardCategoryCode int NOT NULL,
+        Candidate nvarchar(250) NOT NULL,
+        Role nvarchar(200) NULL,
+        RoleCode int NULL,
+        ImageUrl nvarchar(255) NULL,
+        Base64 nvarchar(max) NULL
+    );
+
+    /* Director is the mandatory, single-slot category 1002 candidate. */
+    INSERT INTO #CandidateSource
+        (SourceOrder, PlayId, AwardCategoryCode, Candidate, Role, RoleCode, ImageUrl, Base64)
+    SELECT 0, play.Id, 1002, LEFT(LTRIM(RTRIM(formRecord.Director)), 250),
+           NULL, 0, NULL, NULL
+    FROM dbo.Form AS formRecord
+    INNER JOIN dbo.Plays AS play ON play.SourceFormId = formRecord.Id
+    WHERE formRecord.IsPublished = 1
+      AND formRecord.IsActive = 1
+      AND play.RecordType = 0
+      AND play.IsPublished = 1
+      AND play.IsActive = 1
+      AND NULLIF(LTRIM(RTRIM(formRecord.Director)), N'') IS NOT NULL;
+
+    /* Every category except 1001/1002 creates one role-scoped row per JSON item. */
+    INSERT INTO #CandidateSource
+        (SourceOrder, PlayId, AwardCategoryCode, Candidate, Role, RoleCode, ImageUrl, Base64)
+    SELECT CONVERT(int, jsonItem.[key]) + 1,
+           play.Id,
+           category.AwardCategoryCode,
+           LEFT(LTRIM(RTRIM(JSON_VALUE(jsonItem.value, N'$.Name'))), 250),
+           LEFT(COALESCE
+           (
+               NULLIF(LTRIM(RTRIM(JSON_VALUE(jsonItem.value, N'$.Role'))), N''),
+               NULLIF(LTRIM(RTRIM(JSON_VALUE(jsonItem.value, N'$.Name'))), N'')
+           ), 200),
+           NULL,
+           LEFT(NULLIF(LTRIM(RTRIM(JSON_VALUE(jsonItem.value, N'$.ImageUrl'))), N''), 255),
+           NULLIF(LTRIM(RTRIM(JSON_VALUE(jsonItem.value, N'$.Base64'))), N'')
+    FROM dbo.Form AS formRecord
+    INNER JOIN dbo.Plays AS play ON play.SourceFormId = formRecord.Id
+    CROSS APPLY
+    (
+        VALUES
+            (1003, formRecord.LeadActress),
+            (1004, formRecord.LeadActor),
+            (1005, formRecord.SupportActress),
+            (1006, formRecord.SupportActor),
+            (1007, formRecord.StageDesign),
+            (1008, formRecord.ClothesDesign),
+            (1009, formRecord.StageMusic),
+            (1010, formRecord.LightDesign),
+            (1011, formRecord.Choreography),
+            (1012, formRecord.YoungGenerationArtist)
+    ) AS category(AwardCategoryCode, CandidateJson)
+    CROSS APPLY OPENJSON
+    (
+        CASE
+            WHEN ISJSON(category.CandidateJson) <> 1 THEN N'[]'
+            WHEN LEFT(LTRIM(category.CandidateJson), 1) = N'[' THEN category.CandidateJson
+            ELSE N'[' + category.CandidateJson + N']'
+        END
+    ) AS jsonItem
+    WHERE formRecord.IsPublished = 1
+      AND formRecord.IsActive = 1
+      AND play.RecordType = 0
+      AND play.IsPublished = 1
+      AND play.IsActive = 1
+      AND NULLIF(LTRIM(RTRIM(JSON_VALUE(jsonItem.value, N'$.Name'))), N'') IS NOT NULL;
+
+    IF EXISTS
+    (
+        SELECT 1 FROM #CandidateSource
+        WHERE AwardCategoryCode BETWEEN 1003 AND 1012
+          AND NULLIF(LTRIM(RTRIM(Role)), N'') IS NULL
+    )
+        THROW 52410, N'Oyuncu ve Genç Kuşak adaylarında Role alanı zorunludur.', 1;
+
+    IF EXISTS
+    (
+        SELECT PlayId, AwardCategoryCode, LOWER(LTRIM(RTRIM(Role)))
+        FROM #CandidateSource
+        WHERE Role IS NOT NULL
+        GROUP BY PlayId, AwardCategoryCode, LOWER(LTRIM(RTRIM(Role)))
+        HAVING COUNT(*) > 1
+    )
+        THROW 52411, N'Aynı kategori içinde aynı rol birden fazla kez gönderilemez.', 1;
+
+    UPDATE source
+    SET RoleCode = existing.RoleCode
+    FROM #CandidateSource AS source
+    CROSS APPLY
+    (
+        SELECT TOP (1) candidate.RoleCode
+        FROM dbo.PlayAwardCategories AS candidate
+        WHERE candidate.PlayId = source.PlayId
+          AND candidate.AwardCategoryCode = source.AwardCategoryCode
+          AND candidate.Role IS NOT NULL
+          AND LOWER(LTRIM(RTRIM(candidate.Role))) = LOWER(LTRIM(RTRIM(source.Role)))
+        ORDER BY candidate.IsCurrent DESC, candidate.IsPublished DESC,
+                 COALESCE(candidate.UpdatedAt, candidate.CreatedAt) DESC, candidate.Id
+    ) AS existing
+    WHERE source.Role IS NOT NULL;
+
+    ;WITH MissingRoles AS
+    (
+        SELECT source.PlayId, source.AwardCategoryCode, source.SourceOrder,
+               COALESCE
+               (
+                   (SELECT MAX(candidate.RoleCode)
+                    FROM dbo.PlayAwardCategories AS candidate
+                    WHERE candidate.PlayId = source.PlayId AND candidate.RoleCode > 0),
+                   0
+               ) + ROW_NUMBER() OVER
+                   (PARTITION BY source.PlayId ORDER BY source.AwardCategoryCode, source.SourceOrder) AS NewRoleCode
+        FROM #CandidateSource AS source
+        WHERE source.Role IS NOT NULL AND source.RoleCode IS NULL
+    )
+    UPDATE source
+    SET RoleCode = missing.NewRoleCode
+    FROM #CandidateSource AS source
+    INNER JOIN MissingRoles AS missing
+        ON missing.PlayId = source.PlayId
+       AND missing.AwardCategoryCode = source.AwardCategoryCode
+       AND missing.SourceOrder = source.SourceOrder;
+
+    CREATE TABLE #NewCandidates
+    (
+        CandidateId uniqueidentifier NOT NULL PRIMARY KEY,
+        ImageId uniqueidentifier NULL,
+        PlayId uniqueidentifier NOT NULL,
+        AwardCategoryCode int NOT NULL,
+        Candidate nvarchar(250) NOT NULL,
+        Role nvarchar(200) NULL,
+        RoleCode int NOT NULL,
+        ImageUrl nvarchar(255) NULL,
+        CleanBase64 nvarchar(max) NULL,
+        ImageData varbinary(max) NULL,
+        ContentType nvarchar(100) NULL
+    );
+
+    INSERT INTO #NewCandidates
+        (CandidateId, ImageId, PlayId, AwardCategoryCode, Candidate, Role,
+         RoleCode, ImageUrl, CleanBase64)
+    SELECT NEWID(), CASE WHEN source.Base64 IS NULL THEN NULL ELSE NEWID() END,
+           source.PlayId, source.AwardCategoryCode, source.Candidate, source.Role,
+           COALESCE(source.RoleCode, 0), source.ImageUrl,
+           CASE
+               WHEN source.Base64 LIKE N'data:%;base64,%'
+                   THEN REPLACE(REPLACE(REPLACE(SUBSTRING(source.Base64,
+                        CHARINDEX(N',', source.Base64) + 1, LEN(source.Base64)), CHAR(13), N''), CHAR(10), N''), N' ', N'')
+               ELSE REPLACE(REPLACE(REPLACE(source.Base64, CHAR(13), N''), CHAR(10), N''), N' ', N'')
+           END
+    FROM #CandidateSource AS source
+    WHERE NOT EXISTS
+    (
+        SELECT 1
+        FROM dbo.PlayAwardCategories AS existing
+        WHERE existing.PlayId = source.PlayId
+          AND existing.AwardCategoryCode = source.AwardCategoryCode
+          AND existing.RoleCode = COALESCE(source.RoleCode, 0)
+          AND existing.IsPublished = 1
+    );
+
+    /* Legacy/test Forms can contain placeholder strings in Base64. They must not
+       block candidate backfill and must never be persisted as image bytes. */
+    UPDATE candidate
+    SET ImageId = NULL, CleanBase64 = NULL
+    FROM #NewCandidates AS candidate
+    WHERE candidate.CleanBase64 IS NOT NULL
+      AND
+      (
+          LEN(candidate.CleanBase64) % 4 <> 0
+          OR candidate.CleanBase64 COLLATE Latin1_General_100_BIN2 LIKE N'%[^A-Za-z0-9+/=]%'
+      );
+
+    UPDATE candidate
+    SET ImageData = CAST(N'' AS xml).value(
+            'xs:base64Binary(sql:column("candidate.CleanBase64"))', 'varbinary(max)')
+    FROM #NewCandidates AS candidate
+    WHERE candidate.CleanBase64 IS NOT NULL;
+
+    UPDATE candidate
+    SET ContentType = CASE
+        WHEN SUBSTRING(candidate.ImageData, 1, 3) = 0xFFD8FF THEN N'image/jpeg'
+        WHEN SUBSTRING(candidate.ImageData, 1, 8) = 0x89504E470D0A1A0A THEN N'image/png'
+        WHEN SUBSTRING(candidate.ImageData, 1, 4) = 0x52494646
+         AND SUBSTRING(candidate.ImageData, 9, 4) = 0x57454250 THEN N'image/webp'
+        ELSE NULL END
+    FROM #NewCandidates AS candidate
+    WHERE candidate.ImageData IS NOT NULL;
+
+    UPDATE candidate
+    SET ImageId = NULL, ImageData = NULL, CleanBase64 = NULL
+    FROM #NewCandidates AS candidate
+    WHERE candidate.ImageData IS NOT NULL
+      AND
+      (
+          DATALENGTH(candidate.ImageData) = 0
+          OR DATALENGTH(candidate.ImageData) > 5 * 1024 * 1024
+          OR candidate.ContentType IS NULL
+      );
+
+    INSERT INTO dbo.Images
+        (Id, FileName, ContentType, ImageData, CreatedAt, CreatedBy, IsPublished)
+    SELECT candidate.ImageId,
+           COALESCE(NULLIF(candidate.ImageUrl, N''),
+                    CONCAT(N'form-candidate-', CONVERT(nvarchar(36), candidate.CandidateId),
+                           CASE candidate.ContentType WHEN N'image/png' THEN N'.png'
+                                WHEN N'image/webp' THEN N'.webp' ELSE N'.jpg' END)),
+           candidate.ContentType, candidate.ImageData, @Now, candidate.CandidateId, 1
+    FROM #NewCandidates AS candidate
+    WHERE candidate.ImageId IS NOT NULL;
+
+    INSERT INTO dbo.PlayAwardCategories
+    (
+        Id, PlayId, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy,
+        IsPublished, IsActive, Candidate, AwardCategoryCode,
+        IsCurrent, Role, RoleCode, PhotoImageId
+    )
+    SELECT candidate.CandidateId, candidate.PlayId, @Now, NULL, NULL, NULL,
+           1, 1, candidate.Candidate, candidate.AwardCategoryCode,
+           1, candidate.Role, candidate.RoleCode, candidate.ImageId
+    FROM #NewCandidates AS candidate;
+END;
+GO
+
 CREATE OR ALTER PROCEDURE [dbo].[usp_SynchronizeFormsToPlays]
 WITH EXECUTE AS OWNER
 AS
@@ -473,6 +711,8 @@ BEGIN
                     COALESCE(NULLIF(formRecord.ContactPhone, N''), formRecord.Phone)
               OR COALESCE(play.Email, N'') <> COALESCE(formRecord.Email, N'')
           );
+
+        EXEC dbo.usp_SynchronizeFormCandidates;
 
         CREATE TABLE #DeactivateForms
         (
@@ -1754,6 +1994,7 @@ BEGIN
         LightDesign = changed.LightDesign,
         StageMusic = changed.StageMusic,
         Choreography = changed.Choreography,
+        YoungGenerationArtist = changed.YoungGenerationArtist,
         IsActive = changed.IsActive,
         IsPublished = changed.IsPublished
     FROM dbo.Form AS target
@@ -1776,6 +2017,7 @@ BEGIN
         ApplicantRole, Phone, Email, Director, ContactName, ContactPhone,
         LeadActress, LeadActor, SupportActress, SupportActor, StageDesign,
         ClothesDesign, LightDesign, StageMusic, Choreography,
+        YoungGenerationArtist,
         IsActive, IsPublished
     )
     SELECT
@@ -1789,6 +2031,7 @@ BEGIN
         changed.SupportActress, changed.SupportActor,
         changed.StageDesign, changed.ClothesDesign, changed.LightDesign,
         changed.StageMusic, changed.Choreography,
+        changed.YoungGenerationArtist,
         changed.IsActive, changed.IsPublished
     FROM inserted AS changed
     OUTER APPLY

@@ -33,6 +33,7 @@ public class Form
     public string? LightDesign { get; set; }
     public string? StageMusic { get; set; }
     public string? Choreography { get; set; }
+    public string? YoungGenerationArtist { get; set; }
     public bool IsActive { get; set; } = true;
     public bool IsPublished { get; set; } = true;
     public Season? Season { get; set; }

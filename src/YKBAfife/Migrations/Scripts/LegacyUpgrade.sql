@@ -35,8 +35,8 @@ IF COL_LENGTH(N'dbo.AwardCategories', N'HasRoleAndPhoto') IS NULL
 /* Compile after additive columns exist; SQL Server binds static column names per batch. */
 EXEC sys.sp_executesql N'
 UPDATE dbo.AwardCategories
-SET MultiCandidate = CASE WHEN CategoryCode IN (1003, 1004, 1005, 1006, 1012) THEN 1 ELSE 0 END,
-    HasRoleAndPhoto = CASE WHEN CategoryCode IN (1002, 1003, 1004, 1005, 1006, 1012) THEN 1 ELSE 0 END
+SET MultiCandidate = CASE WHEN CategoryCode BETWEEN 1003 AND 1012 THEN 1 ELSE 0 END,
+    HasRoleAndPhoto = CASE WHEN CategoryCode BETWEEN 1002 AND 1012 THEN 1 ELSE 0 END
 WHERE CategoryCode BETWEEN 1001 AND 1012;';
 
 IF COL_LENGTH(N'dbo.Configs', N'IsPublished') IS NULL
