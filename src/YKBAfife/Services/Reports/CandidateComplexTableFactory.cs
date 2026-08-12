@@ -1,4 +1,5 @@
 using System.Globalization;
+using YKBAfife.Helpers;
 using YKBAfife.Models.Components;
 using YKBAfife.Models.ViewModels;
 
@@ -75,13 +76,14 @@ public static class CandidateComplexTableFactory
     {
         var detailsUrl = $"/adaylar/{row.Id:D}";
         var replacement = row.RoleCandidateCount <= 1 ? "-" : row.IsCurrent ? "Yeni Aday" : "Eski Aday";
+        var isSystemManaged = CandidateCategoryPolicy.IsSystemManaged(row.CategoryCode);
         return new ComplexTableRowViewModel
         {
             Id = $"candidate-{row.Id:N}",
             Link = detailsUrl,
             NavigationUrl = detailsUrl,
             NavigationAccessibleLabel = $"{row.Candidate} aday detayına git",
-            DeleteUrl = row.CategoryCode == 1001 ? string.Empty : $"/adaylar/{row.Id:D}/sil",
+            DeleteUrl = isSystemManaged ? string.Empty : $"/adaylar/{row.Id:D}/sil",
             DeleteConfirmMessage = "İlgili kategorideki adayı silmek istediğinize emin misiniz?",
             DeleteAccessibleLabel = $"{row.Candidate} aday kaydını sil",
             Cells =
@@ -94,8 +96,8 @@ public static class CandidateComplexTableFactory
                 new()
                 {
                     ToggleUrl = $"/adaylar/{row.Id:D}/status",
-                    ToggleChecked = row.IsActive,
-                    ToggleDisabled = row.CategoryCode == 1001,
+                    ToggleChecked = isSystemManaged || row.IsActive,
+                    ToggleDisabled = isSystemManaged,
                     AccessibleLabel = $"{row.Candidate} statüsünü değiştir",
                     CssClass = "candidate-status-cell"
                 }

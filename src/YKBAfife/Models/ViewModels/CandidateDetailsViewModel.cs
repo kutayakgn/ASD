@@ -1,3 +1,5 @@
+using YKBAfife.Helpers;
+
 namespace YKBAfife.Models.ViewModels;
 
 public sealed class CandidateDetailsViewModel
@@ -17,5 +19,5 @@ public sealed class CandidateDetailsViewModel
     public string? UpdatedByName { get; init; }
     public bool HasRoleAndPhoto { get; init; }
     public bool HasPhoto { get; init; }
-    public bool CanManage => CategoryCode != 1001;
+    public bool CanManage => !CandidateCategoryPolicy.IsSystemManaged(CategoryCode);
 }
