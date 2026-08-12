@@ -118,6 +118,12 @@ internal static partial class DatabaseSchemaValidator
             missing.Add($"foreign key {foreignKey} must use ON UPDATE/DELETE NO ACTION");
         }
 
+        foreach (var obsoleteIndex in catalog.ObsoleteCandidateIndexes)
+        {
+            missing.Add(
+                $"obsolete candidate index {obsoleteIndex} blocks RoleCode-based multi-candidate categories");
+        }
+
         var unexpectedTriggers = catalog.Triggers.Except(
             expectedTriggers, StringComparer.OrdinalIgnoreCase);
         foreach (var trigger in unexpectedTriggers)
@@ -256,7 +262,45 @@ internal static partial class DatabaseSchemaValidator
             JOIN sys.tables t ON t.object_id = dc.parent_object_id
             JOIN sys.schemas s ON s.schema_id = t.schema_id
             WHERE c.name = N'IsPublished'
-              AND REPLACE(REPLACE(REPLACE(dc.definition, N'(', N''), N')', N''), N' ', N'') = N'1';
+              AND REPLACE(REPLACE(REPLACE(dc.definition, N'(', N''), N')', N''), N' ', N'') = N'1'
+            UNION ALL
+            SELECT N'X', candidateIndex.name
+            FROM sys.indexes AS candidateIndex
+            WHERE candidateIndex.object_id = OBJECT_ID(N'dbo.PlayAwardCategories')
+              AND candidateIndex.is_unique = 1
+              AND candidateIndex.has_filter = 1
+              AND candidateIndex.filter_definition LIKE N'%IsCurrent%'
+              AND
+              (
+                  SELECT COUNT(*) FROM sys.index_columns AS indexColumn
+                  WHERE indexColumn.object_id = candidateIndex.object_id
+                    AND indexColumn.index_id = candidateIndex.index_id
+                    AND indexColumn.key_ordinal > 0
+              ) = 2
+              AND EXISTS
+              (
+                  SELECT 1
+                  FROM sys.index_columns AS indexColumn
+                  INNER JOIN sys.columns AS columnRecord
+                      ON columnRecord.object_id = indexColumn.object_id
+                     AND columnRecord.column_id = indexColumn.column_id
+                  WHERE indexColumn.object_id = candidateIndex.object_id
+                    AND indexColumn.index_id = candidateIndex.index_id
+                    AND indexColumn.key_ordinal > 0
+                    AND columnRecord.name = N'PlayId'
+              )
+              AND EXISTS
+              (
+                  SELECT 1
+                  FROM sys.index_columns AS indexColumn
+                  INNER JOIN sys.columns AS columnRecord
+                      ON columnRecord.object_id = indexColumn.object_id
+                     AND columnRecord.column_id = indexColumn.column_id
+                  WHERE indexColumn.object_id = candidateIndex.object_id
+                    AND indexColumn.index_id = candidateIndex.index_id
+                    AND indexColumn.key_ordinal > 0
+                    AND columnRecord.name = N'AwardCategoryCode'
+              );
             """;
 
         var result = new Catalog();
@@ -278,6 +322,7 @@ internal static partial class DatabaseSchemaValidator
                 "F" => result.CascadingForeignKeys,
                 "Q" => result.PrimaryKeyTables,
                 "B" => result.IsPublishedDefaultOneTables,
+                "X" => result.ObsoleteCandidateIndexes,
                 _ => throw new DataException($"Unknown schema catalog kind '{kind}'.")
             }).Add(name);
         }
@@ -296,6 +341,7 @@ internal static partial class DatabaseSchemaValidator
         public HashSet<string> CascadingForeignKeys { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> PrimaryKeyTables { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> IsPublishedDefaultOneTables { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public HashSet<string> ObsoleteCandidateIndexes { get; } = new(StringComparer.OrdinalIgnoreCase);
     }
 
     [GeneratedRegex(@"CREATE\s+(?:UNIQUE\s+)?(?:NONCLUSTERED\s+)?INDEX\s+\[(?<name>[^]]+)\]",
