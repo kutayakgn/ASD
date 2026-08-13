@@ -46,7 +46,7 @@ public static class TicketSalesComplexTableFactory
         SummaryContent =
         [
             new ComplexTableSummarySegmentViewModel { Text = report.TotalCount.ToString(CultureInfo.CurrentCulture), IsEmphasized = true },
-            new() { Text = " kayıt bulundu." }
+            new() { Text = " kayıt", IsEmphasized = true } , new() { Text = " bulundu." }
         ]
     };
 

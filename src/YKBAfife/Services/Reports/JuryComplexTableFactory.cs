@@ -31,6 +31,8 @@ public static class JuryComplexTableFactory
         {
             Id = $"jury-{row.UserId:N}",
             Link = $"/juriler/{row.UserId:D}",
+            NavigationUrl = $"/juriler/{row.UserId:D}",
+            NavigationAccessibleLabel = $"{FullName(row)} detayına git",
             Cells = isCurrent
                 ?
                 [
@@ -77,6 +79,7 @@ public static class JuryComplexTableFactory
             CurrentTabKey = report.CurrentTab,
             SearchPlaceholder = "Kullanıcı adı, e-posta, adı soyadı veya telefon ara",
             MinimumTableWidth = 1050,
+            IsNavigationColActive = true,
             Tabs =
             [
                 CreateTab(JuryTabs.Current, "Güncel Jüriler"),
@@ -89,7 +92,8 @@ public static class JuryComplexTableFactory
                     Text = report.TotalCount.ToString(CultureInfo.CurrentCulture),
                     IsEmphasized = true
                 },
-                new() { Text = " kayıt bulundu." }
+                 new() { Text = " kayıt", IsEmphasized = true },
+                new() { Text = " bulundu." }
             ]
         };
     }

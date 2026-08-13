@@ -108,9 +108,11 @@ public static class PlayComplexTableFactory
             SummaryContent =
             [
                 new() { Text = report.TotalCount.ToString(CultureInfo.CurrentCulture), IsEmphasized = true },
-                new() { Text = " kayıt bulundu. " },
+                 new() { Text = " kayıt", IsEmphasized = true },
+                new() { Text = " bulundu. " },
                 new() { Text = report.JuryVotingEnabledCount.ToString(CultureInfo.CurrentCulture), IsEmphasized = true },
-                new() { Text = " kayıt jüri tarafından oylanabilir." }
+                new() { Text = " kayıt", IsEmphasized = true },
+                new() { Text = " jüri tarafından oylanabilir." }
             ]
         };
     }

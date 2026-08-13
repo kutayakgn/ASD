@@ -59,7 +59,8 @@ public static class JuryWatchedPlayComplexTableFactory
                 Text = report.TotalCount.ToString(CultureInfo.CurrentCulture),
                 IsEmphasized = true
             },
-            new() { Text = " kayıt bulundu." }
+             new() { Text = " kayıt", IsEmphasized = true },
+                new() { Text = " bulundu." }
         ]
     };
 }
