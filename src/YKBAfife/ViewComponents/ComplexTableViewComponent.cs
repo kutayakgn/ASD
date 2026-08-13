@@ -25,6 +25,24 @@ public sealed class ComplexTableViewComponent : ViewComponent
                 continue;
             }
 
+            var usesResponsiveWidths = tab.Columns.Any(column => column.ResponsiveWidth.HasValue);
+            if (usesResponsiveWidths)
+            {
+                if (tab.Columns.Any(column => !column.ResponsiveWidth.HasValue))
+                {
+                    throw new InvalidOperationException(
+                        $"Every column in complex table tab '{tab.Key}' must define ResponsiveWidth when responsive widths are used.");
+                }
+
+                if (tab.Columns.Any(column => column.ResponsiveWidth <= 0))
+                {
+                    throw new InvalidOperationException(
+                        $"Every ResponsiveWidth in complex table tab '{tab.Key}' must be greater than zero.");
+                }
+
+                continue;
+            }
+
             if (tab.Columns.Any(column => column.ColWidth <= 0))
             {
                 throw new InvalidOperationException(

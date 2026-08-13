@@ -58,6 +58,11 @@ public sealed class ComplexTableColumnViewModel
     public string Key { get; init; } = string.Empty;
     public bool IsSortable { get; init; } = true;
     public decimal ColWidth { get; init; } = 100;
+    /// <summary>
+    /// Optional design-reference width. When supplied for every column, the table
+    /// normalizes these values proportionally so the layout remains responsive.
+    /// </summary>
+    public decimal? ResponsiveWidth { get; init; }
     public string CssClass { get; init; } = string.Empty;
 }
 

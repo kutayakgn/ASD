@@ -447,7 +447,7 @@ public sealed partial class ManagementController(
         }
 
         TempData["GenericPopup.Type"] = "success";
-        TempData["GenericPopup.Message"] = "Jüri başarıyla güncellendi.";
+        TempData["GenericPopup.Message"] = "Değişiklikler başarıyla kaydedildi.";
         TempData["GenericPopup.RedirectUrl"] = Url.Action(nameof(JuryDetails), new { id }) ?? $"/juriler/{id}";
         return RedirectToAction(nameof(EditJury), new { id });
     }

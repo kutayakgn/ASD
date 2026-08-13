@@ -1,4 +1,5 @@
 @using System.Globalization
+@using YKBAfife.Models.Components
 @model YKBAfife.Models.Components.ComplexTableViewModel
 @{
     var activeTab = Model.Tabs.FirstOrDefault(x => x.Key == Model.CurrentTabKey)
@@ -19,9 +20,18 @@
         : Model.SelectFilter is null
             ? []
             : new[] { Model.SelectFilter };
+    var hasResponsiveColumnWidths = activeTab is not null &&
+        activeTab.Columns.Count > 0 &&
+        activeTab.Columns.All(column => column.ResponsiveWidth is > 0);
+    var responsiveColumnWidthTotal = hasResponsiveColumnWidths
+        ? activeTab!.Columns.Sum(column => column.ResponsiveWidth!.Value)
+        : 0;
 
-    string ColumnWidth(decimal percentage)
+    string ColumnWidth(ComplexTableColumnViewModel column)
     {
+        var percentage = hasResponsiveColumnWidths
+            ? column.ResponsiveWidth!.Value * 100m / responsiveColumnWidthTotal
+            : column.ColWidth;
         var percentageValue = percentage.ToString("0.##", CultureInfo.InvariantCulture);
         var actionColumnsWidth = (Model.IsEditableRows ? Model.EditColumnWidth : 0) +
             (Model.IsDeleteColActive ? Model.DeleteColumnWidth : 0) +
@@ -189,7 +199,7 @@
                 <colgroup>
                     @foreach (var column in activeTab.Columns)
                     {
-                        <col class="@column.CssClass" style="width: @ColumnWidth(column.ColWidth);" />
+                        <col class="@column.CssClass" style="width: @ColumnWidth(column);" />
                     }
                     @if (Model.IsEditableRows)
                     {
@@ -214,7 +224,7 @@
                         <tr>
                             @foreach (var column in activeTab.Columns)
                             {
-                                <th scope="col" class="@column.CssClass" style="width: @ColumnWidth(column.ColWidth);">
+                                <th scope="col" class="@column.CssClass" style="width: @ColumnWidth(column);">
                                     @if (column.IsSortable)
                                     {
                                         <button type="button"
@@ -270,7 +280,7 @@
                                 @for (var index = 0; index < activeTab.Columns.Count; index++)
                                 {
                                     var cell = index < row.Cells.Count ? row.Cells[index] : null;
-                                    <td class="@activeTab.Columns[index].CssClass @((cell is not null && (!string.IsNullOrWhiteSpace(cell.Link) || !string.IsNullOrWhiteSpace(cell.ModalUrl))) ? "complex-table-action-cell" : string.Empty) @((cell is not null && !string.IsNullOrWhiteSpace(cell.ToggleUrl)) ? "complex-table-toggle-cell" : string.Empty)" style="width: @ColumnWidth(activeTab.Columns[index].ColWidth);">
+                                    <td class="@activeTab.Columns[index].CssClass @((cell is not null && (!string.IsNullOrWhiteSpace(cell.Link) || !string.IsNullOrWhiteSpace(cell.ModalUrl))) ? "complex-table-action-cell" : string.Empty) @((cell is not null && !string.IsNullOrWhiteSpace(cell.ToggleUrl)) ? "complex-table-toggle-cell" : string.Empty)" style="width: @ColumnWidth(activeTab.Columns[index]);">
                                         @if (cell is not null)
                                         {
                                             <div class="complex-table-cell-content @cell.CssClass">

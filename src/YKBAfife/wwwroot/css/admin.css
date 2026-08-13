@@ -573,13 +573,13 @@ body {
     display: flex;
     min-height: 44px;
     align-items: center;
-    gap: 24px;
+    gap: 40px;
 }
 
 .add-jury-option {
     display: inline-flex;
     min-height: 44px;
-    padding: 10px 12px;
+    padding: 0;
     align-items: center;
     gap: 9px;
     background: #fff;
@@ -757,7 +757,7 @@ body {
 
 .add-jury-photo-action:hover img,
 .add-jury-photo-action:focus-visible img {
-    filter: brightness(0) invert(1);
+    filter: none;
 }
 
 .add-jury-photo-modal {
@@ -854,7 +854,7 @@ body.has-photo-preview {
 .jury-details-layout {
     display: grid;
     grid-template-columns: minmax(180px, 1fr) minmax(0, 3fr);
-    gap: clamp(32px, 6vw, 88px);
+    gap: 24px;
     margin-top: 24px;
     align-items: start;
 }
@@ -879,6 +879,24 @@ body.has-photo-preview {
     font-size: clamp(64px, 9vw, 120px);
 }
 
+@media (min-width: 1200px) {
+    .jury-details-layout {
+        grid-template-columns: 370px minmax(0, 1fr);
+    }
+
+    .jury-details-photo-panel,
+    .jury-details-photo,
+    .jury-details-photo-placeholder {
+        width: 370px;
+    }
+
+    .jury-details-photo,
+    .jury-details-photo-placeholder {
+        height: 420px;
+        aspect-ratio: auto;
+    }
+}
+
 .jury-details-content {
     margin: 0;
     padding: 0;
@@ -899,7 +917,7 @@ body.has-photo-preview {
 
 .jury-status-dot.is-active { background: #1f9f55; }
 .jury-status-dot.is-inactive { background: #b31d1d; }
-.jury-delete-action { color: #b31d1d; border-color: #b31d1d; }
+.jury-delete-action { color: #171717; border-color: #171717; }
 
 @media (max-width: 800px) {
     .jury-details-layout {
@@ -917,6 +935,21 @@ body.has-photo-preview {
     }
 }
 .jury-watched-plays { margin-bottom: 24px; }
+
+.jury-details-page .jury-watched-plays .complex-table-heading {
+    padding-right: 0;
+    padding-top:16px;
+    padding-left: 0;
+}
+
+.jury-details-page .jury-watched-plays .jury-voting-table-wrapper {
+    padding-right: 0;
+    padding-left: 0;
+}
+.jury-details-page .jury-watched-plays .complex-table-summary-wrapper {
+    padding-right: 0;
+    padding-left: 0;
+}
 /* Candidate custom selects */
 .add-candidate-select {
     position: relative;

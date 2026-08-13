@@ -85,6 +85,7 @@ public sealed class JuryWatchedPlayReportService(AfifeContext context) : IJuryWa
             {
                 PlayId = play.Id,
                 PlayName = play.PlayName,
+                Slug = play.Slug,
                 WatchedAt = vote.UpdatedAt ?? vote.CreatedAt
             };
 
@@ -99,16 +100,18 @@ public sealed class JuryWatchedPlayReportService(AfifeContext context) : IJuryWa
             {
                 PlayId = play.Id,
                 PlayName = play.PlayName,
+                Slug = play.Slug,
                 WatchedAt = ticket.UpdatedAt ?? ticket.CreatedAt
             };
 
         var watchedPlays = votedPlays
             .Concat(ticketedPlays)
-            .GroupBy(item => new { item.PlayId, item.PlayName })
+            .GroupBy(item => new { item.PlayId, item.PlayName, item.Slug })
             .Select(group => new JuryWatchedPlayRowViewModel
             {
                 PlayId = group.Key.PlayId,
                 PlayName = group.Key.PlayName,
+                Slug = group.Key.Slug,
                 WatchedAt = group.Max(item => item.WatchedAt)
             });
 
@@ -142,6 +145,7 @@ public sealed class JuryWatchedPlayReportService(AfifeContext context) : IJuryWa
     {
         public Guid PlayId { get; init; }
         public string PlayName { get; init; } = string.Empty;
+        public string Slug { get; init; } = string.Empty;
         public DateTime? WatchedAt { get; init; }
     }
 }

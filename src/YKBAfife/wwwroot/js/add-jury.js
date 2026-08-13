@@ -1,4 +1,5 @@
 (() => {
+    const phoneInput = document.querySelector("[data-jury-phone]");
     const input = document.querySelector("[data-jury-photo-input]");
     const fileName = document.querySelector("[data-jury-file-name]");
     const pickerButton = document.querySelector("[data-jury-photo-picker]");
@@ -16,6 +17,20 @@
     let previewIsObjectUrl = false;
     let hasPhoto = Boolean(existingPhotoUrl);
 
+    const setPhoneValidationMessage = () => {
+        if (!phoneInput) return;
+
+        phoneInput.setCustomValidity("");
+        if (phoneInput.validity.valueMissing) {
+            phoneInput.setCustomValidity("Telefon numarası zorunludur.");
+        } else if (!/^\d{10,11}$/.test(phoneInput.value)) {
+            phoneInput.setCustomValidity("Telefon numarası 10 veya 11 rakamdan oluşmalıdır.");
+        }
+    };
+
+    phoneInput?.addEventListener("input", setPhoneValidationMessage);
+    phoneInput?.addEventListener("invalid", setPhoneValidationMessage);
+
     const closePreview = () => {
         if (!modal || modal.hidden) return;
         modal.hidden = true;
@@ -30,13 +45,13 @@
     };
 
     const renderPhotoState = (name) => {
-        if (fileName) fileName.textContent = name || "Dosya Ekle";
+        if (fileName) fileName.textContent = name || "Dosya Yükle";
         if (pickerButton) pickerButton.disabled = hasPhoto;
         if (primaryIcon) primaryIcon.src = hasPhoto ? "/icons/trash.svg" : "/icons/upload.svg";
         if (primaryButton) {
             primaryButton.setAttribute(
                 "aria-label",
-                hasPhoto ? "Yüklenen fotoğrafı kaldır" : "Dosya ekle");
+                hasPhoto ? "Yüklenen fotoğrafı kaldır" : "Dosya yükle");
         }
         if (photoActions) photoActions.hidden = !hasPhoto;
     };
@@ -50,6 +65,16 @@
         if (preview) preview.removeAttribute("src");
         if (removePhotoInput) removePhotoInput.value = "true";
         renderPhotoState("");
+    };
+
+    const confirmPhotoRemoval = () => {
+        const message = "Fotoğrafı kaldırmak istediğinize emin misiniz?";
+        if (window.genericPopup?.question) {
+            window.genericPopup.question(message, resetPhoto);
+            return;
+        }
+
+        if (window.confirm(message)) resetPhoto();
     };
 
     const applyPhoto = (file) => {
@@ -71,7 +96,7 @@
     });
 
     primaryButton?.addEventListener("click", () => {
-        if (hasPhoto) resetPhoto();
+        if (hasPhoto) confirmPhotoRemoval();
         else input?.click();
     });
 

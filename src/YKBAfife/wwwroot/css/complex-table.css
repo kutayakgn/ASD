@@ -195,29 +195,31 @@ tr {
         line-height: 22px;
         text-align: left;
     }
-    .modal-body .jury-voting-table td {
-        padding: 12px 24px;
-    }
-    .jury-voting-table td {
-        padding: 12px 16px;
-        background: #fff;
-        border: 1px solid #f4f2ed;
-        gap: 8px;
-        font-family: Outfit;
-        font-size: 14px;
-        font-style: normal;
-        font-weight: 400;
-        line-height: 20px;
-        text-align: left;
-    }
 
-    .jury-voting-table tbody tr:hover {
-        background: #faf8f3;
-    }
+.modal-body .jury-voting-table td {
+    padding: 12px 24px;
+}
 
-    .jury-voting-table tbody tr:last-child td {
-        border-bottom: 0;
-    }
+.jury-voting-table td {
+    padding: 12px 16px;
+    background: #fff;
+    border: 1px solid #f4f2ed;
+    gap: 8px;
+    font-family: Outfit;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 20px;
+    text-align: left;
+}
+
+.jury-voting-table tbody tr:hover {
+    background: #faf8f3;
+}
+
+.jury-voting-table tbody tr:last-child td {
+    border-bottom: 0;
+}
 
 .watch-count-column {
     text-align: start !important;
@@ -474,7 +476,7 @@ tr {
     padding: 16px 24px;
     color: #171717;
     background: #c8c0a7;
-    align-items:center;
+    align-items: center;
     border: 0;
 }
 
@@ -922,7 +924,6 @@ tr {
     color: #171717;
     background: #fff;
     border: 0;
-    border-bottom: 1px solid #f0eee8;
     font: inherit;
     text-align: left;
 }
@@ -931,10 +932,13 @@ tr {
         border-bottom: 0;
     }
 
-    .complex-table-select-option:hover,
-    .complex-table-select-option:focus-visible,
-    .complex-table-select-option[aria-selected="true"] {
+    .complex-table-select-option:hover {
         background: #e9e5da;
+        outline: none;
+    }
+
+    .complex-table-select-option:focus-visible, .complex-table-select-option[aria-selected="true"] {
+        font-weight: 600;
         outline: none;
     }
 

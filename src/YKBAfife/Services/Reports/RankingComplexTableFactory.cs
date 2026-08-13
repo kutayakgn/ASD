@@ -6,6 +6,8 @@ namespace YKBAfife.Services.Reports;
 
 public static class RankingComplexTableFactory
 {
+    private static readonly decimal[] SixColumnRankingWidths = [64, 310, 310, 310, 216, 200];
+
     private static readonly IReadOnlyDictionary<string, string> TabTitles =
         new Dictionary<string, string>
         {
@@ -23,7 +25,7 @@ public static class RankingComplexTableFactory
             Id = $"ranking-{row.PlayAwardCategoryId:N}",
             Icon = ConfidenceIcon(row.ConfidenceValue),
             IconAccessibleLabel = row.ConfidenceValue.HasValue ? $"Güven puanı {row.ConfidenceValue}/4" : "Güven puanı yok",
-            Cells = CreateCells(row, report.RankingType)
+            Cells = CreateCells(row, report)
         }).ToArray();
 
         return new ComplexTableViewModel
@@ -76,41 +78,57 @@ public static class RankingComplexTableFactory
     {
         var columns = new List<ComplexTableColumnViewModel>
         {
-            new() { Title = "Sıra", Key = "position", ColWidth = 7, IsSortable = false },
-            new() { Title = "Kategori", Key = "category", ColWidth = 17, IsSortable = false },
+            new() { Title = "Sıra", Key = "position", ColWidth = 7, ResponsiveWidth = ResponsiveWidth(report, 0), IsSortable = false },
+            new() { Title = "Kategori", Key = "category", ColWidth = 17, ResponsiveWidth = ResponsiveWidth(report, 1), IsSortable = false },
             new()
             {
                 Title = report.CategoryHasRoleAndPhoto ? "Adı Soyadı" : "Tiyatro Adı",
-                Key = "displayName", ColWidth = 21, IsSortable = false
+                Key = "displayName", ColWidth = 21, ResponsiveWidth = ResponsiveWidth(report, 2), IsSortable = false
             },
-            new() { Title = "Oyun Adı", Key = "play", ColWidth = 21, IsSortable = false },
-            new() { Title = "Oy Sayısı", Key = "viewCount", ColWidth = 12, IsSortable = false }
+            new() { Title = "Oyun Adı", Key = "play", ColWidth = 21, ResponsiveWidth = ResponsiveWidth(report, 3), IsSortable = false },
+            new() { Title = "Oy Sayısı", Key = "viewCount", ColWidth = 12, ResponsiveWidth = ResponsiveWidth(report, 4), IsSortable = false }
         };
         if (report.RankingType != RankingTypes.Trimmed)
         {
-            columns.Add(new ComplexTableColumnViewModel
+            if (report.Tab != RankingTabs.CategoryArithmetic)
             {
-                Title = "Varyans", Key = "variance", ColWidth = 10, IsSortable = false
-            });
+                columns.Add(new ComplexTableColumnViewModel
+                {
+                    Title = "Varyans", Key = "variance", ColWidth = 10, IsSortable = false
+                });
+            }
+
             columns.Add(new ComplexTableColumnViewModel
             {
                 Title = report.RankingType == RankingTypes.Confidence ? "Güven Puanı" : "Aritmetik Ortalama",
-                Key = "metric", ColWidth = 12, IsSortable = false
+                Key = "metric", ColWidth = 12,
+                ResponsiveWidth = report.Tab == RankingTabs.CategoryArithmetic
+                    ? ResponsiveWidth(report, 5)
+                    : null,
+                IsSortable = false
             });
         }
         else
         {
             columns.Add(new ComplexTableColumnViewModel
             {
-                Title = "Trim Ortalama", Key = "metric", ColWidth = 22, IsSortable = false
+                Title = "Trim Ortalama", Key = "metric", ColWidth = 22,
+                ResponsiveWidth = ResponsiveWidth(report, 5), IsSortable = false
             });
         }
         return columns;
     }
 
+    private static decimal? ResponsiveWidth(RankingTableViewModel report, int columnIndex) =>
+        report.Tab == RankingTabs.CategoryArithmetic ||
+        (report.RankingType == RankingTypes.Trimmed &&
+         report.Tab is RankingTabs.AllGames or RankingTabs.CategoryTrim)
+            ? SixColumnRankingWidths[columnIndex]
+            : null;
+
     private static IReadOnlyList<ComplexTableCellViewModel> CreateCells(
         RankingRowViewModel row,
-        string rankingType)
+        RankingTableViewModel report)
     {
         var cells = new List<ComplexTableCellViewModel>
         {
@@ -122,14 +140,15 @@ public static class RankingComplexTableFactory
                 AccessibleLabel = $"{row.PlayName} oylarını görüntüle"
             }
         };
-        if (rankingType != RankingTypes.Trimmed)
+        if (report.RankingType != RankingTypes.Trimmed &&
+            report.Tab != RankingTabs.CategoryArithmetic)
         {
             cells.Add(new ComplexTableCellViewModel
             {
                 Content = row.Variance?.ToString("0.000", CultureInfo.CurrentCulture) ?? "-"
             });
         }
-        cells.Add(MetricCell(row.MetricValue, rankingType));
+        cells.Add(MetricCell(row.MetricValue, report.RankingType));
         return cells;
     }
     private static IReadOnlyList<ComplexTableSelectFilterViewModel> CreateFilters(
