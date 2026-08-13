@@ -477,6 +477,7 @@ tr {
     color: #171717;
     background: #c8c0a7;
     align-items: center;
+    border-radius:0px;
     border: 0;
 }
 
@@ -524,6 +525,7 @@ tr {
 
     .play-viewers-modal-header {
         padding: 18px 16px;
+        border-radius: 0px;
     }
 
     .play-viewers-modal .complex-table-summary {
