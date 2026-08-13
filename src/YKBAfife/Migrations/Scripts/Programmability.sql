@@ -411,8 +411,7 @@ BEGIN
             (1008, formRecord.ClothesDesign),
             (1009, formRecord.StageMusic),
             (1010, formRecord.LightDesign),
-            (1011, formRecord.Choreography),
-            (1012, formRecord.YoungGenerationArtist)
+            (1011, formRecord.Choreography)
     ) AS category(AwardCategoryCode, CandidateJson)
     CROSS APPLY OPENJSON
     (
@@ -432,10 +431,10 @@ BEGIN
     IF EXISTS
     (
         SELECT 1 FROM #CandidateSource
-        WHERE AwardCategoryCode BETWEEN 1003 AND 1012
+        WHERE AwardCategoryCode BETWEEN 1003 AND 1011
           AND NULLIF(LTRIM(RTRIM(Role)), N'') IS NULL
     )
-        THROW 52410, N'Oyuncu ve Genç Kuşak adaylarında Role alanı zorunludur.', 1;
+        THROW 52410, N'Çok adaylı kategorilerde Role alanı zorunludur.', 1;
 
     /* SourceOrder is the stable Form slot identity. Candidate and Role are
        editable descriptions; duplicate role names are valid distinct slots. */
@@ -466,7 +465,7 @@ BEGIN
         FROM dbo.PlayAwardCategories AS candidate
         WHERE candidate.SourceFormCandidateOrder IS NULL
           AND candidate.CreatedBy IS NULL
-          AND candidate.AwardCategoryCode BETWEEN 1002 AND 1012
+          AND candidate.AwardCategoryCode BETWEEN 1002 AND 1011
     )
     UPDATE candidate
     SET SourceFormCandidateOrder = source.SourceOrder,
@@ -518,7 +517,7 @@ BEGIN
         FROM dbo.PlayAwardCategories AS candidate
         WHERE candidate.SourceFormCandidateOrder IS NULL
           AND candidate.CreatedBy IS NULL
-          AND candidate.AwardCategoryCode BETWEEN 1002 AND 1012
+          AND candidate.AwardCategoryCode BETWEEN 1002 AND 1011
     )
     UPDATE candidate
     SET SourceFormCandidateOrder = source.SourceOrder,
@@ -1191,6 +1190,14 @@ BEGIN
        writes remain protected by every check below. */
     IF TRY_CONVERT(int, SESSION_CONTEXT(N'FormLifecycleSyncInProgress')) = 1
         RETURN;
+
+    IF EXISTS
+    (
+        SELECT 1 FROM inserted
+        WHERE AwardCategoryCode = 1012
+          AND (IsPublished = 1 OR IsActive = 1 OR IsCurrent = 1)
+    )
+        THROW 52430, N'1012 ödül kategorisi sistemden kaldırılmıştır.', 1;
 
     -- The 1001 row is a system-managed category slot, not a person candidate.
     IF EXISTS

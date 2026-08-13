@@ -58,8 +58,8 @@ IF
     INNER JOIN dbo.Plays AS play ON play.Id = candidate.PlayId
     WHERE play.SourceFormId = @FormId
       AND candidate.AwardCategoryCode IN
-          (1001, 1002, 1003, 1004, 1007, 1008, 1009, 1010, 1011, 1012)
-) <> 12
+          (1001, 1002, 1003, 1004, 1007, 1008, 1009, 1010, 1011)
+) <> 11
     THROW 52990, N'Beklenen aday kategorileri oluşmadı.', 1;
 
 IF
@@ -73,18 +73,15 @@ IF
 ) <> 2
     THROW 52992, N'1007 adayları ayrı RoleCode değerleriyle oluşmadı.', 1;
 
-IF NOT EXISTS
+IF EXISTS
 (
     SELECT 1
     FROM dbo.PlayAwardCategories AS candidate
     INNER JOIN dbo.Plays AS play ON play.Id = candidate.PlayId
-    INNER JOIN dbo.Images AS image ON image.Id = candidate.PhotoImageId
     WHERE play.SourceFormId = @FormId
       AND candidate.AwardCategoryCode = 1012
-      AND image.ContentType = N'image/png'
-      AND DATALENGTH(image.ImageData) > 0
 )
-    THROW 52991, N'1012 görseli oluşmadı.', 1;
+    THROW 52991, N'Kaldırılmış 1012 kategorisi için aday oluşturuldu.', 1;
 
 DECLARE @PlayId uniqueidentifier =
 (

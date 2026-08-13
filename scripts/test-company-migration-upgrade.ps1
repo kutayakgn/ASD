@@ -85,6 +85,36 @@ IF EXISTS
 )
     THROW 52984, N'Inactive Form legacy director was not normalized.', 1;
 
+IF EXISTS (SELECT 1 FROM dbo.AwardCategories WHERE CategoryCode = 1012 AND IsPublished = 1)
+    THROW 52985, N'Retired category 1012 is still published.', 1;
+
+IF EXISTS
+(
+    SELECT 1 FROM dbo.PlayAwardCategories
+    WHERE AwardCategoryCode = 1012
+      AND (IsPublished = 1 OR IsActive = 1 OR IsCurrent = 1)
+)
+    THROW 52986, N'Retired category 1012 still has a visible/current candidate.', 1;
+
+IF EXISTS
+(
+    SELECT 1 FROM dbo.JuryVotes
+    WHERE PlayAwardCategoryId = '77777777-7777-7777-7777-777777777777'
+      AND (IsPublished = 1 OR IsActive = 1)
+)
+    THROW 52987, N'Retired category 1012 still has a visible vote.', 1;
+
+IF EXISTS
+(
+    SELECT 1 FROM dbo.Rankings
+    WHERE PlayAwardCategoryId = '77777777-7777-7777-7777-777777777777'
+      AND IsPublished = 1
+)
+    THROW 52988, N'Retired category 1012 still has a visible ranking.', 1;
+
+IF EXISTS (SELECT 1 FROM dbo.Images WHERE Id = '88888888-8888-8888-8888-888888888888' AND IsPublished = 1)
+    THROW 52989, N'Retired category 1012 orphan image is still published.', 1;
+
 EXEC dbo.usp_RefreshRankings;
 "@
     sqlcmd -I -S $server -d $databaseName -b -Q $verification

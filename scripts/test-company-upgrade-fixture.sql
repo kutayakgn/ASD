@@ -14,6 +14,8 @@ DECLARE @InactiveFormId uniqueidentifier = '33333333-3333-3333-3333-333333333333
 DECLARE @InactivePlayId uniqueidentifier = '44444444-4444-4444-4444-444444444444';
 DECLARE @InactiveDirectorId uniqueidentifier = '55555555-5555-5555-5555-555555555555';
 DECLARE @JuryId uniqueidentifier = '66666666-6666-6666-6666-666666666666';
+DECLARE @RetiredCandidateId uniqueidentifier = '77777777-7777-7777-7777-777777777777';
+DECLARE @RetiredImageId uniqueidentifier = '88888888-8888-8888-8888-888888888888';
 
 DISABLE TRIGGER dbo.TR_Form_NormalizeSeasonAndSynchronize ON dbo.Form;
 
@@ -114,6 +116,45 @@ VALUES
     1, 2, NULL, NULL, 1, 0
 );
 
+IF NOT EXISTS (SELECT 1 FROM dbo.AwardCategories WHERE CategoryCode = 1012)
+BEGIN
+    INSERT INTO dbo.AwardCategories
+    (
+        Id, CategoryName, CategoryCode, CreatedAt, CreatedBy,
+        UpdatedAt, UpdatedBy, IsPublished, MultiCandidate, HasRoleAndPhoto
+    )
+    VALUES
+    (
+        '40000000-0000-0000-0000-000000000011',
+        N'Yılın En Başarılı Genç Kuşak Sanatçısı', 1012,
+        SYSDATETIME(), NULL, NULL, NULL, 1, 1, 1
+    );
+END;
+
+INSERT INTO dbo.Images
+(
+    Id, FileName, ContentType, ImageData, CreatedAt, UpdatedAt,
+    CreatedBy, UpdatedBy, IsPublished
+)
+VALUES
+(
+    @RetiredImageId, N'1012-test.png', N'image/png', 0x89504E470D0A1A0A,
+    SYSDATETIME(), NULL, @JuryId, NULL, 1
+);
+
+INSERT INTO dbo.PlayAwardCategories
+(
+    Id, PlayId, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy,
+    IsPublished, IsActive, Candidate, AwardCategoryCode,
+    IsCurrent, Role, RoleCode, PhotoImageId, SourceFormCandidateOrder
+)
+VALUES
+(
+    @RetiredCandidateId, @PlayId, SYSDATETIME(), NULL, NULL, NULL,
+    1, 1, N'Kaldırılacak Genç Aday', 1012, 1,
+    N'Kaldırılacak Rol', 91, @RetiredImageId, 1
+);
+
 INSERT INTO dbo.JuryVotes
 (
     Id, PlayAwardCategoryId, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy,
@@ -123,6 +164,17 @@ VALUES
 (
     NEWID(), @InactiveDirectorId, SYSDATETIME(), @JuryId, NULL, NULL,
     1, 5, @JuryId, 1
+);
+
+INSERT INTO dbo.JuryVotes
+(
+    Id, PlayAwardCategoryId, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy,
+    IsPublished, Score, JuryId, IsActive
+)
+VALUES
+(
+    NEWID(), @RetiredCandidateId, SYSDATETIME(), @JuryId, NULL, NULL,
+    1, 4, @JuryId, 1
 );
 
 EXEC sys.sp_set_session_context
