@@ -10,12 +10,21 @@
     const statusMenu = statusSelect?.querySelector("[data-play-status-menu]");
     const statusValue = statusSelect?.querySelector("[data-play-status-value]");
     const statusLabel = statusSelect?.querySelector("[data-play-status-label]");
+    const juryVotingActive = form?.querySelector("[data-jury-voting-active]");
+    const juryVotingInactive = form?.querySelector('[name="JuriOylamaStatus"][value="false"]');
     if (!form || !jurySelect || !juryTrigger || !juryMenu || !selectedValues || !hiddenInputs ||
         !statusSelect || !statusTrigger || !statusMenu || !statusValue || !statusLabel) return;
 
     const groups = [...juryMenu.querySelectorAll("[data-jury-group]")];
     const page = form.closest(".add-play-page");
     let clearanceAnimationFrame = 0;
+
+    const syncJuryVotingAvailability = () => {
+        if (!juryVotingActive) return;
+        const canActivate = statusValue.value === "1";
+        juryVotingActive.disabled = !canActivate;
+        if (!canActivate) juryVotingInactive?.click();
+    };
 
     const syncDropdownClearance = () => {
         if (!page) return;
@@ -177,6 +186,7 @@
         statusMenu.querySelectorAll("[role=option]").forEach((item) => {
             item.setAttribute("aria-selected", String(item === option));
         });
+        syncJuryVotingAvailability();
         setDropdownState(statusTrigger, statusMenu, false);
         statusTrigger.focus({ preventScroll: true });
     });
@@ -313,4 +323,5 @@
 
     groups.forEach(syncGroupState);
     renderJurySelection();
+    syncJuryVotingAvailability();
 })();

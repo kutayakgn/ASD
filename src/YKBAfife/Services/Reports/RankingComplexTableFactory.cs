@@ -154,23 +154,6 @@ public static class RankingComplexTableFactory
         RankingTableViewModel report)
     {
         var filters = new List<ComplexTableSelectFilterViewModel>();
-        if (report.Tab == RankingTabs.AllGames)
-        {
-            filters.Add(new ComplexTableSelectFilterViewModel
-            {
-                Name = "RankingType",
-                AccessibleLabel = "Sıralama tipi",
-                ShowLabel = false,
-                Value = report.RankingType,
-                Options =
-                [
-                    Option(RankingTypes.Trimmed, "Tüm Kategori Sıralama Trim"),
-                    Option(RankingTypes.Arithmetic, "Tüm Kategori Sıralama Aritmetik"),
-                    Option(RankingTypes.Confidence, "Tüm Güven Sıralaması")
-                ]
-            });
-        }
-
         filters.Add(new ComplexTableSelectFilterViewModel
         {
             Name = "CategoryCode",
@@ -203,9 +186,9 @@ public static class RankingComplexTableFactory
 
     private static ComplexTableCellViewModel Cell(string value) => new() { Content = value };
 
-    private static ComplexTableCellViewModel Cell(int value) => new()
+    private static ComplexTableCellViewModel Cell(int? value) => new()
     {
-        Content = value.ToString(CultureInfo.CurrentCulture)
+        Content = value?.ToString(CultureInfo.CurrentCulture) ?? "-"
     };
 
     private static string ConfidenceIcon(int? value) => value switch

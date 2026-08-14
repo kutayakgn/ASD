@@ -347,7 +347,14 @@
                                 @if (Model.IsEditableRows)
                                 {
                                     <td class="complex-table-edit-column">
-                                        @if (!string.IsNullOrWhiteSpace(row.EditModalUrl))
+                                        @if (!string.IsNullOrWhiteSpace(row.EditUrl))
+                                        {
+                                            <a href="@row.EditUrl" class="complex-table-edit-button"
+                                               aria-label="@row.EditAccessibleLabel">
+                                                <img src="~/icons/edit.svg" alt="" aria-hidden="true" />
+                                            </a>
+                                        }
+                                        else if (!string.IsNullOrWhiteSpace(row.EditModalUrl))
                                         {
                                             <button type="button" class="complex-table-edit-button"
                                                     data-complex-table-modal-url="@row.EditModalUrl"

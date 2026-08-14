@@ -73,6 +73,7 @@ public sealed class ComplexTableRowViewModel
     public string Id { get; init; } = string.Empty;
     public string Link { get; init; } = string.Empty;
     public string ModalUrl { get; init; } = string.Empty;
+    public string EditUrl { get; init; } = string.Empty;
     public string EditModalUrl { get; init; } = string.Empty;
     public string EditAccessibleLabel { get; init; } = string.Empty;
     public string DeleteUrl { get; init; } = string.Empty;

@@ -24,10 +24,9 @@
         <div asp-validation-summary="ModelOnly" class="add-jury-validation-summary" role="alert"></div>
 
         <div class="add-jury-grid">
-            <div class="add-jury-field">
+            <div class="add-jury-field announcement-location-field">
                 <label asp-for="AnnouncementLocationId"></label>
-                <input asp-for="AnnouncementLocationId" type="number" min="1" required />
-                <span asp-validation-for="AnnouncementLocationId"></span>
+                <input asp-for="AnnouncementLocationId" type="number" disabled />
             </div>
             <div class="add-jury-field">
                 <label asp-for="Text"></label>

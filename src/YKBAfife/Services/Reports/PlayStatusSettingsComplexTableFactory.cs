@@ -14,28 +14,31 @@ public static class PlayStatusSettingsComplexTableFactory
         ControllerName = "Management",
         ActionName = "VotingSettings",
         CurrentTabKey = TabKey,
-        ShowHeading = true,
+        ShowHeading = false,
         ShowSearch = false,
+        IsEditableRows = true,
         MinimumTableWidth = 680,
         Tabs =
         [
             new ComplexTableTabViewModel
             {
                 Key = TabKey,
-                Title = "Oyun Statüleri",
+                Title = "",
                 PageSize = Math.Max(1, rows.Count),
                 TotalCount = rows.Count,
                 EmptyMessage = "Tanımlı oyun statüsü bulunamadı.",
                 Columns =
                 [
-                    new() { Title = "Statü Kodu", Key = "statusCode", ColWidth = 20, IsSortable = false },
-                    new() { Title = "Statü Adı", Key = "statusName", ColWidth = 50, IsSortable = false },
-                    new() { Title = "Rengi", Key = "statusColor", ColWidth = 30, IsSortable = false }
+                    new() { Title = "Statü Kodu", Key = "statusCode", ColWidth = 10, IsSortable = false },
+                    new() { Title = "Statü Adı", Key = "statusName", ColWidth = 45, IsSortable = false },
+                    new() { Title = "Rengi", Key = "statusColor", ColWidth = 45, IsSortable = false }
                 ],
                 Rows = rows.Select(row => new ComplexTableRowViewModel
                 {
                     Id = $"play-status-{row.Id:N}",
                     Link = $"/diger-ayarlar/oyun-statuler/{row.Id}",
+                    EditUrl = $"/diger-ayarlar/oyun-statuler/{row.Id}/duzenle",
+                    EditAccessibleLabel = $"{row.StatusName} oyun statüsünü düzenle",
                     Cells =
                     [
                         Cell(row.StatusCode.ToString()),

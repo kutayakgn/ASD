@@ -1546,6 +1546,77 @@ BEGIN
 END;
 GO
 
+/* RecordType 0 plays can be opened to jury voting only while StatusCode is 1. */
+CREATE OR ALTER TRIGGER [dbo].[TR_Plays_NormalizeJuryVotingStatus]
+ON [dbo].[Plays]
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE play
+    SET play.[JuriOylamaStatus] = 0,
+        play.[UpdatedAt] = DATEADD(HOUR, 3, SYSUTCDATETIME())
+    FROM [dbo].[Plays] AS play
+    INNER JOIN inserted AS changed
+        ON changed.[Id] = play.[Id]
+    WHERE changed.[RecordType] = 0
+      AND changed.[StatusCode] <> 1
+      AND changed.[JuriOylamaStatus] = 1;
+END;
+GO
+
+/* A published blacklist entry immediately removes matching votes from circulation. */
+CREATE OR ALTER TRIGGER [dbo].[TR_Blacklist_DeactivateJuryVotes]
+ON [dbo].[Blacklist]
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE vote
+    SET vote.[IsPublished] = 0,
+        vote.[IsActive] = 0,
+        vote.[UpdatedAt] = DATEADD(HOUR, 3, SYSUTCDATETIME())
+    FROM [dbo].[JuryVotes] AS vote
+    INNER JOIN [dbo].[PlayAwardCategories] AS candidate
+        ON candidate.[Id] = vote.[PlayAwardCategoryId]
+    INNER JOIN inserted AS blacklist
+        ON blacklist.[JuryId] = vote.[JuryId]
+       AND blacklist.[PlayId] = candidate.[PlayId]
+       AND blacklist.[IsPublished] = 1
+    WHERE vote.[IsPublished] = 1
+       OR vote.[IsActive] = 1;
+END;
+GO
+
+/* Defense in depth: a blacklisted jury/play pair cannot publish a vote. */
+CREATE OR ALTER TRIGGER [dbo].[TR_JuryVotes_BlockBlacklistedJuryPlay]
+ON [dbo].[JuryVotes]
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF EXISTS
+    (
+        SELECT 1
+        FROM inserted AS vote
+        INNER JOIN [dbo].[PlayAwardCategories] AS candidate
+            ON candidate.[Id] = vote.[PlayAwardCategoryId]
+        INNER JOIN [dbo].[Blacklist] AS blacklist
+            ON blacklist.[JuryId] = vote.[JuryId]
+           AND blacklist.[PlayId] = candidate.[PlayId]
+           AND blacklist.[IsPublished] = 1
+        WHERE vote.[IsPublished] = 1
+           OR vote.[IsActive] = 1
+    )
+    BEGIN
+        THROW 51214, N'Blacklist kaydı bulunan jüri bu oyun için oy veremez.', 1;
+    END;
+END;
+GO
+
 /* A new published vote soft-deletes every older vote in the same logical role. */
 CREATE OR ALTER TRIGGER dbo.TR_JuryVotes_SingleRecordPerPlayCategoryRole
 ON dbo.JuryVotes

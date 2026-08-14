@@ -1386,6 +1386,10 @@ ALTER TABLE [dbo].[AdditionalVotingUsages]  WITH CHECK ADD  CONSTRAINT [CK_Addit
 GO
 ALTER TABLE [dbo].[AdditionalVotingUsages] CHECK CONSTRAINT [CK_AdditionalVotingUsages_UsageType]
 GO
+ALTER TABLE [dbo].[JuryVotes] WITH CHECK ADD CONSTRAINT [CK_JuryVotes_Score] CHECK (([Score]>=(1) AND [Score]<=(10)))
+GO
+ALTER TABLE [dbo].[JuryVotes] CHECK CONSTRAINT [CK_JuryVotes_Score]
+GO
 ALTER TABLE [dbo].[Plays]  WITH CHECK ADD  CONSTRAINT [CK_Plays_AdminRecord_StatusCode] CHECK  (([RecordType]=(0) OR [StatusCode]<>(1)))
 GO
 ALTER TABLE [dbo].[Plays] CHECK CONSTRAINT [CK_Plays_AdminRecord_StatusCode]
