@@ -23,10 +23,11 @@
 						<div class="ticket-fee-field">
 							<label asp-for="TicketFee"></label>
 							<div class="ticket-fee-input-wrap">
-								<input asp-for="TicketFee" type="number" min="1" step="0.01" inputmode="decimal"
+								<input asp-for="TicketFee" type="text" value="@decimal.Truncate(Model.TicketFee).ToString("0", CultureInfo.InvariantCulture)"
+									   inputmode="numeric" pattern="[0-9]{1,5}" maxlength="5" autocomplete="off"
 									   required data-ticket-fee-input
-									   data-original-ticket-fee="@Model.TicketFee.ToString(CultureInfo.InvariantCulture)" />
-								<span>TL</span>
+									   data-original-ticket-fee="@decimal.Truncate(Model.TicketFee).ToString("0", CultureInfo.InvariantCulture)" />
+								<span class="ticket-fee-currency" aria-hidden="true">TL</span>
 							</div>
 						</div>
 					</div>

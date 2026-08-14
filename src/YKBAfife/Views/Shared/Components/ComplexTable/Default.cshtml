@@ -20,31 +20,44 @@
         : Model.SelectFilter is null
             ? []
             : new[] { Model.SelectFilter };
-    var hasResponsiveColumnWidths = activeTab is not null &&
+    var hasPixelColumnWidths = activeTab is not null &&
         activeTab.Columns.Count > 0 &&
-        activeTab.Columns.All(column => column.ResponsiveWidth is > 0);
-    var responsiveColumnWidthTotal = hasResponsiveColumnWidths
-        ? activeTab!.Columns.Sum(column => column.ResponsiveWidth!.Value)
+        activeTab.Columns.All(column => column.ColWidth.IsPixel && column.ColWidth.Value > 2);
+    var pixelColumnWidthTotal = hasPixelColumnWidths
+        ? activeTab!.Columns.Sum(column => column.ColWidth.Value)
         : 0;
+    var actionColumnsWidth = (Model.IsEditableRows ? Model.EditColumnWidth : 0) +
+        (Model.IsDeleteColActive ? Model.DeleteColumnWidth : 0) +
+        (Model.IsNavigationColActive ? Model.NavigationColumnWidth : 0) +
+        (Model.IsIconColActive ? Model.IconColumnWidth : 0);
+    var effectiveMinimumTableWidth = hasPixelColumnWidths
+        ? Math.Max(Model.MinimumTableWidth, (int)Math.Ceiling(pixelColumnWidthTotal + actionColumnsWidth))
+        : Model.MinimumTableWidth;
 
     string ColumnWidth(ComplexTableColumnViewModel column)
     {
-        var percentage = hasResponsiveColumnWidths
-            ? column.ResponsiveWidth!.Value * 100m / responsiveColumnWidthTotal
-            : column.ColWidth;
-        var percentageValue = percentage.ToString("0.##", CultureInfo.InvariantCulture);
-        var actionColumnsWidth = (Model.IsEditableRows ? Model.EditColumnWidth : 0) +
-            (Model.IsDeleteColActive ? Model.DeleteColumnWidth : 0) +
-            (Model.IsNavigationColActive ? Model.NavigationColumnWidth : 0) +
-            (Model.IsIconColActive ? Model.IconColumnWidth : 0);
-        if (actionColumnsWidth == 0)
+        if (column.ColWidth.IsPixel)
         {
-            return $"{percentageValue}%";
+            var borderAdjustedWidth = Math.Max(0, column.ColWidth.Value - 2);
+            return $"{borderAdjustedWidth.ToString("0.##", CultureInfo.InvariantCulture)}px";
         }
 
-        var reservedWidth = actionColumnsWidth * percentage / 100m;
-        return $"calc({percentageValue}% - {reservedWidth.ToString("0.##", CultureInfo.InvariantCulture)}px)";
+        return $"{column.ColWidth.Value.ToString("0.##", CultureInfo.InvariantCulture)}%";
     }
+
+    string ColumnClass(int index) => $"complex-table-column-{index + 1}";
+
+    var columnWidths = activeTab?.Columns.Select(ColumnWidth).ToArray() ?? [];
+    var tableWidthRule = $"#{Model.Id} .jury-voting-table {{ " +
+        $"--complex-table-min-width: {effectiveMinimumTableWidth}px; " +
+        $"--complex-table-edit-width: {Model.EditColumnWidth}px; " +
+        $"--complex-table-delete-width: {Model.DeleteColumnWidth}px; " +
+        $"--complex-table-navigation-width: {Model.NavigationColumnWidth}px; " +
+        $"--complex-table-icon-width: {Model.IconColumnWidth}px; }}";
+    var columnWidthRules = string.Join(Environment.NewLine,
+        columnWidths.Select((width, index) =>
+            $"#{Model.Id} .{ColumnClass(index)} {{ width: {width}; }}"));
+    var scopedTableCss = $"{tableWidthRule}{Environment.NewLine}{columnWidthRules}";
 }
 
 @if (activeTab is not null)
@@ -55,6 +68,7 @@
              aria-label="@(!Model.ShowHeading ? activeTab.Title : null)"
              data-complex-table
              data-complex-table-url="@dataUrl">
+        <style>@Html.Raw(scopedTableCss)</style>
         <form class="complex-table-state" data-complex-table-state>
             @Html.AntiForgeryToken()
             @foreach (var routeValue in Model.AdditionalRouteValues)
@@ -195,11 +209,12 @@
             </form>
 
         <div class="jury-voting-table-wrapper">
-            <table class="jury-voting-table" style="--complex-table-min-width: @(Model.MinimumTableWidth)px; --complex-table-edit-width: @(Model.EditColumnWidth)px; --complex-table-delete-width: @(Model.DeleteColumnWidth)px; --complex-table-navigation-width: @(Model.NavigationColumnWidth)px; --complex-table-icon-width: @(Model.IconColumnWidth)px;">
+            <table class="jury-voting-table">
                 <colgroup>
-                    @foreach (var column in activeTab.Columns)
+                    @for (var index = 0; index < activeTab.Columns.Count; index++)
                     {
-                        <col class="@column.CssClass" style="width: @ColumnWidth(column);" />
+                        var column = activeTab.Columns[index];
+                        <col class="@column.CssClass @ColumnClass(index)" />
                     }
                     @if (Model.IsEditableRows)
                     {
@@ -222,9 +237,10 @@
                 {
                     <thead>
                         <tr>
-                            @foreach (var column in activeTab.Columns)
+                            @for (var index = 0; index < activeTab.Columns.Count; index++)
                             {
-                                <th scope="col" class="@column.CssClass" style="width: @ColumnWidth(column);">
+                                var column = activeTab.Columns[index];
+                                <th scope="col" class="@column.CssClass @ColumnClass(index)">
                                     @if (column.IsSortable)
                                     {
                                         <button type="button"
@@ -266,21 +282,17 @@
                     {
                         foreach (var row in activeTab.Rows)
                         {
-                            var hasRowDelete = row.DeleteOnRowClick && !string.IsNullOrWhiteSpace(row.DeleteUrl);
                             var isInteractiveRow = !string.IsNullOrWhiteSpace(row.Link) ||
-                                !string.IsNullOrWhiteSpace(row.ModalUrl) ||
-                                hasRowDelete;
+                                !string.IsNullOrWhiteSpace(row.ModalUrl);
                             <tr id="@row.Id" class="@(isInteractiveRow ? "complex-table-linked-row" : string.Empty)"
                                 data-row-link="@row.Link"
                                 data-row-modal-url="@row.ModalUrl"
-                                data-row-delete-url="@(hasRowDelete ? row.DeleteUrl : null)"
-                                data-delete-confirm-message="@row.DeleteConfirmMessage"
                                 tabindex="@(isInteractiveRow ? "0" : null)"
-                                role="@(!string.IsNullOrWhiteSpace(row.ModalUrl) || hasRowDelete ? "button" : !string.IsNullOrWhiteSpace(row.Link) ? "link" : null)">
+                                role="@(!string.IsNullOrWhiteSpace(row.ModalUrl) ? "button" : !string.IsNullOrWhiteSpace(row.Link) ? "link" : null)">
                                 @for (var index = 0; index < activeTab.Columns.Count; index++)
                                 {
                                     var cell = index < row.Cells.Count ? row.Cells[index] : null;
-                                    <td class="@activeTab.Columns[index].CssClass @((cell is not null && (!string.IsNullOrWhiteSpace(cell.Link) || !string.IsNullOrWhiteSpace(cell.ModalUrl))) ? "complex-table-action-cell" : string.Empty) @((cell is not null && !string.IsNullOrWhiteSpace(cell.ToggleUrl)) ? "complex-table-toggle-cell" : string.Empty)" style="width: @ColumnWidth(activeTab.Columns[index]);">
+                                    <td class="@activeTab.Columns[index].CssClass @ColumnClass(index) @((cell is not null && (!string.IsNullOrWhiteSpace(cell.Link) || !string.IsNullOrWhiteSpace(cell.ModalUrl))) ? "complex-table-action-cell" : string.Empty) @((cell is not null && !string.IsNullOrWhiteSpace(cell.ToggleUrl)) ? "complex-table-toggle-cell" : string.Empty)">
                                         @if (cell is not null)
                                         {
                                             <div class="complex-table-cell-content @cell.CssClass">
@@ -347,12 +359,12 @@
                                 }
                                 @if (Model.IsDeleteColActive)
                                 {
-                                    <td class="complex-table-delete-column">
+                                    <td class="complex-table-delete-column @(!string.IsNullOrWhiteSpace(row.DeleteUrl) ? "complex-table-delete-action-cell" : string.Empty)"
+                                        data-complex-table-delete-url="@row.DeleteUrl"
+                                        data-delete-confirm-message="@row.DeleteConfirmMessage">
                                         @if (!string.IsNullOrWhiteSpace(row.DeleteUrl))
                                         {
                                             <button type="button" class="complex-table-delete-button"
-                                                    data-complex-table-delete-url="@row.DeleteUrl"
-                                                    data-delete-confirm-message="@row.DeleteConfirmMessage"
                                                     aria-label="@row.DeleteAccessibleLabel">
                                                 <img src="~/icons/trash.svg" alt="" aria-hidden="true" />
                                             </button>

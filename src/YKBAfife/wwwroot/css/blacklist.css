@@ -82,8 +82,7 @@
 
     .complex-table-delete-button:hover,
     .complex-table-delete-button:focus-visible {
-        margin-top: -12px;
-        padding-top: 20px;
+  
         cursor:pointer;
     }
 

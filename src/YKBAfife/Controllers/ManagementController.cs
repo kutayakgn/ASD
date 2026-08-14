@@ -2178,10 +2178,10 @@ public sealed partial class ManagementController(
             return RedirectToAction(nameof(TicketSales));
         }
 
-        if (model.TicketFee < 1)
+        if (model.TicketFee < 1 || model.TicketFee > 99999 || decimal.Truncate(model.TicketFee) != model.TicketFee)
         {
             TempData["GenericPopup.Type"] = "fail";
-            TempData["GenericPopup.Message"] = "Bilet ücreti 1'den az olamaz.";
+            TempData["GenericPopup.Message"] = "Bilet ücreti 1 ile 99999 arasında bir tam sayı olmalıdır.";
             return RedirectToAction(nameof(TicketSales));
         }
 

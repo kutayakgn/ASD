@@ -310,9 +310,9 @@ body {
     margin: 0;
     color: #171717;
     font-family: LimeLight;
-    font-size: 32px;
+    font-size: 28px;
     font-weight: 400;
-    line-height: 40px;
+    line-height: 36px;
 }
 
 .play-details-actions {
@@ -513,10 +513,7 @@ body {
     outline: none;
 }
 
-.add-jury-field input:focus,
-.add-jury-field select:focus {
-    border-color: #171717;
-}
+
 
 .add-jury-select {
     position: relative;
@@ -585,7 +582,7 @@ body {
     background: #fff;
     cursor: pointer;
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 400;
     transition: background-color .15s ease-in-out, border-color .15s ease-in-out;
 }
 

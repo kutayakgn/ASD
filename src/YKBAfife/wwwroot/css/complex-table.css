@@ -24,7 +24,7 @@ p {
 
 .jury-voting-tab-header {
     height: fit-content;
-    padding: 14px 16px;
+    padding: 14px 16px 12px 16px;
     align-items: center;
     justify-content: flex-start;
     display: flex;
@@ -54,6 +54,7 @@ p {
     .jury-voting-tab-button.active {
         background: #fff;
         border: 1px solid #171717;
+        padding: 7px 12px;
     }
 
 .complex-table-heading {
@@ -79,13 +80,14 @@ p {
     align-items: center;
     position: relative;
     justify-content: flex-end;
-    width: min(100%, 453px);
+    width: min(100%, 452px);
+    max-width:452px;
 }
 
 .jury-voting-table-search-input {
     width: 100%;
-    min-height: 2.75rem;
-    padding: 10px 84px 10px 8px;
+    min-height: 38px;
+    padding: 9px 34px 9px 8px;
     color: #171717;
     background-color: #fff;
     background-image: url("/icons/magnifier-icon.svg");
@@ -95,6 +97,11 @@ p {
     border: 1px solid #bdbdbd;
     border-radius: 0;
     outline: none;
+    font-family: Outfit;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 20px;
 }
 
     .jury-voting-table-search-input:focus {
@@ -189,11 +196,17 @@ tr {
         background: #f4f2ed;
         border-right: none;
         font-family: Outfit;
+        border-left: 1px solid #e3dfd3;
+        border-right: 1px solid #e3dfd3;
         font-size: 16px;
         font-style: normal;
         font-weight: 600;
         line-height: 22px;
         text-align: left;
+    }
+
+    .jury-voting-table tbody {
+        border-bottom: 1px solid #e3dfd3;
     }
 
 .modal-body .jury-voting-table td {
@@ -212,6 +225,11 @@ tr {
     line-height: 20px;
     text-align: left;
 }
+
+    .jury-voting-table th:hover, .jury-voting-table td:hover {
+        cursor: pointer;
+        background-color: #e0dcce;
+    }
 
 .jury-voting-table tbody tr:hover {
     background: #faf8f3;
@@ -233,15 +251,14 @@ tr {
     gap: .4rem;
     padding: 0;
     color: inherit;
+    width: 100%;
     background: transparent;
     border: 0;
     font: inherit;
     text-decoration: none;
 }
 
-    .jury-voting-sort-button:hover {
-        color: #918150;
-    }
+
 
 .complex-table-empty {
     padding: 16px !important;
@@ -278,7 +295,7 @@ tr {
     justify-content: flex-end;
     align-items: center;
     gap: 8px;
-    padding: 1.25rem;
+    padding: 24px 16px;
     background: #fff;
 }
 
@@ -356,6 +373,7 @@ tr {
     background: #171717;
     border: 0;
     border-radius: 0;
+    height: 32px;
     font-size: 13px;
     font-weight: 600;
     text-decoration: none;
@@ -477,7 +495,7 @@ tr {
     color: #171717;
     background: #c8c0a7;
     align-items: center;
-    border-radius:0px;
+    border-radius: 0px;
     border: 0;
 }
 
@@ -806,6 +824,10 @@ tr {
 .jury-voting-table td.complex-table-delete-column {
     padding: 6px;
     text-align: center;
+}
+
+.jury-voting-table td.complex-table-delete-action-cell {
+    cursor: pointer;
 }
 
 .complex-table-select-filter {

@@ -32,7 +32,16 @@
                    aria-label="@($"{Model.Label} seçeneklerinde ara")"
                    autocomplete="off"
                    data-lazy-select-search />
-            <img src="~/icons/magnifier-icon.svg" alt="" aria-hidden="true" />
+            <button type="button"
+                    class="lazy-search-select-clear complex-table-search-clear"
+                    aria-label="Aramayı temizle"
+                    data-lazy-select-clear>
+                <img src="~/icons/x-black.svg" alt="" aria-hidden="true" />
+            </button>
+            <img class="lazy-search-select-magnifier"
+                 src="~/icons/magnifier-icon.svg"
+                 alt=""
+                 aria-hidden="true" />
         </div>
         <div class="lazy-search-select-status" role="status" data-lazy-select-status>Seçenekler yükleniyor...</div>
         <div class="lazy-search-select-options"

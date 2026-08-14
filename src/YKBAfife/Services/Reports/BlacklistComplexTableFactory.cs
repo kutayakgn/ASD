@@ -62,7 +62,6 @@ public static class BlacklistComplexTableFactory
         {
             Id = $"blacklist-{row.Id:N}",
             DeleteUrl = deleteUrl,
-            DeleteOnRowClick = true,
             DeleteConfirmMessage = "İlgili blacklist kaydı silinsin mi?",
             DeleteAccessibleLabel = $"{row.JuryName} - {row.PlayName} blacklist kaydını sil",
             Cells =

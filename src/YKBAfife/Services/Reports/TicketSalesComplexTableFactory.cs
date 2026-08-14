@@ -15,7 +15,7 @@ public static class TicketSalesComplexTableFactory
         DataActionName = "TicketSalesTable",
         CurrentTabKey = TabKey,
         SearchPlaceholder = "Jüri veya oyun ara",
-        MinimumTableWidth = 820,
+        MinimumTableWidth = 1408,
         ExportControllerName = "Management",
         ExportActionName = "ExportTicketSales",
         IsExportEnabled = report.TotalCount > 0,
@@ -35,10 +35,10 @@ public static class TicketSalesComplexTableFactory
                 EmptyMessage = "Bilet satışı kaydı bulunamadı.",
                 Columns =
                 [
-                    new() { Title = "Jüri", Key = TicketSalesSortColumns.Jury, ColWidth = 28 },
-                    new() { Title = "Oyun", Key = TicketSalesSortColumns.Play, ColWidth = 38 },
-                    new() { Title = "Tarih", Key = TicketSalesSortColumns.Date, ColWidth = 19 },
-                    new() { Title = "Bilet Fiyatı", Key = TicketSalesSortColumns.TicketFee, ColWidth = 15 }
+                    new() { Title = "Jüri", Key = TicketSalesSortColumns.Jury, ColWidth = ComplexTableColumnWidth.Pixels(480) },
+                    new() { Title = "Oyun", Key = TicketSalesSortColumns.Play, ColWidth = ComplexTableColumnWidth.Pixels(480) },
+                    new() { Title = "Tarih", Key = TicketSalesSortColumns.Date, ColWidth = ComplexTableColumnWidth.Pixels(200) },
+                    new() { Title = "Bilet Fiyatı", Key = TicketSalesSortColumns.TicketFee, ColWidth = ComplexTableColumnWidth.Pixels(200) }
                 ],
                 Rows = report.Rows.Select(row => CreateRow(row)).ToArray()
             }
@@ -64,7 +64,7 @@ public static class TicketSalesComplexTableFactory
                 Cell(row.JuryName),
                 Cell(row.PlayName),
                 Cell(row.Date?.ToString("dd.MM.yyyy", CultureInfo.CurrentCulture) ?? "-"),
-                Cell($"{row.TicketFee.ToString("N2", CultureInfo.CurrentCulture)} TL")
+                Cell($"{decimal.Truncate(row.TicketFee).ToString("N0", CultureInfo.CurrentCulture)} TL")
             ]
         };
     }

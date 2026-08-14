@@ -78,15 +78,15 @@ public static class RankingComplexTableFactory
     {
         var columns = new List<ComplexTableColumnViewModel>
         {
-            new() { Title = "Sıra", Key = "position", ColWidth = 7, ResponsiveWidth = ResponsiveWidth(report, 0), IsSortable = false },
-            new() { Title = "Kategori", Key = "category", ColWidth = 17, ResponsiveWidth = ResponsiveWidth(report, 1), IsSortable = false },
+            new() { Title = "Sıra", Key = "position", ColWidth = ColumnWidth(report, 0, 7), IsSortable = false },
+            new() { Title = "Kategori", Key = "category", ColWidth = ColumnWidth(report, 1, 17), IsSortable = false },
             new()
             {
                 Title = report.CategoryHasRoleAndPhoto ? "Adı Soyadı" : "Tiyatro Adı",
-                Key = "displayName", ColWidth = 21, ResponsiveWidth = ResponsiveWidth(report, 2), IsSortable = false
+                Key = "displayName", ColWidth = ColumnWidth(report, 2, 21), IsSortable = false
             },
-            new() { Title = "Oyun Adı", Key = "play", ColWidth = 21, ResponsiveWidth = ResponsiveWidth(report, 3), IsSortable = false },
-            new() { Title = "Oy Sayısı", Key = "viewCount", ColWidth = 12, ResponsiveWidth = ResponsiveWidth(report, 4), IsSortable = false }
+            new() { Title = "Oyun Adı", Key = "play", ColWidth = ColumnWidth(report, 3, 21), IsSortable = false },
+            new() { Title = "Oy Sayısı", Key = "viewCount", ColWidth = ColumnWidth(report, 4, 12), IsSortable = false }
         };
         if (report.RankingType != RankingTypes.Trimmed)
         {
@@ -101,10 +101,7 @@ public static class RankingComplexTableFactory
             columns.Add(new ComplexTableColumnViewModel
             {
                 Title = report.RankingType == RankingTypes.Confidence ? "Güven Puanı" : "Aritmetik Ortalama",
-                Key = "metric", ColWidth = 12,
-                ResponsiveWidth = report.Tab == RankingTabs.CategoryArithmetic
-                    ? ResponsiveWidth(report, 5)
-                    : null,
+                Key = "metric", ColWidth = ColumnWidth(report, 5, 12),
                 IsSortable = false
             });
         }
@@ -112,19 +109,21 @@ public static class RankingComplexTableFactory
         {
             columns.Add(new ComplexTableColumnViewModel
             {
-                Title = "Trim Ortalama", Key = "metric", ColWidth = 22,
-                ResponsiveWidth = ResponsiveWidth(report, 5), IsSortable = false
+                Title = "Trim Ortalama", Key = "metric", ColWidth = ColumnWidth(report, 5, 22), IsSortable = false
             });
         }
         return columns;
     }
 
-    private static decimal? ResponsiveWidth(RankingTableViewModel report, int columnIndex) =>
+    private static ComplexTableColumnWidth ColumnWidth(
+        RankingTableViewModel report,
+        int columnIndex,
+        decimal percentage) =>
         report.Tab == RankingTabs.CategoryArithmetic ||
         (report.RankingType == RankingTypes.Trimmed &&
          report.Tab is RankingTabs.AllGames or RankingTabs.CategoryTrim)
-            ? SixColumnRankingWidths[columnIndex]
-            : null;
+            ? ComplexTableColumnWidth.Pixels(SixColumnRankingWidths[columnIndex])
+            : percentage;
 
     private static IReadOnlyList<ComplexTableCellViewModel> CreateCells(
         RankingRowViewModel row,
