@@ -191,6 +191,12 @@ internal static partial class DatabaseSchemaValidator
                     $"expected [{expected.Value}] but found [{row}]");
             }
         }
+
+        if (actual.TryGetValue(("AwardCategory", 1012), out var retiredCategory) &&
+            retiredCategory.IsPublished)
+        {
+            invalid.Add("retired AwardCategory code 1012 must not be published");
+        }
     }
 
     private static readonly IReadOnlyDictionary<(string Type, int Code), ReferenceRow>
@@ -209,7 +215,6 @@ internal static partial class DatabaseSchemaValidator
             [("AwardCategory", 1009)] = new("Yılın En Başarılı Sahne Müziği", true, true, "1"),
             [("AwardCategory", 1010)] = new("Yılın En Başarılı Işık Tasarımı", true, true, "1"),
             [("AwardCategory", 1011)] = new("Yılın En Başarılı Hareket Düzeni (Kareografisi)", true, true, "1"),
-            [("AwardCategory", 1012)] = new("Yılın En Başarılı Genç Kuşak Sanatçısı", true, true, "1"),
             [("PlayStatus", 1)] = new("Oylama Aktif", true, null, "#27ae60"),
             [("PlayStatus", 2)] = new("Değerlendirmeyecek Oyun", true, null, "#d9322d"),
             [("PlayStatus", 3)] = new("Başvuru Yapmayacak Oyun", true, null, "#2CA9E8"),

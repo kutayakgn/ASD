@@ -24,10 +24,9 @@
         <div asp-validation-summary="ModelOnly" class="add-jury-validation-summary" role="alert"></div>
 
         <div class="add-jury-grid">
-            <div class="add-jury-field">
+            <div class="add-jury-field announcement-location-field">
                 <label asp-for="AnnouncementLocationId"></label>
-                <input asp-for="AnnouncementLocationId" type="number" min="1" required />
-                <span asp-validation-for="AnnouncementLocationId"></span>
+                <input asp-for="AnnouncementLocationId" type="number" disabled />
             </div>
             <div class="add-jury-field">
                 <label asp-for="Text"></label>
@@ -55,9 +54,9 @@
                 <div class="add-jury-upload" data-announcement-upload-control>
                     <button type="button" class="add-jury-upload-picker" aria-label="Duyuru görseli seç"
                             data-announcement-image-picker>
-                        <span data-announcement-file-name>@(Model.HasExistingImage ? Model.ExistingImageFileName : "Dosya Ekle")</span>
+                        <span data-announcement-file-name>@(Model.HasExistingImage ? Model.ExistingImageFileName : "Dosya Yükle")</span>
                     </button>
-                    <button type="button" class="add-jury-upload-icon" aria-label="Dosya ekle"
+                    <button type="button" class="add-jury-upload-icon" aria-label="Dosya yükle"
                             data-announcement-image-primary>
                         <img src="~/icons/upload.svg" alt="" aria-hidden="true" data-announcement-image-primary-icon />
                     </button>
@@ -82,9 +81,9 @@
                 <div class="add-jury-upload" data-announcement-upload-control>
                     <button type="button" class="add-jury-upload-picker" aria-label="Arka plan görseli seç"
                             data-announcement-image-picker>
-                        <span data-announcement-file-name>@(Model.HasExistingBackgroundImage ? Model.ExistingBackgroundImageFileName : "Dosya Ekle")</span>
+                        <span data-announcement-file-name>@(Model.HasExistingBackgroundImage ? Model.ExistingBackgroundImageFileName : "Dosya Yükle")</span>
                     </button>
-                    <button type="button" class="add-jury-upload-icon" aria-label="Dosya ekle"
+                    <button type="button" class="add-jury-upload-icon" aria-label="Dosya yükle"
                             data-announcement-image-primary>
                         <img src="~/icons/upload.svg" alt="" aria-hidden="true" data-announcement-image-primary-icon />
                     </button>

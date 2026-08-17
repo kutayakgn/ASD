@@ -277,7 +277,6 @@ body {
 
 .play-details-back {
     display: inline-flex;
-  
     align-items: center;
     gap: 6px;
     color: #171717;
@@ -286,16 +285,16 @@ body {
     text-decoration: none;
 }
 
-.play-details-back img {
-    width: 16px;
-    height: 16px;
-}
+    .play-details-back img {
+        width: 16px;
+        height: 16px;
+    }
 
-.play-details-back:hover,
-.play-details-back:focus-visible {
-    color: #918150;
-    outline: none;
-}
+    .play-details-back:hover,
+    .play-details-back:focus-visible {
+        color: #918150;
+        outline: none;
+    }
 
 .play-details-toolbar {
     display: flex;
@@ -306,14 +305,14 @@ body {
     gap: 24px;
 }
 
-.play-details-toolbar h1 {
-    margin: 0;
-    color: #171717;
-    font-family: LimeLight;
-    font-size: 32px;
-    font-weight: 400;
-    line-height: 40px;
-}
+    .play-details-toolbar h1 {
+        margin: 0;
+        color: #171717;
+        font-family: LimeLight;
+        font-size: 28px;
+        font-weight: 400;
+        line-height: 36px;
+    }
 
 .play-details-actions {
     display: flex;
@@ -349,6 +348,7 @@ body {
     background: #fff;
     border-color: #b31d1d;
 }
+
 .play-detail-action-primary {
     color: #fff;
     background: #171717;
@@ -366,7 +366,6 @@ body {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 24px;
-  
 }
 
 .play-detail-field {
@@ -438,41 +437,188 @@ body {
         padding: 0;
     }
 }
-.play-status-value { display: inline-flex; align-items: center; gap: 8px; }
-.play-status-dot { width: 10px; height: 10px; flex: 0 0 10px; border-radius: 50%; }
-.play-details-divider { height: 1px; margin: 24px 0 24px 0; background: #d8d4ca; }
-.add-candidate { font-family: Outfit; }
-.add-candidate-header h2 { margin: 0 0 16px; font-family: LimeLight; font-size: 28px; font-weight: 400; line-height: 36px; }
-.add-candidate-mode-group, .add-candidate-status { display: flex; margin: 0; padding: 0; border: 0; gap: 4px; }
-.add-candidate-mode-group { margin-bottom: 16px; }
-.add-candidate-mode, .add-candidate-status label { display: inline-flex; align-items: center; gap: 9px; cursor: pointer; font-weight: 400; }
-.add-candidate-mode input, .add-candidate-status input { width: 18px; height: 18px; margin: 0; accent-color: #171717; }
-.add-candidate-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
-.add-candidate-field { display: flex; min-width: 0; flex-direction: column; gap: 8px; }
-.add-candidate-field label, .add-candidate-status legend { color: #777064; font-size: 13px; font-weight: 500; line-height: 18px; }
-.add-candidate-field input, .add-candidate-field select { width: 100%; min-height: 44px; padding: 10px 12px; color: #171717; background: #fff; border: 1px solid #bdbdbd; border-radius: 0; }
-.add-candidate-field select:disabled { color: #656565; background: #f3f2ef; opacity: 1; }
-.add-candidate-status { min-height: 70px; flex-wrap: wrap; align-content: flex-start; }
-.add-candidate-status { column-gap: 40px; row-gap: 0; }
-.add-candidate-status legend { width: 100%; margin-bottom: 12px; }
-.add-candidate-actions { display: flex; justify-content: flex-end; margin-top: 28px; }
-.add-candidate-submit { min-width: 120px; min-height: 42px; padding: 10px 20px; color: #fff; background: #171717; border: 1px solid #171717; font-weight: 600; }
-.add-candidate-submit:hover, .add-candidate-submit:focus-visible { background: #918150; border-color: #918150; outline: none; }
-.add-candidate-message { margin-bottom: 20px; padding: 12px 14px; border: 1px solid; }
-.add-candidate-message-success { color: #176c3a; background: #edf9f2; border-color: #b8e3c9; }
-.add-candidate-message-error, .add-candidate-validation { color: #b31d1d; }
-.add-candidate-message-error { background: #fff1f1; border-color: #e4b4b4; }
-.add-candidate-change-fields { padding: 24px; color: #656565; background: #f5f4f0; }
-.add-candidate-change-fields p { margin: 0; }
+
+.play-status-value {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.play-status-dot {
+    width: 10px;
+    height: 10px;
+    flex: 0 0 10px;
+    border-radius: 50%;
+}
+
+.play-details-divider {
+    height: 1px;
+    margin: 24px 0 24px 0;
+    background: #d8d4ca;
+}
+
+.add-candidate {
+    font-family: Outfit;
+}
+
+.add-candidate-header h2 {
+    margin: 0 0 16px;
+    font-family: LimeLight;
+    font-size: 28px;
+    font-weight: 400;
+    line-height: 36px;
+}
+
+.add-candidate-mode-group, .add-candidate-status {
+    display: flex;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    gap: 4px;
+}
+
+.add-candidate-mode-group {
+    margin-bottom: 16px;
+}
+
+.add-candidate-mode, .add-candidate-status label {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    cursor: pointer;
+    font-weight: 400;
+}
+
+    .add-candidate-mode input, .add-candidate-status input {
+        width: 18px;
+        height: 18px;
+        margin: 0;
+        accent-color: #171717;
+    }
+
+.add-candidate-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+}
+
+.add-candidate-field {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 8px;
+}
+
+    .add-candidate-field label, .add-candidate-status legend {
+        color: #777064;
+        font-size: 13px;
+        font-weight: 500;
+        line-height: 18px;
+    }
+
+    .add-candidate-field input, .add-candidate-field select {
+        width: 100%;
+        min-height: 44px;
+        padding: 10px 12px;
+        color: #171717;
+        background: #fff;
+        border: 1px solid #bdbdbd;
+        border-radius: 0;
+    }
+
+        .add-candidate-field select:disabled {
+            color: #656565;
+            background: #f3f2ef;
+            opacity: 1;
+        }
+
+.add-candidate-status {
+    min-height: 70px;
+    flex-wrap: wrap;
+    align-content: flex-start;
+}
+
+.add-candidate-status {
+    column-gap: 40px;
+    row-gap: 0;
+}
+
+    .add-candidate-status legend {
+        width: 100%;
+        margin-bottom: 12px;
+    }
+
+.add-candidate-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 28px;
+}
+
+.add-candidate-submit {
+    min-width: 120px;
+    min-height: 42px;
+    padding: 10px 20px;
+    color: #fff;
+    background: #171717;
+    border: 1px solid #171717;
+    font-weight: 600;
+}
+
+    .add-candidate-submit:hover, .add-candidate-submit:focus-visible {
+        background: #918150;
+        border-color: #918150;
+        outline: none;
+    }
+
+.add-candidate-message {
+    margin-bottom: 20px;
+    padding: 12px 14px;
+    border: 1px solid;
+}
+
+.add-candidate-message-success {
+    color: #176c3a;
+    background: #edf9f2;
+    border-color: #b8e3c9;
+}
+
+.add-candidate-message-error, .add-candidate-validation {
+    color: #b31d1d;
+}
+
+.add-candidate-message-error {
+    background: #fff1f1;
+    border-color: #e4b4b4;
+}
+
+.add-candidate-change-fields {
+    padding: 24px;
+    color: #656565;
+    background: #f5f4f0;
+}
+
+    .add-candidate-change-fields p {
+        margin: 0;
+    }
+
 @media (max-width: 700px) {
-    .add-candidate-grid { grid-template-columns: 1fr; }
-    .add-candidate-mode-group { align-items: flex-start; flex-direction: column; gap: 14px; }
-    .add-candidate-submit { width: 100%; }
+    .add-candidate-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .add-candidate-mode-group {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .add-candidate-submit {
+        width: 100%;
+    }
 }
 
 
 .add-jury-form {
-   
     font-family: Outfit;
 }
 
@@ -486,20 +632,20 @@ body {
     display: flex;
     min-width: 0;
     flex-direction: column;
-
 }
 
-.add-jury-field > label:first-child,
-.add-jury-status legend {
-    margin: 0;
-    color: #777064;
-    font-size: 13px;
-    margin-bottom: 6px;
-    font-weight: 500;
-    line-height: 18px;
-}
+    .add-jury-field > label:first-child,
+    .add-jury-status legend {
+        margin: 0;
+        color: #171717;
+        font-size: 14px;
+        margin-bottom: 4px;
+        font-weight: 400;
+        line-height: 20px;
+    }
+
 .field-validation-error {
-   margin-top:4px;
+    margin-top: 4px;
 }
 
 .add-jury-field input:not([type="file"]),
@@ -513,43 +659,45 @@ body {
     outline: none;
 }
 
-.add-jury-field input:focus,
-.add-jury-field select:focus {
-    border-color: #171717;
-}
+    .add-jury-field input:not([type="file"]):disabled {
+        color: #BDBDBD;
+        background: #f5f5f5;
+    }
+
+
 
 .add-jury-select {
     position: relative;
 }
 
-.add-jury-select select {
-    padding-right: 40px;
-    appearance: none;
-    cursor: pointer;
-}
+    .add-jury-select select {
+        padding-right: 40px;
+        appearance: none;
+        cursor: pointer;
+    }
 
-.add-jury-select select:required:invalid {
-    color: rgba(23, 23, 23, .5);
-}
+        .add-jury-select select:required:invalid {
+            color: rgba(23, 23, 23, .5);
+        }
 
-.add-jury-select select option {
-    color: #171717;
-}
+        .add-jury-select select option {
+            color: #171717;
+        }
 
-.add-jury-select > img {
-    position: absolute;
-    top: 50%;
-    right: 12px;
-    width: 16px;
-    height: 16px;
-    pointer-events: none;
-    transform: translateY(-50%);
-    transition: transform .15s ease-in-out;
-}
+    .add-jury-select > img {
+        position: absolute;
+        top: 50%;
+        right: 12px;
+        width: 16px;
+        height: 16px;
+        pointer-events: none;
+        transform: translateY(-50%);
+        transition: transform .15s ease-in-out;
+    }
 
-.add-jury-select.is-open > img {
-    transform: translateY(-50%) rotate(180deg);
-}
+    .add-jury-select.is-open > img {
+        transform: translateY(-50%) rotate(180deg);
+    }
 
 .add-jury-field > span,
 .add-jury-status > span,
@@ -558,10 +706,10 @@ body {
     font-size: 13px;
 }
 
-.add-jury-validation-summary:empty,
-.add-jury-validation-summary.validation-summary-valid {
-    display: none;
-}
+    .add-jury-validation-summary:empty,
+    .add-jury-validation-summary.validation-summary-valid {
+        display: none;
+    }
 
 .add-jury-status {
     margin: 0;
@@ -573,32 +721,32 @@ body {
     display: flex;
     min-height: 44px;
     align-items: center;
-    gap: 24px;
+    gap: 40px;
 }
 
 .add-jury-option {
     display: inline-flex;
     min-height: 44px;
-    padding: 10px 12px;
+    padding: 0;
     align-items: center;
     gap: 9px;
     background: #fff;
     cursor: pointer;
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 400;
     transition: background-color .15s ease-in-out, border-color .15s ease-in-out;
 }
 
 
 
-.add-jury-option input {
-    width: 18px;
-    height: 18px;
-    display:flex;
-    align-items:center;
-    margin: 0;
-    accent-color: #171717;
-}
+    .add-jury-option input {
+        width: 18px;
+        height: 18px;
+        display: flex;
+        align-items: center;
+        margin: 0;
+        accent-color: #171717;
+    }
 
 .add-jury-photo-field {
     grid-column: 1 / -1;
@@ -618,11 +766,11 @@ body {
     cursor: pointer;
 }
 
-.add-jury-upload img {
-    width: 18px;
-    height: 18px;
-    flex: 0 0 18px;
-}
+    .add-jury-upload img {
+        width: 18px;
+        height: 18px;
+        flex: 0 0 18px;
+    }
 
 .add-jury-actions {
     display: flex;
@@ -658,15 +806,15 @@ body {
     background: #171717;
 }
 
-.add-jury-cancel:hover,
-.add-jury-cancel:focus-visible,
-.add-jury-submit:hover,
-.add-jury-submit:focus-visible {
-    color: #fff;
-    background: #918150;
-    border-color: #918150;
-    outline: none;
-}
+    .add-jury-cancel:hover,
+    .add-jury-cancel:focus-visible,
+    .add-jury-submit:hover,
+    .add-jury-submit:focus-visible {
+        color: #fff;
+        background: #918150;
+        border-color: #918150;
+        outline: none;
+    }
 
 @media (max-width: 700px) {
     .add-jury-grid {
@@ -695,6 +843,7 @@ body {
         width: 100%;
     }
 }
+
 .add-jury-upload {
     cursor: default;
 }
@@ -712,25 +861,25 @@ body {
     cursor: pointer;
 }
 
-.add-jury-upload-icon:hover,
-.add-jury-upload-icon:focus-visible {
-    background: #f4f2ed;
-    outline: none;
-}
+    .add-jury-upload-icon:hover,
+    .add-jury-upload-icon:focus-visible {
+        background: #f4f2ed;
+        outline: none;
+    }
 
-.add-jury-upload-icon img,
-.add-jury-photo-action img {
-    width: 18px;
-    height: 18px;
-}
+    .add-jury-upload-icon img,
+    .add-jury-photo-action img {
+        width: 18px;
+        height: 18px;
+    }
 
 .add-jury-photo-actions {
     display: flex;
     align-items: center;
     gap: 24px;
     flex-wrap: wrap;
-    justify-content:flex-end;
-    margin-top:16px;
+    justify-content: flex-end;
+    margin-top: 16px;
 }
 
 .add-jury-photo-action {
@@ -741,8 +890,8 @@ body {
     color: #171717;
     background: #fff;
     border: none;
-    padding:0;
-    margin:0;
+    padding: 0;
+    margin: 0;
     font-family: Outfit;
     font-size: 14px;
     font-weight: 600;
@@ -755,10 +904,10 @@ body {
         outline: none;
     }
 
-.add-jury-photo-action:hover img,
-.add-jury-photo-action:focus-visible img {
-    filter: brightness(0) invert(1);
-}
+        .add-jury-photo-action:hover img,
+        .add-jury-photo-action:focus-visible img {
+            filter: none;
+        }
 
 .add-jury-photo-modal {
     position: fixed;
@@ -771,9 +920,9 @@ body {
     backdrop-filter: blur(2px);
 }
 
-.add-jury-photo-modal[hidden] {
-    display: none;
-}
+    .add-jury-photo-modal[hidden] {
+        display: none;
+    }
 
 .add-jury-photo-dialog {
     display: grid;
@@ -785,12 +934,12 @@ body {
     box-shadow: 0 24px 80px rgba(0, 0, 0, .32);
 }
 
-.add-jury-photo-dialog img {
-    display: block;
-    max-width: 100%;
-    max-height: calc(88vh - 24px);
-    object-fit: contain;
-}
+    .add-jury-photo-dialog img {
+        display: block;
+        max-width: 100%;
+        max-height: calc(88vh - 24px);
+        object-fit: contain;
+    }
 
 body.has-photo-preview {
     overflow: hidden;
@@ -810,6 +959,7 @@ body.has-photo-preview {
         padding: 16px;
     }
 }
+
 .add-jury-photo-actions[hidden] {
     display: none;
 }
@@ -834,17 +984,17 @@ body.has-photo-preview {
     text-align: left;
 }
 
-.add-jury-upload-picker:not(:disabled):hover,
-.add-jury-upload-picker:not(:disabled):focus-visible {
-    background: #faf9f6;
-    outline: none;
-}
+    .add-jury-upload-picker:not(:disabled):hover,
+    .add-jury-upload-picker:not(:disabled):focus-visible {
+        background: #faf9f6;
+        outline: none;
+    }
 
-.add-jury-upload-picker:disabled {
-    color: #171717;
-    cursor: default;
-    opacity: 1;
-}
+    .add-jury-upload-picker:disabled {
+        color: #171717;
+        cursor: default;
+        opacity: 1;
+    }
 
 /* Keep the optional photo field aligned with the two-column form grid. */
 .add-jury-photo-field {
@@ -854,7 +1004,7 @@ body.has-photo-preview {
 .jury-details-layout {
     display: grid;
     grid-template-columns: minmax(180px, 1fr) minmax(0, 3fr);
-    gap: clamp(32px, 6vw, 88px);
+    gap: 24px;
     margin-top: 24px;
     align-items: start;
 }
@@ -873,10 +1023,28 @@ body.has-photo-preview {
     background: linear-gradient(145deg, #ece8dc, #d8cfb5);
 }
 
-.jury-details-photo-placeholder span {
-    color: #918150;
-    font-family: LimeLight;
-    font-size: clamp(64px, 9vw, 120px);
+    .jury-details-photo-placeholder span {
+        color: #918150;
+        font-family: LimeLight;
+        font-size: clamp(64px, 9vw, 120px);
+    }
+
+@media (min-width: 1200px) {
+    .jury-details-layout {
+        grid-template-columns: 370px minmax(0, 1fr);
+    }
+
+    .jury-details-photo-panel,
+    .jury-details-photo,
+    .jury-details-photo-placeholder {
+        width: 370px;
+    }
+
+    .jury-details-photo,
+    .jury-details-photo-placeholder {
+        height: 420px;
+        aspect-ratio: auto;
+    }
 }
 
 .jury-details-content {
@@ -897,9 +1065,18 @@ body.has-photo-preview {
     border-radius: 50%;
 }
 
-.jury-status-dot.is-active { background: #1f9f55; }
-.jury-status-dot.is-inactive { background: #b31d1d; }
-.jury-delete-action { color: #b31d1d; border-color: #b31d1d; }
+    .jury-status-dot.is-active {
+        background: #1f9f55;
+    }
+
+    .jury-status-dot.is-inactive {
+        background: #b31d1d;
+    }
+
+.jury-delete-action {
+    color: #171717;
+    border-color: #171717;
+}
 
 @media (max-width: 800px) {
     .jury-details-layout {
@@ -916,16 +1093,35 @@ body.has-photo-preview {
         max-width: 100%;
     }
 }
-.jury-watched-plays { margin-bottom: 24px; }
+
+.jury-watched-plays {
+    margin-bottom: 24px;
+}
+
+.jury-details-page .jury-watched-plays .complex-table-heading {
+    padding-right: 0;
+    padding-top: 16px;
+    padding-left: 0;
+}
+
+.jury-details-page .jury-watched-plays .jury-voting-table-wrapper {
+    padding-right: 0;
+    padding-left: 0;
+}
+
+.jury-details-page .jury-watched-plays .complex-table-summary-wrapper {
+    padding-right: 0;
+    padding-left: 0;
+}
 /* Candidate custom selects */
 .add-candidate-select {
     position: relative;
     width: 100%;
 }
 
-.add-candidate-select.is-open {
-    z-index: 40;
-}
+    .add-candidate-select.is-open {
+        z-index: 40;
+    }
 
 .add-candidate-select-trigger {
     display: flex;
@@ -942,29 +1138,29 @@ body.has-photo-preview {
     text-align: left;
 }
 
-.add-candidate-select-trigger:focus-visible {
-    border-color: #171717;
-    outline: 1px solid #171717;
-    outline-offset: 1px;
-}
+    .add-candidate-select-trigger:focus-visible {
+        border-color: #171717;
+        outline: 1px solid #171717;
+        outline-offset: 1px;
+    }
 
-.add-candidate-select-trigger > span {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
+    .add-candidate-select-trigger > span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
 
-.add-candidate-select-trigger .is-placeholder {
-    opacity: .5;
-}
+    .add-candidate-select-trigger .is-placeholder {
+        opacity: .5;
+    }
 
-.add-candidate-select-trigger > img {
-    width: 16px;
-    height: 16px;
-    flex: 0 0 16px;
-    transition: transform .2s ease;
-}
+    .add-candidate-select-trigger > img {
+        width: 16px;
+        height: 16px;
+        flex: 0 0 16px;
+        transition: transform .2s ease;
+    }
 
 .add-candidate-select.is-open .add-candidate-select-trigger > img {
     transform: rotate(180deg);
@@ -997,11 +1193,11 @@ body.has-photo-preview {
     box-shadow: 0 12px 28px rgba(23, 23, 23, .14);
 }
 
-.add-candidate-select-menu[hidden],
-.add-candidate-select-option[hidden],
-.add-candidate-photo-field[hidden] {
-    display: none !important;
-}
+    .add-candidate-select-menu[hidden],
+    .add-candidate-select-option[hidden],
+    .add-candidate-photo-field[hidden] {
+        display: none !important;
+    }
 
 .add-candidate-select-option {
     display: block;
@@ -1016,16 +1212,16 @@ body.has-photo-preview {
     text-align: left;
 }
 
-.add-candidate-select-option:last-child {
-    border-bottom: 0;
-}
+    .add-candidate-select-option:last-child {
+        border-bottom: 0;
+    }
 
-.add-candidate-select-option:hover,
-.add-candidate-select-option:focus-visible,
-.add-candidate-select-option[aria-selected="true"] {
-    background: #e9e5da;
-    outline: none;
-}
+    .add-candidate-select-option:hover,
+    .add-candidate-select-option:focus-visible,
+    .add-candidate-select-option[aria-selected="true"] {
+        background: #e9e5da;
+        outline: none;
+    }
 
 .add-candidate-photo-field {
     min-width: 0;
@@ -1043,12 +1239,12 @@ body.has-photo-preview {
     margin-top: 24px;
 }
 
-.candidate-details-layout.has-photo {
-    display: grid;
-    grid-template-columns: 370px minmax(0, 1fr);
-    gap: 24px;
-    align-items: start;
-}
+    .candidate-details-layout.has-photo {
+        display: grid;
+        grid-template-columns: 370px minmax(0, 1fr);
+        gap: 24px;
+        align-items: start;
+    }
 
 .candidate-details-photo-panel {
     width: 370px;
@@ -1099,6 +1295,7 @@ body.has-photo-preview {
         width: 100%;
     }
 }
+
 .announcement-details-grid {
     align-items: start;
 }
@@ -1120,7 +1317,16 @@ body.has-photo-preview {
     grid-column: auto;
 }
 
+.announcement-form-page .announcement-location-field {
+    width: calc((100% - 24px) / 2);
+    grid-column: 1 / -1;
+}
+
 @media (max-width: 700px) {
+    .announcement-form-page .announcement-location-field {
+        width: 100%;
+    }
+
     .announcement-image-detail img {
         width: 100%;
         max-height: 240px;

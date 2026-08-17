@@ -1043,7 +1043,10 @@ namespace YKBAfife.Data.Migrations
 
                     SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("PlayAwardCategoryId", "IsPublished", "IsActive"), new[] { "Score", "Id" });
 
-                    b.ToTable("JuryVotes", "dbo");
+                    b.ToTable("JuryVotes", "dbo", t =>
+                        {
+                            t.HasCheckConstraint("CK_JuryVotes_Score", "[Score] >= 1 AND [Score] <= 10");
+                        });
 
                     b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
                 });

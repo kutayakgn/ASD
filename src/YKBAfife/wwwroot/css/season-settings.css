@@ -4,6 +4,17 @@
     font-family: Outfit;
 }
 
+    .season-settings-page .season-settings-page-header {
+        margin: 0;
+        padding: 0;
+        font-family: LimeLight;
+        font-size: 28px;
+        font-style: normal;
+        line-height: 36px;
+        font-weight: 400;
+        padding:24px 16px 0px
+    }
+
 #season-settings-table .complex-table-heading-tools {
     justify-content: flex-end;
 }
@@ -29,9 +40,9 @@
     margin: 0;
 }
 
-.season-form-grid .application-date-field {
-    min-width: 0;
-}
+    .season-form-grid .application-date-field {
+        min-width: 0;
+    }
 
 
 .season-form .add-jury-actions {
@@ -49,10 +60,10 @@
         width: 100%;
     }
 
-    .season-details-page .play-details-actions form,
-    .season-details-page .play-detail-action {
-        flex: 1 1 160px;
-    }
+        .season-details-page .play-details-actions form,
+        .season-details-page .play-detail-action {
+            flex: 1 1 160px;
+        }
 }
 
 .settings-section-divider {
@@ -117,16 +128,16 @@
     font-weight: 600;
 }
 
-.additional-voting-all-option input {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
-}
+    .additional-voting-all-option input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
 
-.additional-voting-all-option input:checked + .add-play-check-mark {
-    border-color: #171717;
-    background: #171717;
-}
+        .additional-voting-all-option input:checked + .add-play-check-mark {
+            border-color: #171717;
+            background: #171717;
+        }
 
 .additional-voting-flat-menu .add-play-check-option {
     min-height: 44px;
@@ -170,21 +181,21 @@
     background: #171717;
 }
 
-.additional-voting-all-option input:indeterminate + .add-play-check-mark::after {
-    position: absolute;
-    top: 8px;
-    left: 4px;
-    width: 11px;
-    height: 2px;
-    background: #fff;
-    content: "";
-}
+    .additional-voting-all-option input:indeterminate + .add-play-check-mark::after {
+        position: absolute;
+        top: 8px;
+        left: 4px;
+        width: 11px;
+        height: 2px;
+        background: #fff;
+        content: "";
+    }
 
 .settings-accordion {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    padding-top:24px;
+    padding-top: 24px;
 }
 
 .settings-accordion-item {
@@ -195,7 +206,9 @@
 .settings-accordion-heading {
     margin: 0;
 }
-
+.settings-accordion-content {
+    padding-top: 24px;
+}
 .settings-accordion-trigger {
     display: flex;
     width: 100%;
@@ -209,17 +222,20 @@
     font: 600 20px/28px Outfit;
     text-align: left;
 }
+.settings-accordion-content-inner .complex-table-heading{
+    padding: 0px 16px 16px 0px;
+}
 
 .settings-accordion-trigger:focus-visible {
     outline: 2px solid #918150;
     outline-offset: -2px;
 }
 
-.settings-accordion-trigger img {
-    width: 24px;
-    height: 24px;
-    transition: transform .15s ease-in-out;
-}
+    .settings-accordion-trigger img {
+        width: 24px;
+        height: 24px;
+        transition: transform .15s ease-in-out;
+    }
 
 .settings-accordion-item.is-open .settings-accordion-trigger img {
     transform: rotate(180deg);
@@ -231,9 +247,9 @@
     transition: height .32s ease-in-out;
 }
 
-.settings-accordion-content[hidden] {
-    display: none;
-}
+    .settings-accordion-content[hidden] {
+        display: none;
+    }
 
 .settings-accordion-content-inner {
     padding: 0px 0px 32px 0px;
@@ -246,23 +262,23 @@
     gap: 10px;
 }
 
-.play-status-color-dot,
-.play-status-detail-color > span {
-    width: 14px;
-    height: 14px;
-    flex: 0 0 14px;
-    border: 1px solid #bdbdbd;
-    border-radius: 50%;
-}
+    .play-status-color-dot,
+    .play-status-detail-color > span {
+        width: 14px;
+        height: 14px;
+        flex: 0 0 14px;
+        border: 1px solid #bdbdbd;
+        border-radius: 50%;
+    }
 
 .play-status-form-page,
 .play-status-details-page {
     font-family: Outfit;
 }
 
-.play-status-form-page .add-jury-actions {
-    margin-top: 32px;
-}
+    .play-status-form-page .add-jury-actions {
+        margin-top: 32px;
+    }
 
 @media (max-width: 760px) {
     .settings-accordion-content-inner {
@@ -275,6 +291,7 @@
         line-height: 24px;
     }
 }
+
 @media (prefers-reduced-motion: reduce) {
     .settings-accordion-content,
     .settings-accordion-trigger img {

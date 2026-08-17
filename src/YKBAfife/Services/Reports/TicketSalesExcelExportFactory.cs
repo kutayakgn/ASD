@@ -25,7 +25,7 @@ public static class TicketSalesExcelExportFactory
             new() { Value = row.JuryName },
             new() { Value = row.PlayName },
             new() { Value = row.Date },
-            new() { Value = row.TicketFee }
+            new() { Value = decimal.ToInt32(decimal.Truncate(row.TicketFee)) }
         ]).ToArray(),
         FooterLines = [$"Toplam kayıt sayısı: {rows.Count}"]
     };

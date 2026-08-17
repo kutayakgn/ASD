@@ -411,8 +411,7 @@ BEGIN
             (1008, formRecord.ClothesDesign),
             (1009, formRecord.StageMusic),
             (1010, formRecord.LightDesign),
-            (1011, formRecord.Choreography),
-            (1012, formRecord.YoungGenerationArtist)
+            (1011, formRecord.Choreography)
     ) AS category(AwardCategoryCode, CandidateJson)
     CROSS APPLY OPENJSON
     (
@@ -432,10 +431,10 @@ BEGIN
     IF EXISTS
     (
         SELECT 1 FROM #CandidateSource
-        WHERE AwardCategoryCode BETWEEN 1003 AND 1012
+        WHERE AwardCategoryCode BETWEEN 1003 AND 1011
           AND NULLIF(LTRIM(RTRIM(Role)), N'') IS NULL
     )
-        THROW 52410, N'Oyuncu ve Genç Kuşak adaylarında Role alanı zorunludur.', 1;
+        THROW 52410, N'Çok adaylı kategorilerde Role alanı zorunludur.', 1;
 
     /* SourceOrder is the stable Form slot identity. Candidate and Role are
        editable descriptions; duplicate role names are valid distinct slots. */
@@ -466,7 +465,7 @@ BEGIN
         FROM dbo.PlayAwardCategories AS candidate
         WHERE candidate.SourceFormCandidateOrder IS NULL
           AND candidate.CreatedBy IS NULL
-          AND candidate.AwardCategoryCode BETWEEN 1002 AND 1012
+          AND candidate.AwardCategoryCode BETWEEN 1002 AND 1011
     )
     UPDATE candidate
     SET SourceFormCandidateOrder = source.SourceOrder,
@@ -518,7 +517,7 @@ BEGIN
         FROM dbo.PlayAwardCategories AS candidate
         WHERE candidate.SourceFormCandidateOrder IS NULL
           AND candidate.CreatedBy IS NULL
-          AND candidate.AwardCategoryCode BETWEEN 1002 AND 1012
+          AND candidate.AwardCategoryCode BETWEEN 1002 AND 1011
     )
     UPDATE candidate
     SET SourceFormCandidateOrder = source.SourceOrder,
@@ -1192,6 +1191,14 @@ BEGIN
     IF TRY_CONVERT(int, SESSION_CONTEXT(N'FormLifecycleSyncInProgress')) = 1
         RETURN;
 
+    IF EXISTS
+    (
+        SELECT 1 FROM inserted
+        WHERE AwardCategoryCode = 1012
+          AND (IsPublished = 1 OR IsActive = 1 OR IsCurrent = 1)
+    )
+        THROW 52430, N'1012 ödül kategorisi sistemden kaldırılmıştır.', 1;
+
     -- The 1001 row is a system-managed category slot, not a person candidate.
     IF EXISTS
     (
@@ -1535,6 +1542,77 @@ BEGIN
     )
     BEGIN
         THROW 51231, N'Mevcut bir oyunun RecordType degeri degistirilemez.', 1;
+    END;
+END;
+GO
+
+/* RecordType 0 plays can be opened to jury voting only while StatusCode is 1. */
+CREATE OR ALTER TRIGGER [dbo].[TR_Plays_NormalizeJuryVotingStatus]
+ON [dbo].[Plays]
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE play
+    SET play.[JuriOylamaStatus] = 0,
+        play.[UpdatedAt] = DATEADD(HOUR, 3, SYSUTCDATETIME())
+    FROM [dbo].[Plays] AS play
+    INNER JOIN inserted AS changed
+        ON changed.[Id] = play.[Id]
+    WHERE changed.[RecordType] = 0
+      AND changed.[StatusCode] <> 1
+      AND changed.[JuriOylamaStatus] = 1;
+END;
+GO
+
+/* A published blacklist entry immediately removes matching votes from circulation. */
+CREATE OR ALTER TRIGGER [dbo].[TR_Blacklist_DeactivateJuryVotes]
+ON [dbo].[Blacklist]
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE vote
+    SET vote.[IsPublished] = 0,
+        vote.[IsActive] = 0,
+        vote.[UpdatedAt] = DATEADD(HOUR, 3, SYSUTCDATETIME())
+    FROM [dbo].[JuryVotes] AS vote
+    INNER JOIN [dbo].[PlayAwardCategories] AS candidate
+        ON candidate.[Id] = vote.[PlayAwardCategoryId]
+    INNER JOIN inserted AS blacklist
+        ON blacklist.[JuryId] = vote.[JuryId]
+       AND blacklist.[PlayId] = candidate.[PlayId]
+       AND blacklist.[IsPublished] = 1
+    WHERE vote.[IsPublished] = 1
+       OR vote.[IsActive] = 1;
+END;
+GO
+
+/* Defense in depth: a blacklisted jury/play pair cannot publish a vote. */
+CREATE OR ALTER TRIGGER [dbo].[TR_JuryVotes_BlockBlacklistedJuryPlay]
+ON [dbo].[JuryVotes]
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF EXISTS
+    (
+        SELECT 1
+        FROM inserted AS vote
+        INNER JOIN [dbo].[PlayAwardCategories] AS candidate
+            ON candidate.[Id] = vote.[PlayAwardCategoryId]
+        INNER JOIN [dbo].[Blacklist] AS blacklist
+            ON blacklist.[JuryId] = vote.[JuryId]
+           AND blacklist.[PlayId] = candidate.[PlayId]
+           AND blacklist.[IsPublished] = 1
+        WHERE vote.[IsPublished] = 1
+           OR vote.[IsActive] = 1
+    )
+    BEGIN
+        THROW 51214, N'Blacklist kaydı bulunan jüri bu oyun için oy veremez.', 1;
     END;
 END;
 GO

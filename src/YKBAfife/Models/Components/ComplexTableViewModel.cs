@@ -57,8 +57,15 @@ public sealed class ComplexTableColumnViewModel
     public string Title { get; init; } = string.Empty;
     public string Key { get; init; } = string.Empty;
     public bool IsSortable { get; init; } = true;
-    public decimal ColWidth { get; init; } = 100;
+    public ComplexTableColumnWidth ColWidth { get; init; } = 100;
     public string CssClass { get; init; } = string.Empty;
+}
+
+public readonly record struct ComplexTableColumnWidth(decimal Value, bool IsPixel)
+{
+    public static ComplexTableColumnWidth Pixels(decimal value) => new(value, true);
+    public static implicit operator ComplexTableColumnWidth(int value) => new(value, false);
+    public static implicit operator ComplexTableColumnWidth(decimal value) => new(value, false);
 }
 
 public sealed class ComplexTableRowViewModel
@@ -66,10 +73,10 @@ public sealed class ComplexTableRowViewModel
     public string Id { get; init; } = string.Empty;
     public string Link { get; init; } = string.Empty;
     public string ModalUrl { get; init; } = string.Empty;
+    public string EditUrl { get; init; } = string.Empty;
     public string EditModalUrl { get; init; } = string.Empty;
     public string EditAccessibleLabel { get; init; } = string.Empty;
     public string DeleteUrl { get; init; } = string.Empty;
-    public bool DeleteOnRowClick { get; init; }
     public string DeleteConfirmMessage { get; init; } = string.Empty;
     public string DeleteAccessibleLabel { get; init; } = string.Empty;
     public string NavigationUrl { get; init; } = string.Empty;

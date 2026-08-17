@@ -25,13 +25,31 @@ public sealed class ComplexTableViewComponent : ViewComponent
                 continue;
             }
 
-            if (tab.Columns.Any(column => column.ColWidth <= 0))
+            var usesPixelWidths = tab.Columns.Any(column => column.ColWidth.IsPixel);
+            if (usesPixelWidths)
+            {
+                if (tab.Columns.Any(column => !column.ColWidth.IsPixel))
+                {
+                    throw new InvalidOperationException(
+                        $"Every column in complex table tab '{tab.Key}' must use pixel widths when one pixel width is defined.");
+                }
+
+                if (tab.Columns.Any(column => column.ColWidth.Value <= 2))
+                {
+                    throw new InvalidOperationException(
+                        $"Every pixel ColWidth in complex table tab '{tab.Key}' must be greater than the two-pixel border allowance.");
+                }
+
+                continue;
+            }
+
+            if (tab.Columns.Any(column => column.ColWidth.Value <= 0))
             {
                 throw new InvalidOperationException(
                     $"Every column in complex table tab '{tab.Key}' must have a ColWidth greater than zero.");
             }
 
-            var totalWidth = tab.Columns.Sum(column => column.ColWidth);
+            var totalWidth = tab.Columns.Sum(column => column.ColWidth.Value);
             if (totalWidth != 100)
             {
                 throw new InvalidOperationException(

@@ -31,13 +31,13 @@
         <div class="add-jury-grid">
             <div class="add-jury-field">
                 <label asp-for="Username"></label>
-                <input asp-for="Username" autocomplete="username" required />
+                <input asp-for="Username" autocomplete="username" placeholder="Kullanıcı adı yazın" required />
                 <span asp-validation-for="Username"></span>
             </div>
 
             <div class="add-jury-field">
                 <label asp-for="Email"></label>
-                <input asp-for="Email" autocomplete="email" required />
+                <input asp-for="Email" autocomplete="email" placeholder="E-posta adresi yazın" required />
                 <span asp-validation-for="Email"></span>
             </div>
 
@@ -46,19 +46,28 @@
                 <input asp-for="Password"
                        type="text"
                        autocomplete="new-password"
-                       placeholder="Değiştirmek istemiyorsanız boş bırakın" />
+                       placeholder="Yeni şifre yazın (değiştirmeyecekseniz boş bırakın)" />
                 <span asp-validation-for="Password"></span>
             </div>
 
             <div class="add-jury-field">
                 <label asp-for="FullName"></label>
-                <input asp-for="FullName" autocomplete="name" required />
+                <input asp-for="FullName" autocomplete="name" placeholder="Ad soyad yazın" required />
                 <span asp-validation-for="FullName"></span>
             </div>
 
             <div class="add-jury-field">
                 <label asp-for="Phone"></label>
-                <input asp-for="Phone" autocomplete="tel" required />
+                <input asp-for="Phone"
+                       type="tel"
+                       inputmode="numeric"
+                       autocomplete="tel"
+                       placeholder="Telefon numarası yazın"
+                       minlength="10"
+                       maxlength="11"
+                       pattern="[0-9]{10,11}"
+                       data-jury-phone
+                       required />
                 <span asp-validation-for="Phone"></span>
             </div>
 
@@ -93,11 +102,11 @@
                             class="add-jury-upload-picker"
                             aria-label="Fotoğraf dosyası seç"
                             data-jury-photo-picker>
-                        <span data-jury-file-name>@(Model.HasExistingPhoto ? Model.ExistingPhotoFileName : "Dosya Ekle")</span>
+                        <span data-jury-file-name>@(Model.HasExistingPhoto ? Model.ExistingPhotoFileName : "Dosya Yükle")</span>
                     </button>
                     <button type="button"
                             class="add-jury-upload-icon"
-                            aria-label="Dosya ekle"
+                            aria-label="Dosya yükle"
                             data-jury-photo-primary>
                         <img src="~/icons/upload.svg" alt="" aria-hidden="true" data-jury-photo-primary-icon />
                     </button>

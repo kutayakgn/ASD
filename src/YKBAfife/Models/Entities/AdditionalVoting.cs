@@ -7,6 +7,8 @@ namespace YKBAfife.Models.Entities;
 public sealed class AdditionalVoting
 {
     [Key] public Guid Id { get; set; }
+    // Jury eligibility treats these DateOnly values as an inclusive interval:
+    // StartDate 00:00:01 through EndDate 23:59:59 (Turkey local time).
     public DateOnly StartDate { get; set; }
     public DateOnly EndDate { get; set; }
     public bool AppliesToAllJuries { get; set; }

@@ -6,6 +6,8 @@ namespace YKBAfife.Services.Reports;
 
 public static class RankingComplexTableFactory
 {
+    private static readonly decimal[] SixColumnRankingWidths = [64, 310, 310, 310, 216, 200];
+
     private static readonly IReadOnlyDictionary<string, string> TabTitles =
         new Dictionary<string, string>
         {
@@ -23,7 +25,7 @@ public static class RankingComplexTableFactory
             Id = $"ranking-{row.PlayAwardCategoryId:N}",
             Icon = ConfidenceIcon(row.ConfidenceValue),
             IconAccessibleLabel = row.ConfidenceValue.HasValue ? $"Güven puanı {row.ConfidenceValue}/4" : "Güven puanı yok",
-            Cells = CreateCells(row, report.RankingType)
+            Cells = CreateCells(row, report)
         }).ToArray();
 
         return new ComplexTableViewModel
@@ -76,41 +78,56 @@ public static class RankingComplexTableFactory
     {
         var columns = new List<ComplexTableColumnViewModel>
         {
-            new() { Title = "Sıra", Key = "position", ColWidth = 7, IsSortable = false },
-            new() { Title = "Kategori", Key = "category", ColWidth = 17, IsSortable = false },
+            new() { Title = "Sıra", Key = "position", ColWidth = ColumnWidth(report, 0, 7), IsSortable = false },
+            new() { Title = "Kategori", Key = "category", ColWidth = ColumnWidth(report, 1, 17), IsSortable = false },
             new()
             {
                 Title = report.CategoryHasRoleAndPhoto ? "Adı Soyadı" : "Tiyatro Adı",
-                Key = "displayName", ColWidth = 21, IsSortable = false
+                Key = "displayName", ColWidth = ColumnWidth(report, 2, 21), IsSortable = false
             },
-            new() { Title = "Oyun Adı", Key = "play", ColWidth = 21, IsSortable = false },
-            new() { Title = "Oy Sayısı", Key = "viewCount", ColWidth = 12, IsSortable = false }
+            new() { Title = "Oyun Adı", Key = "play", ColWidth = ColumnWidth(report, 3, 21), IsSortable = false },
+            new() { Title = "Oy Sayısı", Key = "viewCount", ColWidth = ColumnWidth(report, 4, 12), IsSortable = false }
         };
         if (report.RankingType != RankingTypes.Trimmed)
         {
-            columns.Add(new ComplexTableColumnViewModel
+            if (report.Tab != RankingTabs.CategoryArithmetic)
             {
-                Title = "Varyans", Key = "variance", ColWidth = 10, IsSortable = false
-            });
+                columns.Add(new ComplexTableColumnViewModel
+                {
+                    Title = "Varyans", Key = "variance", ColWidth = 10, IsSortable = false
+                });
+            }
+
             columns.Add(new ComplexTableColumnViewModel
             {
                 Title = report.RankingType == RankingTypes.Confidence ? "Güven Puanı" : "Aritmetik Ortalama",
-                Key = "metric", ColWidth = 12, IsSortable = false
+                Key = "metric", ColWidth = ColumnWidth(report, 5, 12),
+                IsSortable = false
             });
         }
         else
         {
             columns.Add(new ComplexTableColumnViewModel
             {
-                Title = "Trim Ortalama", Key = "metric", ColWidth = 22, IsSortable = false
+                Title = "Trim Ortalama", Key = "metric", ColWidth = ColumnWidth(report, 5, 22), IsSortable = false
             });
         }
         return columns;
     }
 
+    private static ComplexTableColumnWidth ColumnWidth(
+        RankingTableViewModel report,
+        int columnIndex,
+        decimal percentage) =>
+        report.Tab == RankingTabs.CategoryArithmetic ||
+        (report.RankingType == RankingTypes.Trimmed &&
+         report.Tab is RankingTabs.AllGames or RankingTabs.CategoryTrim)
+            ? ComplexTableColumnWidth.Pixels(SixColumnRankingWidths[columnIndex])
+            : percentage;
+
     private static IReadOnlyList<ComplexTableCellViewModel> CreateCells(
         RankingRowViewModel row,
-        string rankingType)
+        RankingTableViewModel report)
     {
         var cells = new List<ComplexTableCellViewModel>
         {
@@ -122,37 +139,21 @@ public static class RankingComplexTableFactory
                 AccessibleLabel = $"{row.PlayName} oylarını görüntüle"
             }
         };
-        if (rankingType != RankingTypes.Trimmed)
+        if (report.RankingType != RankingTypes.Trimmed &&
+            report.Tab != RankingTabs.CategoryArithmetic)
         {
             cells.Add(new ComplexTableCellViewModel
             {
                 Content = row.Variance?.ToString("0.000", CultureInfo.CurrentCulture) ?? "-"
             });
         }
-        cells.Add(MetricCell(row.MetricValue, rankingType));
+        cells.Add(MetricCell(row.MetricValue, report.RankingType));
         return cells;
     }
     private static IReadOnlyList<ComplexTableSelectFilterViewModel> CreateFilters(
         RankingTableViewModel report)
     {
         var filters = new List<ComplexTableSelectFilterViewModel>();
-        if (report.Tab == RankingTabs.AllGames)
-        {
-            filters.Add(new ComplexTableSelectFilterViewModel
-            {
-                Name = "RankingType",
-                AccessibleLabel = "Sıralama tipi",
-                ShowLabel = false,
-                Value = report.RankingType,
-                Options =
-                [
-                    Option(RankingTypes.Trimmed, "Tüm Kategori Sıralama Trim"),
-                    Option(RankingTypes.Arithmetic, "Tüm Kategori Sıralama Aritmetik"),
-                    Option(RankingTypes.Confidence, "Tüm Güven Sıralaması")
-                ]
-            });
-        }
-
         filters.Add(new ComplexTableSelectFilterViewModel
         {
             Name = "CategoryCode",
@@ -185,9 +186,9 @@ public static class RankingComplexTableFactory
 
     private static ComplexTableCellViewModel Cell(string value) => new() { Content = value };
 
-    private static ComplexTableCellViewModel Cell(int value) => new()
+    private static ComplexTableCellViewModel Cell(int? value) => new()
     {
-        Content = value.ToString(CultureInfo.CurrentCulture)
+        Content = value?.ToString(CultureInfo.CurrentCulture) ?? "-"
     };
 
     private static string ConfidenceIcon(int? value) => value switch

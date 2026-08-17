@@ -42,6 +42,7 @@ public sealed class EditTicketFeeViewModel
     public string PlayName { get; init; } = string.Empty;
 
     [Required(ErrorMessage = "Bilet ücreti zorunludur.")]
+    [Range(typeof(decimal), "1", "99999", ErrorMessage = "Bilet ücreti 1 ile 99999 arasında olmalıdır.")]
     [Display(Name = "Bilet Ücreti")]
     public decimal TicketFee { get; set; }
 }

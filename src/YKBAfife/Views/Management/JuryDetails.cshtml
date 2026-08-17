@@ -100,7 +100,7 @@
             <div class="play-detail-field">
                 <dt>Statü</dt>
                 <dd class="jury-status-value">
-                    <span class="jury-status-dot @(Model.IsActive ? "is-active" : "is-inactive")" aria-hidden="true"></span>
+                   @*  <span class="jury-status-dot @(Model.IsActive ? "is-active" : "is-inactive")" aria-hidden="true"></span> *@
                     <span>@(Model.IsActive ? "Güncel Jüri" : "Geçmiş Jüri")</span>
                 </dd>
             </div>
@@ -110,7 +110,7 @@
             </div>
         </dl>
     </div>
-    <div class="play-details-divider" role="separator"></div>
+    <div class="play-details-divider" role="separator" style="margin: 16px 0px 0px 0px"></div>
 
     <section class="jury-watched-plays" aria-label="JÃ¼rinin izlediÄŸi oyunlar">
         @await Component.InvokeAsync("ComplexTable", new { model = Model.WatchedPlaysTable })

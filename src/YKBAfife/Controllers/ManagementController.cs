@@ -447,7 +447,7 @@ public sealed partial class ManagementController(
         }
 
         TempData["GenericPopup.Type"] = "success";
-        TempData["GenericPopup.Message"] = "Jüri başarıyla güncellendi.";
+        TempData["GenericPopup.Message"] = "Değişiklikler başarıyla kaydedildi.";
         TempData["GenericPopup.RedirectUrl"] = Url.Action(nameof(JuryDetails), new { id }) ?? $"/juriler/{id}";
         return RedirectToAction(nameof(EditJury), new { id });
     }
@@ -1039,7 +1039,9 @@ public sealed partial class ManagementController(
             play.TheaterName = model.TheaterName;
             play.StatusCode = model.StatusCode!.Value;
             play.Slug = newSlug;
-            play.JuriOylamaStatus = !play.RecordType && model.JuriOylamaStatus;
+            play.JuriOylamaStatus = !play.RecordType &&
+                                    model.StatusCode.Value == 1 &&
+                                    model.JuriOylamaStatus;
             play.KunyeGirisStatus = !play.RecordType && model.KunyeGirisStatus;
             play.UpdatedAt = TurkeyTime.Now;
             play.UpdatedBy = currentUserId;
@@ -1114,6 +1116,21 @@ public sealed partial class ManagementController(
             play.KunyeGirisStatus = false;
             if (requiresNormalization)
             {
+                play.UpdatedAt = TurkeyTime.Now;
+                play.UpdatedBy = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var normalizingUserId)
+                    ? normalizingUserId
+                    : null;
+                await context.SaveChangesAsync(cancellationToken);
+            }
+
+            return Json(new { isActive = false, isDisabled = true, refreshTable = false });
+        }
+
+        if (isJuryVotingStatus && play.StatusCode != 1)
+        {
+            if (play.JuriOylamaStatus)
+            {
+                play.JuriOylamaStatus = false;
                 play.UpdatedAt = TurkeyTime.Now;
                 play.UpdatedBy = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var normalizingUserId)
                     ? normalizingUserId
@@ -2178,10 +2195,10 @@ public sealed partial class ManagementController(
             return RedirectToAction(nameof(TicketSales));
         }
 
-        if (model.TicketFee < 1)
+        if (model.TicketFee < 1 || model.TicketFee > 99999 || decimal.Truncate(model.TicketFee) != model.TicketFee)
         {
             TempData["GenericPopup.Type"] = "fail";
-            TempData["GenericPopup.Message"] = "Bilet ücreti 1'den az olamaz.";
+            TempData["GenericPopup.Message"] = "Bilet ücreti 1 ile 99999 arasında bir tam sayı olmalıdır.";
             return RedirectToAction(nameof(TicketSales));
         }
 

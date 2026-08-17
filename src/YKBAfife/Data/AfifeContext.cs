@@ -291,7 +291,11 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
         });
         modelBuilder.Entity<JuryVote>(entity =>
         {
-            entity.ToTable("JuryVotes", "dbo", table => table.UseSqlOutputClause(false));
+            entity.ToTable("JuryVotes", "dbo", table =>
+            {
+                table.UseSqlOutputClause(false);
+                table.HasCheckConstraint("CK_JuryVotes_Score", "[Score] >= 1 AND [Score] <= 10");
+            });
             entity.HasIndex(x => new { x.PlayAwardCategoryId, x.JuryId })
                 .IsUnique()
                 .HasFilter("[IsPublished] = 1");

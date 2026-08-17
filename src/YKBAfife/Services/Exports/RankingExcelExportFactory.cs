@@ -44,7 +44,7 @@ public static class RankingExcelExportFactory
             WorksheetName = "Sıralamalar", TableName = "Siralamalar",
             MetadataLines = ExcelExportMetadata.Create(
                 metricHeader,
-                "desc",
+                "asc",
                 [$"Kategori = {categoryName}", $"Görünüm = {report.PageSize} satır"],
                 currentPageOnly ? report.CurrentPage : null),
             Title = $"{categoryName} - {metricHeader}", Columns = columns, Rows = rows,

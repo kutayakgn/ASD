@@ -44,8 +44,8 @@ public static class PlayComplexTableFactory
                     new()
                     {
                         ToggleUrl = $"/oyunlar/{row.PlayId:D}/juri-oylama-status",
-                        ToggleChecked = !row.RecordType && row.JuriOylamaStatus,
-                        ToggleDisabled = row.RecordType,
+                        ToggleChecked = !row.RecordType && row.StatusCode == 1 && row.JuriOylamaStatus,
+                        ToggleDisabled = row.RecordType || row.StatusCode != 1,
                         CssClass = "play-toggle-cell",
                         AccessibleLabel = $"{row.PlayName} jüri oylama listesi statüsünü değiştir"
                     },
@@ -108,9 +108,11 @@ public static class PlayComplexTableFactory
             SummaryContent =
             [
                 new() { Text = report.TotalCount.ToString(CultureInfo.CurrentCulture), IsEmphasized = true },
-                new() { Text = " kayıt bulundu. " },
+                 new() { Text = " kayıt", IsEmphasized = true },
+                new() { Text = " bulundu. " },
                 new() { Text = report.JuryVotingEnabledCount.ToString(CultureInfo.CurrentCulture), IsEmphasized = true },
-                new() { Text = " kayıt jüri tarafından oylanabilir." }
+                new() { Text = " kayıt", IsEmphasized = true },
+                new() { Text = " jüri tarafından oylanabilir." }
             ]
         };
     }
