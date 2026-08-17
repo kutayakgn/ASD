@@ -15,6 +15,20 @@ BEGIN
 END;
 GO
 
+CREATE OR ALTER TRIGGER dbo.TR_JuryLogs_SoftDelete
+ON dbo.JuryLogs
+INSTEAD OF DELETE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE target
+    SET IsPublished = 0
+    FROM dbo.JuryLogs AS target
+    INNER JOIN deleted AS source ON source.Id = target.Id;
+END;
+GO
+
 /*
     One audit row is written for every DML statement. OldValues and NewValues are
     JSON arrays so set-based EF updates and trigger/procedure side effects preserve
@@ -41,7 +55,7 @@ FROM sys.tables AS tableInfo
 INNER JOIN sys.schemas AS schemaInfo ON schemaInfo.schema_id = tableInfo.schema_id
 WHERE tableInfo.is_ms_shipped = 0
   AND tableInfo.temporal_type = 0
-  AND NOT (schemaInfo.name = N'dbo' AND tableInfo.name IN (N'AdminLogs', N'UsersLog', N'__EFMigrationsHistory'))
+  AND NOT (schemaInfo.name = N'dbo' AND tableInfo.name IN (N'AdminLogs', N'JuryLogs', N'UsersLog', N'__EFMigrationsHistory'))
 ORDER BY schemaInfo.name, tableInfo.name;
 
 OPEN table_cursor;

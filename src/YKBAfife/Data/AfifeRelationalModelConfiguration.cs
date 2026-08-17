@@ -83,6 +83,15 @@ internal static class AfifeRelationalModelConfiguration
 
         modelBuilder.Entity<UserLog>().HasOne<User>().WithMany().HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.NoAction).HasConstraintName("FK_UsersLog_Users_UserId");
+        modelBuilder.Entity<JuryLog>().HasOne(x => x.Jury).WithMany()
+            .HasForeignKey(x => x.JuryId).OnDelete(DeleteBehavior.NoAction)
+            .HasConstraintName("FK_JuryLogs_Users_JuryId");
+        modelBuilder.Entity<JuryLog>().HasOne(x => x.Play).WithMany()
+            .HasForeignKey(x => x.PlayId).OnDelete(DeleteBehavior.NoAction)
+            .HasConstraintName("FK_JuryLogs_Plays_PlayId");
+        modelBuilder.Entity<JuryLog>().HasOne(x => x.AdditionalVoting).WithMany()
+            .HasForeignKey(x => x.AdditionalVotingId).OnDelete(DeleteBehavior.NoAction)
+            .HasConstraintName("FK_JuryLogs_AdditionalVotings_AdditionalVotingId");
 
         modelBuilder.Entity<Announcement>().HasOne(x => x.ImageAsset)
             .WithMany(x => x.AnnouncementImages).HasForeignKey(x => x.ImageId)
