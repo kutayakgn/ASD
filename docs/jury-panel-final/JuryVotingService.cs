@@ -729,7 +729,7 @@ namespace YkbAfife.Business.Service.JuryVoting
             }
 
             var sourceFormIsEligible =
-                play.RecordType ||
+                play.RecordType != 0 ||
                 (play.SourceFormId.HasValue &&
                  await _context.Form.AsNoTracking().AnyAsync(x =>
                      x.Id == play.SourceFormId.Value &&
@@ -1085,7 +1085,7 @@ namespace YkbAfife.Business.Service.JuryVoting
                 }
 
                 var sourceFormIsEligible =
-                    play.RecordType ||
+                    play.RecordType != 0 ||
                     (play.SourceFormId.HasValue &&
                      await _context.Form.AsNoTracking().AnyAsync(x =>
                          x.Id == play.SourceFormId.Value &&
@@ -1096,7 +1096,7 @@ namespace YkbAfife.Business.Service.JuryVoting
                 {
                     return await FailAsync(
                         JuryVotingSaveVoteResult.SourceFormNotEligible,
-                        "RecordType=false (0) oyunun bağlı olduğu başvuru aktif veya yayında değil.",
+                        "RecordType=0 oyunun bağlı olduğu başvuru aktif veya yayında değil.",
                         new { play.RecordType, play.SourceFormId });
                 }
 
