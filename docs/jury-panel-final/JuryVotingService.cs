@@ -458,7 +458,10 @@ namespace YkbAfife.Business.Service.JuryVoting
 
                                        where assignedPlay.IsPublished && assignedPlay.JuryId == authenticatedUserId
 
-                                       join play in _context.Plays.AsNoTracking().Where(x => x.IsPublished && x.IsActive)
+                                       join play in _context.Plays.AsNoTracking().Where(x =>
+                                           x.IsPublished &&
+                                           x.IsActive &&
+                                           x.JuriOylamaStatus)
 
                                            on assignedPlay.PlayId equals play.Id
 
@@ -702,6 +705,7 @@ namespace YkbAfife.Business.Service.JuryVoting
                 .Where(x =>
                     x.IsPublished &&
                     x.IsActive &&
+                    x.JuriOylamaStatus &&
                     x.Slug == playSlug)
                 .Select(x => new
                 {
@@ -854,7 +858,7 @@ namespace YkbAfife.Business.Service.JuryVoting
                             selectedCandidate?.PlayCategoryPhoto ?? string.Empty,
                         SelectedScore = votedCandidate?.Score,
                         IsEditable =
-                            (play.JuriOylamaStatus || additionalVotingId.HasValue) &&
+                            play.JuriOylamaStatus &&
                             (votedCandidate is null ||
                              !votedCandidate.JuryVoteId.HasValue ||
                              additionalVotingId.HasValue),
@@ -869,7 +873,7 @@ namespace YkbAfife.Business.Service.JuryVoting
             var canEnterCandidateVotes =
                 canShowCandidates &&
                 awardCategories.Count > 0 &&
-                (play.JuriOylamaStatus || additionalVotingId.HasValue);
+                play.JuriOylamaStatus;
 
             var hasPendingCandidateVote =
                 canEnterCandidateVotes &&
@@ -897,11 +901,6 @@ namespace YkbAfife.Business.Service.JuryVoting
             {
                 message = "Oyun oylanabilir statüde olmadığı için yalnızca bilet ücreti girişi yapabilirsiniz.";
             }
-            else if (!play.JuriOylamaStatus && !additionalVotingId.HasValue)
-            {
-                message = "Normal oylama kapalıdır ve kullanılabilir ek oylama hakkınız bulunmamaktadır.";
-            }
-
             return new JuryVotingPlayDetailViewModel
             {
                 ResultCode = JuryVotingResultCodes.Success,
@@ -1074,11 +1073,14 @@ namespace YkbAfife.Business.Service.JuryVoting
                 playId = play?.Id;
                 playName = play?.PlayName;
 
-                if (play is null || !play.IsActive || !play.IsPublished)
+                if (play is null ||
+                    !play.IsActive ||
+                    !play.IsPublished ||
+                    !play.JuriOylamaStatus)
                 {
                     return await FailAsync(
                         JuryVotingSaveVoteResult.PlayNotEligible,
-                        "Oyun bulunamadı, aktif değil veya yayında değil.",
+                        "Oyun bulunamadı, aktif/yayında değil veya Jüri panelinde görünür değil.",
                         play);
                 }
 
@@ -1233,17 +1235,12 @@ namespace YkbAfife.Business.Service.JuryVoting
                     }
                 }
 
-                var normalVotingOpen =
+                var initialVotingAllowed =
                     candidateVotingAllowed &&
                     play.JuriOylamaStatus;
 
-                var extraVotingAvailable =
-                    candidateVotingAllowed &&
-                    additionalVotingId.HasValue;
-
                 var mustSubmitEveryCard =
-                    candidateVotingAllowed &&
-                    (normalVotingOpen || extraVotingAvailable);
+                    initialVotingAllowed;
 
                 if (mustSubmitEveryCard && submittedScores.Count != groups.Count)
                 {
@@ -1316,11 +1313,6 @@ namespace YkbAfife.Business.Service.JuryVoting
                         requiresAdditionalVoting = true;
                         hasExistingVoteUpdate = true;
                     }
-                    else if (!normalVotingOpen)
-                    {
-                        requiresAdditionalVoting = true;
-                    }
-
                     voteChanges.Add(new VoteChange(
                         submitted,
                         existingGroupVote,
@@ -1345,31 +1337,6 @@ namespace YkbAfife.Business.Service.JuryVoting
                         }
                     }
                 }
-                else if (submittedScores.Count > 0)
-                {
-                    // Oylama kapalıyken istemci yalnızca ekrandaki mevcut disabled
-                    // oyları gönderebilir; değişiklik denemesi kabul edilmez.
-                    foreach (var submitted in submittedScores)
-                    {
-                        var matchingVote = activeVotes.SingleOrDefault(x =>
-                            x.PlayAwardCategoryId ==
-                                submitted.PlayAwardCategoryId);
-
-                        if (matchingVote is null ||
-                            matchingVote.Score != submitted.Score)
-                        {
-                            return await FailAsync(
-                                JuryVotingSaveVoteResult.VotingClosed,
-                                "Normal oylama kapalı ve kullanılabilir ek oylama hakkı yok.",
-                                new
-                                {
-                                    play.JuriOylamaStatus,
-                                    AdditionalVotingId = additionalVotingId
-                                });
-                        }
-                    }
-                }
-
                 var feeEntity = await _context.JuryGameTicketFees
                     .FirstOrDefaultAsync(x =>
                         x.UserId == authenticatedUserId &&
@@ -1427,15 +1394,6 @@ namespace YkbAfife.Business.Service.JuryVoting
                             VoteChangeCount = voteChanges.Count,
                             TicketFeeChanged = ticketFeeChanged
                         });
-                }
-
-                if (!normalVotingOpen &&
-                    voteChanges.Any(x => x.ExistingVote is null) &&
-                    !additionalVotingId.HasValue)
-                {
-                    return await FailAsync(
-                        JuryVotingSaveVoteResult.VotingClosed,
-                        "İlk aday oyları için normal veya ek oylama açık olmalıdır.");
                 }
 
                 if (isBlacklisted && voteChanges.Count != 0)
@@ -1616,7 +1574,7 @@ namespace YkbAfife.Business.Service.JuryVoting
                         play.JuriOylamaStatus,
                         IsBlacklisted = isBlacklisted,
                         SourceFormIsEligible = sourceFormIsEligible,
-                        NormalVotingOpen = normalVotingOpen,
+                        InitialVotingAllowed = initialVotingAllowed,
                         AdditionalVotingId = additionalVotingId,
                         UsesAdditionalVoting = useAdditionalVoting
                     }),
@@ -1882,7 +1840,18 @@ public async Task<JuryVotingComplexTableViewModel> BuildGameListTableModelAsync(
 
      var trimmedSearch = search?.Trim() ?? string.Empty;
  
-     var tabs = GetGameListTabs();
+     var hasAssignedVisiblePlay = await _context.JuryAssignedPlays
+         .AsNoTracking()
+         .AnyAsync(assignedPlay =>
+             assignedPlay.IsPublished &&
+             assignedPlay.JuryId == authenticatedUserId &&
+             _context.Plays.AsNoTracking().Any(play =>
+                 play.Id == assignedPlay.PlayId &&
+                 play.IsPublished &&
+                 play.IsActive &&
+                 play.JuriOylamaStatus));
+
+     var tabs = GetGameListTabs(hasAssignedVisiblePlay);
 
      var activeTab = tabs.FirstOrDefault(x => x.Key == tab) ?? tabs[0];
 
@@ -2014,13 +1983,15 @@ public async Task<JuryVotingComplexTableViewModel> BuildGameListTableModelAsync(
 
          .Select(x => x.PlayId);
  
-     // Oyun Listesi gerçekten bütün aktif/yayımlanmış oyunları gösterir.
-     // JuriOylamaStatus yalnızca "Oylanabilir Oyunlar" ekranının filtresidir.
+     // JuriOylamaStatus Jüri panelinin mutlak görünürlük filtresidir.
      var filteredRows = _context.Plays
 
          .AsNoTracking()
 
-         .Where(play => play.IsPublished && play.IsActive)
+         .Where(play =>
+             play.IsPublished &&
+             play.IsActive &&
+             play.JuriOylamaStatus)
 
          .Where(play => tab != "assigned" || _context.JuryAssignedPlays
 
@@ -3170,19 +3141,26 @@ select new JuryVotingPlayTableQueryRow
    }
 
  
-        private static IReadOnlyList<JuryVotingComplexTableTabViewModel> GetGameListTabs()
+        private static IReadOnlyList<JuryVotingComplexTableTabViewModel> GetGameListTabs(
+            bool hasAssignedVisiblePlay)
 
         {
 
-            return
+            var tabs = new List<JuryVotingComplexTableTabViewModel>
+            {
+                new() { Title = "Tüm Oyunlar", Key = "all" }
+            };
 
-            [
+            if (hasAssignedVisiblePlay)
+            {
+                tabs.Add(new JuryVotingComplexTableTabViewModel
+                {
+                    Title = "Görev Oyunların",
+                    Key = "assigned"
+                });
+            }
 
-                new JuryVotingComplexTableTabViewModel { Title = "Tüm Oyunlar", Key = "all" },
-
-                new JuryVotingComplexTableTabViewModel { Title = "Görev Oyunların", Key = "assigned" }
-
-            ];
+            return tabs;
 
         }
  
