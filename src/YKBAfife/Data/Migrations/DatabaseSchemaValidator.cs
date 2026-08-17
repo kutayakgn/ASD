@@ -97,6 +97,7 @@ internal static partial class DatabaseSchemaValidator
 
         foreach (var table in catalog.Tables.Where(x =>
                      !x.EndsWith(".AdminLogs", StringComparison.OrdinalIgnoreCase) &&
+                     !x.EndsWith(".JuryLogs", StringComparison.OrdinalIgnoreCase) &&
                      !x.EndsWith(".UsersLog", StringComparison.OrdinalIgnoreCase) &&
                      !x.EndsWith(".__EFMigrationsHistory", StringComparison.OrdinalIgnoreCase)))
         {

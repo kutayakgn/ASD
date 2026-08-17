@@ -1,0 +1,1102 @@
+@model YkbAfife.Domain.Model.Data.JuryVoting.JuryVotingPlayDetailViewModel
+ 
+@{
+
+    Layout = "~/Views/JuryVoting/_JuryVotingLayout.cshtml";
+
+    var prevPage = Context.Request.Headers["Referer"].ToString();
+
+}
+ 
+@section styles {
+<link rel="stylesheet"
+
+          href="~/css/jury-voting.css"
+
+          asp-append-version="true" />
+
+}
+<div class="mb-3 section-padding play-detail-wrapper">
+@Html.AntiForgeryToken()
+<div class="mt-3">
+<button id="go-back" class="back-btn">
+<img src="~/icon/arrow-left.svg" />
+
+            @(prevPage.Contains("oylanabilir") ? "Oylanabilir Oyunlar' a Dön" : "Oyun Listesi' ne Dön")
+</button>
+</div>
+ 
+    
+<div class="play-info-wrapper">
+<div class="play-title">
+
+            @Model.PlayName
+</div>
+<div class="theater-name"><span>Tiyatro Adı</span> @Model.TheaterName</div>
+<hr />
+</div>
+ 
+    <div id="categories-section" class="d-flex flex-column gap-4">
+
+        @if (Model.ShowAwardCategories)
+
+        {
+<div class="categories-header">
+
+                Kategoriler
+</div>
+
+        }
+ 
+        @if (!string.IsNullOrWhiteSpace(Model.AwardCategoriesMessage))
+
+        {
+<div class="no-category-alert-banner" role="alert">
+<img src="~/icon/info-circle-solid.svg" width="20" height="20" class="" alt="Bilgi" />
+<span>@Model.AwardCategoriesMessage</span>
+</div>
+
+        }
+ 
+        <div class="row row-cols-1 row-cols-lg-2 g-4">
+
+            @if (Model.ShowAwardCategories)
+
+            {
+
+                @foreach (var categoryCard in Model.AwardCategories)
+
+                {
+
+                    var categoryScore = categoryCard.SelectedScore ?? 0;
+
+                    var isCategoryEditable = categoryCard.IsEditable;
+
+                    var hasExistingCategoryVote = categoryCard.SelectedJuryVoteId.HasValue;
+
+                    var shouldShowCandidateSelectionInfo = categoryCard.Candidates.Count > 1
+&& isCategoryEditable
+&& !hasExistingCategoryVote;
+<div class="col">
+<div class="category-card voting-card@(isCategoryEditable ? string.Empty : " voting-disabled")"
+
+                             data-playawardid="@categoryCard.SelectedPlayAwardCategoryId"
+
+                             data-juryvoteid="@categoryCard.SelectedJuryVoteId"
+
+                             data-originalscore="@categoryScore"
+
+                             data-score="@categoryScore"
+
+                             data-editable="@isCategoryEditable.ToString().ToLowerInvariant()"
+
+                             data-placeholder="@Url.Content($"~/images/jury-voting/{categoryCard.AwardCategoryCode}.svg")">
+<div class="category-header">
+
+                                @categoryCard.CategoryDisplayName
+</div>
+<div class="category-content">
+<div class="category-photo">
+<img src="@(!string.IsNullOrWhiteSpace(categoryCard.SelectedPlayCategoryPhoto) ? categoryCard.SelectedPlayCategoryPhoto : Url.Content($"~/images/jury-voting/{categoryCard.AwardCategoryCode}.svg"))" />
+</div>
+<div class="category-voting">
+
+                                    @if (categoryCard.Candidates.Count > 1)
+
+                                    {
+ 
+                                        var selectedCandidate = categoryCard.Candidates.FirstOrDefault(candidate =>
+
+                                                                                        candidate.PlayAwardCategoryId ==
+
+                                                                                        categoryCard.SelectedPlayAwardCategoryId);
+ 
+                                        var hasSelectedCandidate =
+
+                                                ((!isCategoryEditable) || hasExistingCategoryVote) &&
+
+                                                selectedCandidate is not null;
+ 
+                                        var candidateDropdownLabel = hasSelectedCandidate
+
+                                                ? (string.IsNullOrWhiteSpace(selectedCandidate!.Candidate)
+
+                                                    ? "Aday bilgisi yok"
+
+                                                    : selectedCandidate.Candidate)
+
+                                                : "Oyuncu Seçin";
+ 
+                                        
+<div class="dropdown category-candidate-dropdown">
+<label>Değerlendirilecek Aday</label>
+ 
+                                            <select class="category-candidate-select"
+
+                                                    disabled="@(!isCategoryEditable)">
+ 
+                                                <option value=""
+
+                                                        data-juryvoteid=""
+
+                                                        data-score="0"
+
+                                                        data-photo=""
+
+                                                        selected="@(!hasSelectedCandidate)">
+
+                                                    Oyuncu Seçin
+</option>
+ 
+                                                @foreach (var candidate in categoryCard.Candidates)
+
+                                                {
+
+                                                    var isSelected =
+
+                                                        hasSelectedCandidate &&
+
+                                                        candidate.PlayAwardCategoryId ==
+
+                                                        categoryCard.SelectedPlayAwardCategoryId;
+ 
+                                                    <option value="@candidate.PlayAwardCategoryId"
+
+                                                            data-juryvoteid="@candidate.JuryVoteId"
+
+                                                            data-score="@(candidate.Score ?? 0)"
+
+                                                            data-photo="@candidate.PlayCategoryPhoto"
+
+                                                            selected="@isSelected">
+
+                                                        @(string.IsNullOrWhiteSpace(candidate.Candidate)
+
+                                                            ? "Aday bilgisi yok"
+
+                                                            : candidate.Candidate)
+</option>
+
+                                                }
+</select>
+ 
+                                            <button class="form-select category-candidate category-candidate-dropdown-toggle"
+
+                                                    type="button"
+
+                                                    data-bs-toggle="dropdown"
+
+                                                    aria-expanded="false"
+
+                                                    disabled="@(!isCategoryEditable)">
+ 
+                                                <span class="category-candidate-dropdown-label
+
+                                                    @(!hasSelectedCandidate ? "is-placeholder" : "")">
+
+                                                    @candidateDropdownLabel
+</span>
+ 
+                                                <img src="~/icon/angle-down.svg"
+
+                                                     alt="Açılır menü oku"
+
+                                                     class="category-candidate-dropdown-icon" />
+</button>
+ 
+                                            <div class="dropdown-menu category-candidate-dropdown-menu">
+
+                                                @foreach (var candidate in categoryCard.Candidates)
+
+                                                {
+<button type="button"
+
+                                                            class="dropdown-item category-candidate-option"
+
+                                                            data-value="@candidate.PlayAwardCategoryId">
+
+                                                        @(string.IsNullOrWhiteSpace(candidate.Candidate)
+
+                                                            ? "Aday bilgisi yok"
+
+                                                            : candidate.Candidate)
+</button>
+
+                                                }
+</div>
+</div>
+
+                                    }
+
+                                    else
+
+                                    {
+<div class="category-candidate">
+
+                                            @categoryCard.SelectedCandidate
+</div>
+
+                                    }
+<div class="category-candidate-info-banner@(shouldShowCandidateSelectionInfo ? string.Empty : " d-none")"
+
+                                         role="alert">
+<img src="~/icon/info-circle-solid.svg" width="20" height="20" alt="Bilgi" />
+<span>Bu kategori için, sezon içinde oyuncu değişikliği gerçekleşmiştir. Lütfen değerlendirmek istediğiniz oyuncuyu seçin.</span>
+</div>
+<div class="category-stars@(shouldShowCandidateSelectionInfo ? " d-none" : string.Empty)">
+
+                                        @for (int i = 1; i <= 10; i++)
+
+                                        {
+<span class="star"
+
+                                                  data-value="@i">
+<img src="~/icon/star_empty_active.svg" />
+</span>
+
+                                        }
+</div>
+<div class="category-score@(shouldShowCandidateSelectionInfo ? " d-none" : string.Empty)">
+
+                                        @categoryScore/10
+</div>
+</div>
+</div>
+</div>
+</div>
+
+                }
+
+            }
+ 
+            <div class="col">
+<div class="category-card">
+<div class="category-header">
+
+                        Bilet Ücreti
+</div>
+<div class="category-content align-items-center justify-content-center">
+<div class="category-photo">
+<img src="~/images/jury-voting/ticket.svg" />
+</div>
+<div class="category-voting">
+<label id="tf">Bilet Ücreti</label>
+<div class="input-group ticket-fee-input-group">
+<input id="ticketFee"
+
+                                   ticketFeeId="@Model.TicketFeeId"
+
+                                   maxlength="5"
+
+                                   data-original="@(Model.TicketFee.HasValue ? decimal.Truncate(Model.TicketFee.Value) : null)"
+
+                                   data-editable="@Model.IsTicketFeeEditable.ToString().ToLowerInvariant()"
+
+                                   value="@(Model.TicketFee.HasValue ? decimal.Truncate(Model.TicketFee.Value) : null)"
+
+                                   type="text"
+
+                                   autocomplete="off"
+
+                                   inputmode="numeric"
+
+                                   pattern="[0-9]*"
+
+                                   class="form-control"
+
+                                   placeholder="Bilet Ücretini Yazınız"
+
+                                   disabled="@(!Model.IsTicketFeeEditable)" />
+<span class="input-group-text">TL</span>
+</div>
+<div id="ticketFeeValidation" class="ticket-validation"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="voting-btn-wrapper">
+<button type="button" class="vote-btn"
+
+                    data-playid="@Model.PlayId"
+
+                    data-userid="@Model.UserId"
+
+                    disabled="@(!Model.CanSubmit)">
+
+                Oy Kullan
+</button>
+</div>
+</div>
+</div>
+
+@section Scripts {
+<script>
+
+        const isVotingActive = @Model.IsVotingActive.ToString().ToLowerInvariant();
+
+        const canEditExistingVotes = @Model.CanEditExistingVotes.ToString().ToLowerInvariant();
+
+        const canSubmit = @Model.CanSubmit.ToString().ToLowerInvariant();
+
+        const showAwardCategories = @Model.ShowAwardCategories.ToString().ToLowerInvariant();
+
+        const isTicketFeeEditable = @Model.IsTicketFeeEditable.ToString().ToLowerInvariant();
+ 
+        document.addEventListener("DOMContentLoaded", () => {
+
+            initializeCandidateSelections();
+
+            initializeStars();
+
+            initializeTicketValidation();
+
+            if (canSubmit) {
+
+                document
+
+                    .querySelector(".vote-btn")
+
+                    .addEventListener("click", saveVotes);
+
+            }
+ 
+        });
+ 
+        document.getElementById("go-back")
+
+        .addEventListener("click", () => {
+ 
+            history.back();
+ 
+        });
+ 
+
+
+        function initializeStars() {
+
+            let cards =
+
+                document.querySelectorAll(".voting-card");
+ 
+            cards.forEach(card => {
+
+                syncCardState(card);
+
+                let stars =
+
+                    card.querySelectorAll(".star");
+ 
+                stars.forEach(star => {
+
+                    if (star.dataset.bound === "true") {
+
+                        return;
+
+                    }
+ 
+                    star.dataset.bound = "true";
+ 
+                    star.addEventListener("click", () => {
+
+                        if (!isVotingActive || card.dataset.editable !== "true") {
+
+                            return;
+
+                        }
+ 
+                        let value =
+
+                            parseInt(star.dataset.value);
+ 
+                        card.dataset.score = value;
+ 
+                        paintStars(card, value);
+ 
+                        card.querySelector(
+
+                            ".category-score"
+
+                        ).innerText =
+
+                            `${value}/10`;
+ 
+                    });
+
+                });
+
+            });
+
+        }
+ 
+               function initializeCandidateSelections() {
+
+            const selects = document.querySelectorAll(
+
+                ".category-candidate-select"
+
+            );
+ 
+            selects.forEach(select => {
+
+                syncCardCandidate(select);
+ 
+                const dropdown = select.closest(
+
+                    ".category-candidate-dropdown"
+
+                );
+ 
+                if (dropdown) {
+
+                    const optionButtons = dropdown.querySelectorAll(
+
+                        ".category-candidate-option"
+
+                    );
+ 
+                    optionButtons.forEach(button => {
+
+                        if (button.dataset.bound === "true") {
+
+                            return;
+
+                        }
+ 
+                        button.dataset.bound = "true";
+ 
+                        button.addEventListener("click", () => {
+
+                            if (select.disabled) {
+
+                                return;
+
+                            }
+ 
+                            select.value = button.dataset.value || "";
+ 
+                            syncCardCandidate(select);
+ 
+                            select.dispatchEvent(new Event("change", {
+
+                                bubbles: true
+
+                            }));
+
+                        });
+
+                    });
+
+                }
+ 
+                select.addEventListener("change", () => {
+
+                    syncCardCandidate(select);
+
+                });
+
+            });
+
+        }
+ 
+               function syncCardCandidate(select) {
+
+            const card = select.closest(".voting-card");
+ 
+            if (!card) {
+
+                return;
+
+            }
+ 
+            const selectedOption =
+
+                select.options[select.selectedIndex];
+ 
+            if (!selectedOption) {
+
+                return;
+
+            }
+ 
+            const selectedValue = selectedOption.value || "";
+
+            const isPlaceholder = selectedValue.length === 0;
+ 
+            card.dataset.playawardid = selectedValue;
+
+            card.dataset.juryvoteid =
+
+                selectedOption.dataset.juryvoteid || "";
+ 
+            const score = parseInt(
+
+                selectedOption.dataset.score || "0",
+
+                10
+
+            );
+ 
+            card.dataset.originalscore = score.toString();
+
+            card.dataset.score = score.toString();
+ 
+            const photo =
+
+                selectedOption.dataset.photo ||
+
+                card.dataset.placeholder ||
+
+                "";
+ 
+            const image = card.querySelector(".category-photo img");
+ 
+            if (image) {
+
+                image.src = photo;
+
+            }
+ 
+            const dropdown = select.closest(
+
+                ".category-candidate-dropdown"
+
+            );
+ 
+            if (dropdown) {
+
+                const label = dropdown.querySelector(
+
+                    ".category-candidate-dropdown-label"
+
+                );
+ 
+                if (label) {
+
+                    label.textContent = isPlaceholder
+
+                        ? "Oyuncu Seçin"
+
+                        : selectedOption.textContent.trim();
+ 
+                    label.classList.toggle(
+
+                        "is-placeholder",
+
+                        isPlaceholder
+
+                    );
+
+                }
+ 
+                const optionButtons = dropdown.querySelectorAll(
+
+                    ".category-candidate-option"
+
+                );
+ 
+                optionButtons.forEach(button => {
+
+                    const isSelected =
+
+                        !isPlaceholder &&
+
+                        button.dataset.value === selectedValue;
+ 
+                    button.classList.toggle("active", isSelected);
+
+                    button.setAttribute(
+
+                        "aria-selected",
+
+                        isSelected.toString()
+
+                    );
+
+                });
+
+            }
+ 
+            syncCardState(card);
+
+        }
+ 
+        function syncCardState(card) {
+
+            let score =
+
+                parseInt(card.dataset.score || 0);
+ 
+            let candidateSelect = card.querySelector(
+
+                ".category-candidate-select"
+
+            );
+ 
+            let isCategoryEditable =
+
+                isVotingActive && (score === 0 || canEditExistingVotes);
+ 
+            let hasSelectedCandidate =
+
+                !candidateSelect ||
+
+                !!candidateSelect.value;
+ 
+            let isCardEditable =
+
+                isCategoryEditable && hasSelectedCandidate;
+ 
+            card.dataset.editable =
+
+                isCardEditable.toString();
+ 
+            card.classList.toggle(
+
+                "voting-disabled",
+
+                !isCategoryEditable
+
+            );
+ 
+            let stars =
+
+                card.querySelectorAll(".star");
+ 
+                
+
+            let candidateDropdown = card.querySelector(
+
+                ".category-candidate-dropdown"
+
+            );
+ 
+            let candidateDropdownToggle = card.querySelector(
+
+                ".category-candidate-dropdown-toggle"
+
+            );
+ 
+            let candidateDropdownMenu = card.querySelector(
+
+                ".category-candidate-dropdown-menu"
+
+            );
+ 
+            let candidateInfoBanner = card.querySelector(
+
+                ".category-candidate-info-banner"
+
+            );
+ 
+            let starsWrapper = card.querySelector(
+
+                ".category-stars"
+
+            );
+ 
+            let scoreLabel = card.querySelector(
+
+                ".category-score"
+
+            );
+ 
+            if (candidateSelect) {
+
+                candidateSelect.disabled =
+
+                    !isCategoryEditable;
+
+            }
+ 
+            if (candidateDropdownToggle) {
+
+                candidateDropdownToggle.disabled =
+
+                    !isCategoryEditable;
+
+            }
+ 
+            if (!isCategoryEditable) {
+
+                candidateDropdown?.classList.remove("show");
+
+                candidateDropdownMenu?.classList.remove(
+
+                    "show"
+
+                );
+ 
+                if (candidateDropdownToggle) {
+
+                    candidateDropdownToggle.setAttribute(
+
+                        "aria-expanded",
+
+                        "false"
+
+                    );
+
+                }
+
+            }
+ 
+            let showCandidateInfoBanner =
+
+                !!candidateSelect &&
+
+                isCategoryEditable &&
+
+                !hasSelectedCandidate;
+ 
+            if (candidateInfoBanner) {
+
+                candidateInfoBanner.classList.toggle(
+
+                    "d-none",
+
+                    !showCandidateInfoBanner
+
+                );
+
+            }
+ 
+            if (starsWrapper) {
+
+                starsWrapper.classList.toggle(
+
+                    "d-none",
+
+                    showCandidateInfoBanner
+
+                );
+
+            }
+ 
+            if (scoreLabel) {
+
+                scoreLabel.classList.toggle(
+
+                    "d-none",
+
+                    showCandidateInfoBanner
+
+                );
+
+            }
+ 
+            stars.forEach(star => {
+
+                star.classList.toggle(
+
+                    "disabled",
+
+                    !isVotingActive || !isCardEditable
+
+                );
+
+            });
+ 
+            paintStars(card, score);
+ 
+            if (scoreLabel) {
+
+                scoreLabel.innerText =
+
+                    `${score}/10`;
+
+            }
+
+        }
+ 
+        function paintStars(card, score) {
+ 
+            let stars =
+
+                card.querySelectorAll(".star");
+ 
+            stars.forEach(star => {
+
+                let value =
+
+                    parseInt(star.dataset.value);
+
+                    let image = star.querySelector("img")
+ 
+                if (value <= score) {
+
+                    star.classList.add("active");
+
+                    image.src = "/icon/star_filled_active.svg"
+
+                }
+
+                else {
+
+                    star.classList.remove("active");
+
+                    image.src = "/icon/star_empty_active.svg"
+
+                }
+ 
+            });
+ 
+        }
+ 
+        function initializeTicketValidation() {
+            const ticketInput = document.getElementById("ticketFee");
+
+            if (!ticketInput || ticketInput.disabled) {
+                return;
+            }
+
+            ticketInput.addEventListener("input", event => {
+                // Ondalık ayraç, eksi işareti ve TL metni payload'a giremez.
+                event.target.value = event.target.value
+                    .replace(/\D/g, "")
+                    .slice(0, 5);
+
+                validateTicketFee();
+            });
+
+            ticketInput.addEventListener("paste", () => {
+                window.setTimeout(validateTicketFee, 0);
+            });
+        }
+
+        function validateTicketFee() {
+            const ticketInput = document.getElementById("ticketFee");
+            const validation = document.getElementById(
+                "ticketFeeValidation"
+            );
+
+            if (!ticketInput || !validation) {
+                return false;
+            }
+
+            const value = ticketInput.value.trim();
+            const isValid = /^[1-9][0-9]{0,4}$/.test(value);
+
+            validation.innerText = isValid
+                ? ""
+                : "Bilet ücreti 1-99999 arasında, en fazla 5 haneli tam sayı olmalıdır.";
+
+            ticketInput.classList.toggle(
+                "input-error",
+                !isValid
+            );
+
+            return isValid;
+        }
+
+        function showVotingCompletionPopup(
+
+            message,icon,
+
+            onOk
+
+        ) {
+
+            let popup =
+
+                document.getElementById(
+
+                    "voteValidationPopup"
+
+                );
+ 
+            if (popup) {
+
+                popup.remove();
+
+            }
+ 
+            popup = document.createElement("div");
+
+            popup.id = "voteValidationPopup";
+
+            popup.className =
+
+                "vote-validation-popup-overlay";
+ 
+            popup.innerHTML = `
+<div class="vote-validation-popup-card">
+<img src="${icon}" />
+<div class="vote-validation-popup-message">
+
+                        ${message}
+</div>
+<button type="button" id="voteValidationPopupOk" class="vote-validation-popup-ok">
+
+                        Tamam
+</button>
+</div>
+
+            `;
+ 
+            document.body.appendChild(popup);
+ 
+            popup.querySelector("#voteValidationPopupOk")
+
+                .addEventListener("click", () => {
+
+                    popup.remove();
+
+                    if (typeof onOk === "function") {
+
+                        onOk();
+
+                    }
+
+                });
+
+        }
+ 
+        function getResultMessage(resultCode) {
+            const messages = {
+                Unauthorized: "Oturumunuz sona ermiş. Lütfen yeniden giriş yapın.",
+                JuryNotEligible: "Jüri hesabınız aktif veya yetkili değil.",
+                PlayNotFound: "Oyun bulunamadı.",
+                PlayNotEligible: "Oyun aktif veya yayında değil.",
+                SourceFormNotEligible: "Oyunun bağlı olduğu başvuru aktif/yayında değil.",
+                PlayStatusNotValidForVoting: "Bu oyun statüsünde aday oyu kullanılamaz.",
+                VotingClosed: "Normal oylama kapalı ve kullanılabilir ek oylama hakkınız yok.",
+                Blacklisted: "Bu oyun için blacklist kaydınız bulunduğundan aday oyu kullanamazsınız.",
+                ScoreOutOfRange: "Bütün puanlar 1 ile 10 arasında olmalıdır.",
+                InvalidTicketFee: "Bilet ücreti 1-99999 arasında tam sayı olmalıdır.",
+                CandidateNotEligible: "Seçilen aday artık aktif veya yayında değil.",
+                MultipleCandidatesForSameCard: "Aynı kategoride yalnızca bir aday seçebilirsiniz.",
+                IncompleteVoteSet: "Enabled durumdaki tüm aday kartlarını ve bilet ücretini doldurmalısınız.",
+                AdditionalVotingNotAvailable: "Oy güncellemek için kullanılabilir ek oylama hakkınız yok.",
+                AdditionalVotingAlreadyUsed: "Ek oylama hakkınız başka bir işlemde kullanılmış.",
+                NoChanges: "Kaydedilecek bir değişiklik bulunamadı.",
+                ConcurrencyConflict: "Kayıt başka bir işlemle çakıştı. Sayfayı yenileyip tekrar deneyin."
+            };
+
+            return messages[resultCode] ||
+                "İşlem tamamlanamadı. Sayfayı yenileyip tekrar deneyin.";
+        }
+
+        async function saveVotes() {
+            if (!canSubmit || !validateTicketFee()) {
+                return;
+            }
+
+            const votingCards = Array.from(
+                document.querySelectorAll(".voting-card")
+            );
+
+            const scores = [];
+            let hasIncompleteCategory = false;
+
+            votingCards.forEach(card => {
+                const score = Number.parseInt(
+                    card.dataset.score || "0",
+                    10
+                );
+
+                const isEditable =
+                    card.dataset.editable === "true";
+
+                const playAwardCategoryId =
+                    card.dataset.playawardid || "";
+
+                // Görünen kartların tamamı gönderilir. Disabled eski oylar da
+                // sunucu tarafındaki tam ekran bütünlük kontrolüne dahildir.
+                if (!playAwardCategoryId || score < 1 || score > 10) {
+                    if (isEditable) {
+                        hasIncompleteCategory = true;
+                    }
+
+                    return;
+                }
+
+                scores.push({
+                    playAwardCategoryId,
+                    juryVoteId:
+                        card.dataset.juryvoteid || null,
+                    score
+                });
+            });
+
+            if (showAwardCategories && hasIncompleteCategory) {
+                showVotingCompletionPopup(
+                    "Oy kullanma işleminizi tamamlamak için tüm kategori kartlarında bir aday seçip 1-10 arasında puan vermelisiniz.",
+                    "/icon/circle-exclamation-solid.svg"
+                );
+                return;
+            }
+
+            const ticketInput =
+                document.getElementById("ticketFee");
+
+            const payload = {
+                playId: document.querySelector(".vote-btn")
+                    .dataset.playid,
+                ticketFee: Number.parseInt(
+                    ticketInput.value,
+                    10
+                ),
+                ticketFeeId:
+                    ticketInput.getAttribute("ticketFeeId") ||
+                    null,
+                scores: showAwardCategories ? scores : []
+            };
+
+            const token = document.querySelector(
+                'input[name="__RequestVerificationToken"]'
+            )?.value;
+
+            const button = document.querySelector(".vote-btn");
+            button.disabled = true;
+
+            try {
+                const response = await fetch(
+                    "/oylama/oy-kaydet",
+                    {
+                        method: "POST",
+                        credentials: "same-origin",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "RequestVerificationToken": token
+                        },
+                        body: JSON.stringify(payload)
+                    }
+                );
+
+                let result = null;
+
+                try {
+                    result = await response.json();
+                } catch {
+                    result = null;
+                }
+
+                if (response.ok) {
+                    showVotingCompletionPopup(
+                        "Oy ve bilet ücreti bilgileriniz başarıyla kaydedildi.",
+                        "/icon/circle-check-solid.svg",
+                        () => location.reload()
+                    );
+                    return;
+                }
+
+                showVotingCompletionPopup(
+                    getResultMessage(result?.resultCode),
+                    "/icon/circle-exclamation-solid.svg",
+                    response.status === 401
+                        ? () => location.href = "/oylama/giris"
+                        : null
+                );
+            } catch {
+                showVotingCompletionPopup(
+                    "Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edip tekrar deneyin.",
+                    "/icon/circle-exclamation-solid.svg"
+                );
+            } finally {
+                button.disabled = !canSubmit;
+            }
+        }
+</script>
+
+}
