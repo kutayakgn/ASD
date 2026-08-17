@@ -1,4 +1,5 @@
 using System.Globalization;
+using YKBAfife.Helpers;
 using YKBAfife.Models.Components;
 using YKBAfife.Models.ViewModels;
 
@@ -16,6 +17,7 @@ public static class JuryWatchedPlayComplexTableFactory
         CurrentTabKey = TabKey,
         SearchPlaceholder = "Oyun adı ara",
         MinimumTableWidth = 420,
+        IsNavigationColActive = true,
         ExportControllerName = "Management",
         ExportActionName = "ExportJuryWatchedPlays",
         IsExportEnabled = report.TotalCount > 0,
@@ -45,10 +47,19 @@ public static class JuryWatchedPlayComplexTableFactory
                         ColWidth = 100
                     }
                 ],
-                Rows = report.Rows.Select(row => new ComplexTableRowViewModel
+                Rows = report.Rows.Select(row =>
                 {
-                    Id = $"watched-play-{row.PlayId:N}",
-                    Cells = [new ComplexTableCellViewModel { Content = row.PlayName }]
+                    var slug = SlugHelper.Resolve(row.Slug, row.PlayName);
+                    var returnUrl = Uri.EscapeDataString($"/juriler/{report.JuryId:D}");
+                    var detailsUrl = $"/oyunlar/{Uri.EscapeDataString(slug)}?returnUrl={returnUrl}";
+
+                    return new ComplexTableRowViewModel
+                    {
+                        Id = $"watched-play-{row.PlayId:N}",
+                        NavigationUrl = detailsUrl,
+                        NavigationAccessibleLabel = $"{row.PlayName} oyun detayına git",
+                        Cells = [new ComplexTableCellViewModel { Content = row.PlayName }]
+                    };
                 }).ToArray()
             }
         ],
@@ -59,7 +70,8 @@ public static class JuryWatchedPlayComplexTableFactory
                 Text = report.TotalCount.ToString(CultureInfo.CurrentCulture),
                 IsEmphasized = true
             },
-            new() { Text = " kayıt bulundu." }
+             new() { Text = " kayıt", IsEmphasized = true },
+                new() { Text = " bulundu." }
         ]
     };
 }

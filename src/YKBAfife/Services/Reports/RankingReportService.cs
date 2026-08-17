@@ -56,6 +56,8 @@ public sealed class RankingReportService(AfifeContext context) : IRankingReportS
                 NumberOfActiveVote = ranking.NumberOfActiveVote,
                 ArithmeticMean = ranking.ArithmeticMean,
                 TrimmedMean = ranking.TrimmedMean,
+                ArithmeticRank = ranking.ArithmeticRank,
+                TrimmedRank = ranking.TrimmedRank,
                 ArithmeticVariance = ranking.ArithmeticVariance,
                 ConfidenceValue = ranking.ConfidenceValue
             };
@@ -70,7 +72,12 @@ public sealed class RankingReportService(AfifeContext context) : IRankingReportS
 
         var rows = data.Select((row, index) => new RankingRowViewModel
         {
-            Position = offset + index + 1,
+            Position = normalized.RankingType switch
+            {
+                RankingTypes.Arithmetic => row.ArithmeticRank,
+                RankingTypes.Trimmed => row.TrimmedRank,
+                _ => offset + index + 1
+            },
             PlayAwardCategoryId = row.PlayAwardCategoryId,
             CategoryName = row.CategoryName,
             DisplayName = selectedCategory.HasRoleAndPhoto ? row.CandidateName : row.TheaterName,
@@ -179,19 +186,18 @@ public sealed class RankingReportService(AfifeContext context) : IRankingReportS
         string rankingType) => rankingType switch
         {
             RankingTypes.Arithmetic => source
-                .OrderBy(row => row.ArithmeticMean == null)
-                .ThenByDescending(row => row.ArithmeticMean)
+                .OrderBy(row => row.ArithmeticRank == null)
+                .ThenBy(row => row.ArithmeticRank)
                 .ThenBy(row => row.CandidateName)
                 .ThenBy(row => row.PlayName),
             RankingTypes.Confidence => source
-                .OrderBy(row => row.ConfidenceValue == null)
-                .ThenByDescending(row => row.ConfidenceValue)
-                .ThenByDescending(row => row.TrimmedMean)
+                .OrderBy(row => row.ArithmeticVariance == null)
+                .ThenBy(row => row.ArithmeticVariance)
                 .ThenBy(row => row.CandidateName)
                 .ThenBy(row => row.PlayName),
             _ => source
-                .OrderBy(row => row.TrimmedMean == null)
-                .ThenByDescending(row => row.TrimmedMean)
+                .OrderBy(row => row.TrimmedRank == null)
+                .ThenBy(row => row.TrimmedRank)
                 .ThenBy(row => row.CandidateName)
                 .ThenBy(row => row.PlayName)
         };
@@ -210,7 +216,7 @@ public sealed class RankingReportService(AfifeContext context) : IRankingReportS
         {
             RankingTabs.CategoryArithmetic => RankingTypes.Arithmetic,
             RankingTabs.Confidence => RankingTypes.Confidence,
-            RankingTabs.AllGames when RankingTypes.All.Contains(query.RankingType) => query.RankingType,
+            RankingTabs.AllGames => RankingTypes.Trimmed,
             _ => RankingTypes.Trimmed
         };
         var categoryCode = categories.Any(category => category.CategoryCode == query.CategoryCode)
@@ -239,6 +245,8 @@ public sealed class RankingReportService(AfifeContext context) : IRankingReportS
         public int NumberOfActiveVote { get; init; }
         public double? ArithmeticMean { get; init; }
         public double? TrimmedMean { get; init; }
+        public int? ArithmeticRank { get; init; }
+        public int? TrimmedRank { get; init; }
         public double? ArithmeticVariance { get; init; }
         public int? ConfidenceValue { get; init; }
     }

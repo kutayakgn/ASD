@@ -90,6 +90,9 @@ public sealed partial class ManagementController
             cancellationToken);
         if (announcement is null) return NotFound();
 
+        model.AnnouncementLocationId = announcement.AnnouncementLocationId;
+        ModelState.Remove(nameof(model.AnnouncementLocationId));
+
         model.Text = NormalizeNullable(model.Text);
         model.ButtonText = NormalizeNullable(model.ButtonText);
         model.ButtonLink = NormalizeNullable(model.ButtonLink);
@@ -110,8 +113,7 @@ public sealed partial class ManagementController
             return View(model);
         }
 
-        var hasChanges = announcement.AnnouncementLocationId != model.AnnouncementLocationId ||
-            !string.Equals(announcement.Text, model.Text, StringComparison.Ordinal) ||
+        var hasChanges = !string.Equals(announcement.Text, model.Text, StringComparison.Ordinal) ||
             !string.Equals(announcement.ButtonText, model.ButtonText, StringComparison.Ordinal) ||
             !string.Equals(announcement.ButtonLink, model.ButtonLink, StringComparison.Ordinal) ||
             !string.Equals(announcement.BackgroundColor, model.BackgroundColor, StringComparison.OrdinalIgnoreCase) ||
@@ -133,7 +135,6 @@ public sealed partial class ManagementController
         var oldBackgroundImageId = announcement.BackgroundImageId;
         var now = TurkeyTime.Now;
 
-        announcement.AnnouncementLocationId = model.AnnouncementLocationId;
         announcement.Text = model.Text;
         announcement.ButtonText = model.ButtonText;
         announcement.ButtonLink = model.ButtonLink;

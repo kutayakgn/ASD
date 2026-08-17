@@ -42,6 +42,7 @@ public sealed class PlayTableRowViewModel
     public Guid PlayId { get; init; }
     public string PlayName { get; init; } = string.Empty;
     public string TheaterName { get; init; } = string.Empty;
+    public int StatusCode { get; init; }
     public bool RecordType { get; init; }
     public bool IsNew { get; init; }
     public bool HasSimilarPlay { get; init; }

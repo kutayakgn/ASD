@@ -13,27 +13,30 @@ public static class AnnouncementSettingsComplexTableFactory
         ControllerName = "Management",
         ActionName = "VotingSettings",
         CurrentTabKey = TabKey,
-        ShowHeading = true,
+        ShowHeading = false,
         ShowSearch = false,
+        IsEditableRows = true,
         MinimumTableWidth = 680,
         Tabs =
         [
             new ComplexTableTabViewModel
             {
                 Key = TabKey,
-                Title = "Duyurular",
+                Title = "",
                 PageSize = Math.Max(1, rows.Count),
                 TotalCount = rows.Count,
                 EmptyMessage = "Yayınlanmış duyuru bulunamadı.",
                 Columns =
                 [
-                    new() { Title = "Duyuru Konum ID", Key = "announcementLocationId", ColWidth = 25, IsSortable = false },
-                    new() { Title = "Metin", Key = "text", ColWidth = 75, IsSortable = false }
+                    new() { Title = "Duyuru Konum ID", Key = "announcementLocationId", ColWidth = 12, IsSortable = false },
+                    new() { Title = "Metin", Key = "text", ColWidth = 88, IsSortable = false }
                 ],
                 Rows = rows.Select(row => new ComplexTableRowViewModel
                 {
                     Id = $"announcement-{row.Id:N}",
                     Link = $"/diger-ayarlar/duyurular/{row.Id}",
+                    EditUrl = $"/diger-ayarlar/duyurular/{row.Id}/duzenle",
+                    EditAccessibleLabel = $"{row.AnnouncementLocationId} konumundaki duyuruyu düzenle",
                     Cells =
                     [
                         new ComplexTableCellViewModel { Content = row.AnnouncementLocationId.ToString() },

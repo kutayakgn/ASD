@@ -119,6 +119,51 @@ CREATE TABLE [dbo].[AdminLogs](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
+/****** Object:  Table [dbo].[JuryLogs] ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[JuryLogs](
+    [Id] [uniqueidentifier] NOT NULL,
+    [CorrelationId] [uniqueidentifier] NOT NULL,
+    [JuryId] [uniqueidentifier] NULL,
+    [JuryUsername] [nvarchar](100) NULL,
+    [PlayId] [uniqueidentifier] NULL,
+    [PlayName] [nvarchar](250) NULL,
+    [AdditionalVotingId] [uniqueidentifier] NULL,
+    [AdditionalVotingUsageId] [uniqueidentifier] NULL,
+    [AdditionalVotingUsageType] [tinyint] NULL,
+    [IsAdditionalVoting] [bit] NOT NULL,
+    [OperationName] [nvarchar](256) NOT NULL,
+    [OperationType] [nvarchar](50) NOT NULL,
+    [SubmittedVotesJson] [nvarchar](max) NULL,
+    [OldVotesJson] [nvarchar](max) NULL,
+    [NewVotesJson] [nvarchar](max) NULL,
+    [SubmittedTicketFee] [decimal](10,2) NULL,
+    [OldTicketFee] [decimal](10,2) NULL,
+    [NewTicketFee] [decimal](10,2) NULL,
+    [RequestPayloadJson] [nvarchar](max) NULL,
+    [StateSnapshotJson] [nvarchar](max) NULL,
+    [AffectedVoteCount] [int] NOT NULL,
+    [OccurredAt] [datetime2](7) NOT NULL,
+    [DurationMilliseconds] [bigint] NULL,
+    [IpAddress] [nvarchar](64) NULL,
+    [UserAgent] [nvarchar](1000) NULL,
+    [HttpMethod] [nvarchar](16) NULL,
+    [RequestPath] [nvarchar](2048) NULL,
+    [ControllerName] [nvarchar](128) NULL,
+    [ActionName] [nvarchar](128) NULL,
+    [Application] [nvarchar](100) NOT NULL,
+    [Source] [nvarchar](50) NOT NULL,
+    [IsSuccessful] [bit] NOT NULL,
+    [ResultCode] [nvarchar](100) NULL,
+    [Details] [nvarchar](max) NULL,
+    [FailureReason] [nvarchar](2000) NULL,
+    [IsPublished] [bit] NOT NULL,
+ CONSTRAINT [PK_JuryLogs] PRIMARY KEY CLUSTERED ([Id] ASC)
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
 /****** Object:  Table [dbo].[Announcements]    Script Date: 3.08.2026 15:17:26 ******/
 SET ANSI_NULLS ON
 GO
@@ -437,9 +482,9 @@ CREATE TABLE [dbo].[PlayAwardCategories](
 	[IsCurrent] [bit] NOT NULL,
 	[Role] [nvarchar](200) NULL,
 	[RoleCode] [int] NOT NULL,
+	[SourceFormCandidateOrder] [int] NULL,
 	[PhotoImageId] [uniqueidentifier] NULL,
 	[IsActive] [bit] NOT NULL,
-	[IsJuryPresident] [bit] NOT NULL,
  CONSTRAINT [PK_PlayAwardCategories] PRIMARY KEY CLUSTERED 
 (
 	[Id] ASC
@@ -595,6 +640,7 @@ CREATE TABLE [dbo].[Users](
 	[GroupCode] [int] NULL,
 	[PhotoImageId] [uniqueidentifier] NULL,
 	[IsActive] [bit] NOT NULL,
+	[IsJuryPresident] [bit] NOT NULL,
  CONSTRAINT [PK_Users] PRIMARY KEY CLUSTERED 
 (
 	[Id] ASC
@@ -871,6 +917,40 @@ CREATE UNIQUE NONCLUSTERED INDEX [UX_PlayAwardCategories_Current_Play_Category_R
 WHERE ([IsCurrent]=(1) AND [IsPublished]=(1))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
+/****** Object: Index [IX_JuryLogs_CorrelationId] ******/
+CREATE NONCLUSTERED INDEX [IX_JuryLogs_CorrelationId] ON [dbo].[JuryLogs] ([CorrelationId] ASC)
+GO
+/****** Object: Index [IX_JuryLogs_JuryId_OccurredAt] ******/
+CREATE NONCLUSTERED INDEX [IX_JuryLogs_JuryId_OccurredAt] ON [dbo].[JuryLogs]
+(
+    [JuryId] ASC,
+    [OccurredAt] DESC
+)
+GO
+/****** Object: Index [IX_JuryLogs_PlayId_OccurredAt] ******/
+CREATE NONCLUSTERED INDEX [IX_JuryLogs_PlayId_OccurredAt] ON [dbo].[JuryLogs]
+(
+    [PlayId] ASC,
+    [OccurredAt] DESC
+)
+GO
+/****** Object: Index [IX_JuryLogs_OperationType_IsSuccessful_OccurredAt] ******/
+CREATE NONCLUSTERED INDEX [IX_JuryLogs_OperationType_IsSuccessful_OccurredAt] ON [dbo].[JuryLogs]
+(
+    [OperationType] ASC,
+    [IsSuccessful] ASC,
+    [OccurredAt] DESC
+)
+GO
+/****** Object:  Index [UX_PlayAwardCategories_FormSourceSlot] ******/
+CREATE UNIQUE NONCLUSTERED INDEX [UX_PlayAwardCategories_FormSourceSlot] ON [dbo].[PlayAwardCategories]
+(
+	[PlayId] ASC,
+	[AwardCategoryCode] ASC,
+	[SourceFormCandidateOrder] ASC
+)
+WHERE ([SourceFormCandidateOrder] IS NOT NULL AND [IsCurrent]=(1))
+GO
 /****** Object:  Index [UX_PlayAwardCategories_DefaultPlayCategory]    Script Date: 3.08.2026 15:17:26 ******/
 CREATE UNIQUE NONCLUSTERED INDEX [UX_PlayAwardCategories_DefaultPlayCategory] ON [dbo].[PlayAwardCategories]
 (
@@ -1066,6 +1146,24 @@ GO
 ALTER TABLE [dbo].[AdminLogs] ADD  CONSTRAINT [DF_AdminLogs_IsSuccessful]  DEFAULT ((1)) FOR [IsSuccessful]
 GO
 ALTER TABLE [dbo].[AdminLogs] ADD  CONSTRAINT [DF_AdminLogs_IsPublished]  DEFAULT ((1)) FOR [IsPublished]
+GO
+ALTER TABLE [dbo].[JuryLogs] ADD CONSTRAINT [DF_JuryLogs_Id] DEFAULT (newsequentialid()) FOR [Id]
+GO
+ALTER TABLE [dbo].[JuryLogs] ADD CONSTRAINT [DF_JuryLogs_CorrelationId] DEFAULT (newid()) FOR [CorrelationId]
+GO
+ALTER TABLE [dbo].[JuryLogs] ADD CONSTRAINT [DF_JuryLogs_IsAdditionalVoting] DEFAULT ((0)) FOR [IsAdditionalVoting]
+GO
+ALTER TABLE [dbo].[JuryLogs] ADD CONSTRAINT [DF_JuryLogs_AffectedVoteCount] DEFAULT ((0)) FOR [AffectedVoteCount]
+GO
+ALTER TABLE [dbo].[JuryLogs] ADD CONSTRAINT [DF_JuryLogs_OccurredAt] DEFAULT (DATEADD(HOUR, (3), SYSUTCDATETIME())) FOR [OccurredAt]
+GO
+ALTER TABLE [dbo].[JuryLogs] ADD CONSTRAINT [DF_JuryLogs_Application] DEFAULT (N'AfifeJury') FOR [Application]
+GO
+ALTER TABLE [dbo].[JuryLogs] ADD CONSTRAINT [DF_JuryLogs_Source] DEFAULT (N'JuryPanel') FOR [Source]
+GO
+ALTER TABLE [dbo].[JuryLogs] ADD CONSTRAINT [DF_JuryLogs_IsSuccessful] DEFAULT ((0)) FOR [IsSuccessful]
+GO
+ALTER TABLE [dbo].[JuryLogs] ADD CONSTRAINT [DF_JuryLogs_IsPublished] DEFAULT ((1)) FOR [IsPublished]
 GO
 ALTER TABLE [dbo].[Announcements] ADD  CONSTRAINT [DF_Announcements_IsPublished_SoftDelete]  DEFAULT ((1)) FOR [IsPublished]
 GO
@@ -1290,6 +1388,21 @@ ON UPDATE NO ACTION
 GO
 ALTER TABLE [dbo].[JuryGameTicketFees] CHECK CONSTRAINT [FK_JuryGameTicketFees_Users]
 GO
+ALTER TABLE [dbo].[JuryLogs] WITH CHECK ADD CONSTRAINT [FK_JuryLogs_AdditionalVotings_AdditionalVotingId]
+FOREIGN KEY([AdditionalVotingId]) REFERENCES [dbo].[AdditionalVotings] ([Id])
+GO
+ALTER TABLE [dbo].[JuryLogs] CHECK CONSTRAINT [FK_JuryLogs_AdditionalVotings_AdditionalVotingId]
+GO
+ALTER TABLE [dbo].[JuryLogs] WITH CHECK ADD CONSTRAINT [FK_JuryLogs_Plays_PlayId]
+FOREIGN KEY([PlayId]) REFERENCES [dbo].[Plays] ([Id])
+GO
+ALTER TABLE [dbo].[JuryLogs] CHECK CONSTRAINT [FK_JuryLogs_Plays_PlayId]
+GO
+ALTER TABLE [dbo].[JuryLogs] WITH CHECK ADD CONSTRAINT [FK_JuryLogs_Users_JuryId]
+FOREIGN KEY([JuryId]) REFERENCES [dbo].[Users] ([Id])
+GO
+ALTER TABLE [dbo].[JuryLogs] CHECK CONSTRAINT [FK_JuryLogs_Users_JuryId]
+GO
 ALTER TABLE [dbo].[JuryVotes]  WITH CHECK ADD  CONSTRAINT [FK_JuryVotes_PlayAwardCategories] FOREIGN KEY([PlayAwardCategoryId])
 REFERENCES [dbo].[PlayAwardCategories] ([Id])
 ON UPDATE NO ACTION
@@ -1375,6 +1488,10 @@ GO
 ALTER TABLE [dbo].[AdditionalVotingUsages]  WITH CHECK ADD  CONSTRAINT [CK_AdditionalVotingUsages_UsageType] CHECK  (([UsageType]=(1) OR [UsageType]=(0)))
 GO
 ALTER TABLE [dbo].[AdditionalVotingUsages] CHECK CONSTRAINT [CK_AdditionalVotingUsages_UsageType]
+GO
+ALTER TABLE [dbo].[JuryVotes] WITH CHECK ADD CONSTRAINT [CK_JuryVotes_Score] CHECK (([Score]>=(1) AND [Score]<=(10)))
+GO
+ALTER TABLE [dbo].[JuryVotes] CHECK CONSTRAINT [CK_JuryVotes_Score]
 GO
 ALTER TABLE [dbo].[Plays]  WITH CHECK ADD  CONSTRAINT [CK_Plays_AdminRecord_StatusCode] CHECK  (([RecordType]=(0) OR [StatusCode]<>(1)))
 GO

@@ -1,5 +1,15 @@
 SET XACT_ABORT ON;
 
+IF EXISTS
+(
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.PlayAwardCategories')
+      AND name = N'UX_PlayAwardCategories_PlayId_IsCurrent_AwardCategoryCode'
+)
+    DROP INDEX [UX_PlayAwardCategories_PlayId_IsCurrent_AwardCategoryCode]
+        ON [dbo].[PlayAwardCategories];
+
 IF TRY_CONVERT(bit, SESSION_CONTEXT(N'AfifeBaselineAlreadyExists')) <> 1
     RETURN;
 
@@ -35,9 +45,10 @@ IF COL_LENGTH(N'dbo.AwardCategories', N'HasRoleAndPhoto') IS NULL
 /* Compile after additive columns exist; SQL Server binds static column names per batch. */
 EXEC sys.sp_executesql N'
 UPDATE dbo.AwardCategories
-SET MultiCandidate = CASE WHEN CategoryCode BETWEEN 1003 AND 1012 THEN 1 ELSE 0 END,
-    HasRoleAndPhoto = CASE WHEN CategoryCode BETWEEN 1002 AND 1012 THEN 1 ELSE 0 END
-WHERE CategoryCode BETWEEN 1001 AND 1012;';
+SET MultiCandidate = CASE WHEN CategoryCode BETWEEN 1003 AND 1011 THEN 1 ELSE 0 END,
+    HasRoleAndPhoto = CASE WHEN CategoryCode BETWEEN 1002 AND 1011 THEN 1 ELSE 0 END
+WHERE CategoryCode BETWEEN 1001 AND 1011;
+UPDATE dbo.AwardCategories SET IsPublished = 0 WHERE CategoryCode = 1012;';
 
 IF COL_LENGTH(N'dbo.Configs', N'IsPublished') IS NULL
     ALTER TABLE dbo.Configs ADD IsPublished bit NOT NULL CONSTRAINT DF_Configs_IsPublished DEFAULT (1) WITH VALUES;
@@ -52,6 +63,8 @@ IF COL_LENGTH(N'dbo.Manager', N'IsPublished') IS NULL
     ALTER TABLE dbo.Manager ADD IsPublished bit NOT NULL CONSTRAINT DF_Manager_IsPublished DEFAULT (1) WITH VALUES;
 IF COL_LENGTH(N'dbo.PlayAwardCategories', N'PhotoImageId') IS NULL
     ALTER TABLE dbo.PlayAwardCategories ADD PhotoImageId uniqueidentifier NULL;
+IF COL_LENGTH(N'dbo.PlayAwardCategories', N'SourceFormCandidateOrder') IS NULL
+    ALTER TABLE dbo.PlayAwardCategories ADD SourceFormCandidateOrder int NULL;
 IF COL_LENGTH(N'dbo.PlayAwardCategories', N'IsActive') IS NULL
 BEGIN
     ALTER TABLE dbo.PlayAwardCategories ADD IsActive bit NULL;
@@ -67,6 +80,9 @@ END;
 IF COL_LENGTH(N'dbo.Users', N'IsJuryPresident') IS NULL
     ALTER TABLE dbo.Users ADD IsJuryPresident bit NOT NULL
         CONSTRAINT DF_Users_IsJuryPresident DEFAULT (0) WITH VALUES;
+IF COL_LENGTH(N'dbo.Form', N'YoungGenerationArtist') IS NULL
+    EXEC sys.sp_executesql
+        N'ALTER TABLE dbo.Form ADD YoungGenerationArtist nvarchar(max) NULL;';
 GO
 IF NOT EXISTS
 (

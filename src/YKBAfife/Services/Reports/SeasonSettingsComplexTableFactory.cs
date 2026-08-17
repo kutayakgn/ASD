@@ -26,13 +26,15 @@ public static class SeasonSettingsComplexTableFactory
         DataActionName = "SeasonSettingsTable",
         CurrentTabKey = TabKey,
         ShowSearch = false,
+        IsEditableRows = true,
+
         MinimumTableWidth = 1280,
         Tabs =
         [
             new ComplexTableTabViewModel
             {
                 Key = TabKey,
-                Title = "Sezon Ayarları",
+                Title = "",
                 SortBy = report.SortBy,
                 SortDirection = report.SortDirection,
                 CurrentPage = report.CurrentPage,
@@ -53,6 +55,8 @@ public static class SeasonSettingsComplexTableFactory
                 {
                     Id = $"season-setting-{row.Id:N}",
                     Link = $"/diger-ayarlar/sezonlar/{row.Id}",
+                    EditUrl = $"/diger-ayarlar/sezonlar/{row.Id}/duzenle",
+                    EditAccessibleLabel = $"{row.SeasonName} sezonunu düzenle",
                     Cells =
                     [
                         Cell(row.SeasonName),

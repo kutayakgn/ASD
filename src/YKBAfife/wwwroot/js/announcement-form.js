@@ -38,10 +38,10 @@
         };
 
         const render = (name) => {
-            if (fileName) fileName.textContent = name || "Dosya Ekle";
+            if (fileName) fileName.textContent = name || "Dosya Yükle";
             if (picker) picker.disabled = hasImage;
             if (primaryIcon) primaryIcon.src = hasImage ? "/icons/trash.svg" : "/icons/upload.svg";
-            primary?.setAttribute("aria-label", hasImage ? "Yüklenen görseli kaldır" : "Dosya ekle");
+            primary?.setAttribute("aria-label", hasImage ? "Yüklenen görseli kaldır" : "Dosya yükle");
             if (actions) actions.hidden = !hasImage;
         };
 

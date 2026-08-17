@@ -447,7 +447,7 @@ public sealed partial class ManagementController(
         }
 
         TempData["GenericPopup.Type"] = "success";
-        TempData["GenericPopup.Message"] = "Jüri başarıyla güncellendi.";
+        TempData["GenericPopup.Message"] = "Değişiklikler başarıyla kaydedildi.";
         TempData["GenericPopup.RedirectUrl"] = Url.Action(nameof(JuryDetails), new { id }) ?? $"/juriler/{id}";
         return RedirectToAction(nameof(EditJury), new { id });
     }
@@ -1039,7 +1039,9 @@ public sealed partial class ManagementController(
             play.TheaterName = model.TheaterName;
             play.StatusCode = model.StatusCode!.Value;
             play.Slug = newSlug;
-            play.JuriOylamaStatus = !play.RecordType && model.JuriOylamaStatus;
+            play.JuriOylamaStatus = !play.RecordType &&
+                                    model.StatusCode.Value == 1 &&
+                                    model.JuriOylamaStatus;
             play.KunyeGirisStatus = !play.RecordType && model.KunyeGirisStatus;
             play.UpdatedAt = TurkeyTime.Now;
             play.UpdatedBy = currentUserId;
@@ -1114,6 +1116,21 @@ public sealed partial class ManagementController(
             play.KunyeGirisStatus = false;
             if (requiresNormalization)
             {
+                play.UpdatedAt = TurkeyTime.Now;
+                play.UpdatedBy = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var normalizingUserId)
+                    ? normalizingUserId
+                    : null;
+                await context.SaveChangesAsync(cancellationToken);
+            }
+
+            return Json(new { isActive = false, isDisabled = true, refreshTable = false });
+        }
+
+        if (isJuryVotingStatus && play.StatusCode != 1)
+        {
+            if (play.JuriOylamaStatus)
+            {
+                play.JuriOylamaStatus = false;
                 play.UpdatedAt = TurkeyTime.Now;
                 play.UpdatedBy = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var normalizingUserId)
                     ? normalizingUserId
@@ -1407,7 +1424,7 @@ public sealed partial class ManagementController(
             item => item.Id == id && item.IsPublished,
             cancellationToken);
         if (candidate is null) return NotFound();
-        if (candidate.AwardCategoryCode == 1001)
+        if (CandidateCategoryPolicy.IsSystemManaged(candidate.AwardCategoryCode))
         {
             return BadRequest(new
             {
@@ -1446,7 +1463,7 @@ public sealed partial class ManagementController(
                 ? NotFound(new { message = "Aday kaydı bulunamadı." })
                 : NotFound();
         }
-        if (candidate.AwardCategoryCode == 1001)
+        if (CandidateCategoryPolicy.IsSystemManaged(candidate.AwardCategoryCode))
         {
             const string protectedCategoryMessage = "Sistem tarafından yönetilen oyun kategorisi silinemez.";
             if (IsAjaxRequest())
@@ -1601,7 +1618,8 @@ public sealed partial class ManagementController(
                 .SingleOrDefaultAsync(
                     item => item.IsPublished &&
                             item.CategoryCode == input.AwardCategoryCode.Value &&
-                            item.CategoryCode != 1001,
+                            item.CategoryCode != CandidateCategoryPolicy.BestPlayCategoryCode &&
+                            item.CategoryCode != CandidateCategoryPolicy.BestDirectorCategoryCode,
                     cancellationToken)
             : null;
         if (category is null)
@@ -1679,6 +1697,7 @@ public sealed partial class ManagementController(
 
             int roleCode;
             string? role;
+            int? sourceFormCandidateOrder = null;
             if (isChangeMode)
             {
                 if (!input.ReplacedCandidateId.HasValue)
@@ -1703,6 +1722,7 @@ public sealed partial class ManagementController(
 
                 roleCode = replacedCandidate.RoleCode;
                 role = replacedCandidate.Role;
+                sourceFormCandidateOrder = replacedCandidate.SourceFormCandidateOrder;
                 if (category.HasRoleAndPhoto && string.IsNullOrWhiteSpace(role))
                 {
                     await transaction.RollbackAsync(cancellationToken);
@@ -1731,17 +1751,6 @@ public sealed partial class ManagementController(
             else if (category.MultiCandidate)
             {
                 role = input.Role;
-                var roleAlreadyExists = publishedPlayCandidates.Any(item =>
-                    candidateTextComparer.Equals(item.Role?.Trim(), role));
-                if (roleAlreadyExists)
-                {
-                    await transaction.RollbackAsync(cancellationToken);
-                    return RedirectToCandidateSectionWithPopup(
-                        slug,
-                        "fail",
-                        RoleDuplicateMessage);
-                }
-
                 var usedRoleCodes = publishedPlayCandidates
                     .Where(item => item.RoleCode > 0)
                     .Select(item => item.RoleCode)
@@ -1793,7 +1802,8 @@ public sealed partial class ManagementController(
                 AwardCategoryCode = category.CategoryCode,
                 IsCurrent = true,
                 Role = role,
-                RoleCode = roleCode
+                RoleCode = roleCode,
+                SourceFormCandidateOrder = sourceFormCandidateOrder
             });
 
             await context.SaveChangesAsync(cancellationToken);
@@ -2185,10 +2195,10 @@ public sealed partial class ManagementController(
             return RedirectToAction(nameof(TicketSales));
         }
 
-        if (model.TicketFee < 1)
+        if (model.TicketFee < 1 || model.TicketFee > 99999 || decimal.Truncate(model.TicketFee) != model.TicketFee)
         {
             TempData["GenericPopup.Type"] = "fail";
-            TempData["GenericPopup.Message"] = "Bilet ücreti 1'den az olamaz.";
+            TempData["GenericPopup.Message"] = "Bilet ücreti 1 ile 99999 arasında bir tam sayı olmalıdır.";
             return RedirectToAction(nameof(TicketSales));
         }
 

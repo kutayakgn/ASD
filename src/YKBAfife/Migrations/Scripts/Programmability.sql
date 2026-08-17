@@ -411,8 +411,7 @@ BEGIN
             (1008, formRecord.ClothesDesign),
             (1009, formRecord.StageMusic),
             (1010, formRecord.LightDesign),
-            (1011, formRecord.Choreography),
-            (1012, formRecord.YoungGenerationArtist)
+            (1011, formRecord.Choreography)
     ) AS category(AwardCategoryCode, CandidateJson)
     CROSS APPLY OPENJSON
     (
@@ -432,20 +431,103 @@ BEGIN
     IF EXISTS
     (
         SELECT 1 FROM #CandidateSource
-        WHERE AwardCategoryCode BETWEEN 1003 AND 1012
+        WHERE AwardCategoryCode BETWEEN 1003 AND 1011
           AND NULLIF(LTRIM(RTRIM(Role)), N'') IS NULL
     )
-        THROW 52410, N'Oyuncu ve Genç Kuşak adaylarında Role alanı zorunludur.', 1;
+        THROW 52410, N'Çok adaylı kategorilerde Role alanı zorunludur.', 1;
 
-    IF EXISTS
+    /* SourceOrder is the stable Form slot identity. Candidate and Role are
+       editable descriptions; duplicate role names are valid distinct slots. */
+    ;WITH SourceMatches AS
     (
-        SELECT PlayId, AwardCategoryCode, LOWER(LTRIM(RTRIM(Role)))
-        FROM #CandidateSource
-        WHERE Role IS NOT NULL
-        GROUP BY PlayId, AwardCategoryCode, LOWER(LTRIM(RTRIM(Role)))
-        HAVING COUNT(*) > 1
+        SELECT source.*,
+               ROW_NUMBER() OVER
+               (
+                   PARTITION BY source.PlayId, source.AwardCategoryCode,
+                                LOWER(LTRIM(RTRIM(source.Candidate))),
+                                LOWER(LTRIM(RTRIM(COALESCE(source.Role, N''))))
+                   ORDER BY source.SourceOrder
+               ) AS MatchOrder
+        FROM #CandidateSource AS source
+    ),
+    ExistingMatches AS
+    (
+        SELECT candidate.Id, candidate.PlayId, candidate.AwardCategoryCode,
+               candidate.Candidate, candidate.Role,
+               ROW_NUMBER() OVER
+               (
+                   PARTITION BY candidate.PlayId, candidate.AwardCategoryCode,
+                                LOWER(LTRIM(RTRIM(candidate.Candidate))),
+                                LOWER(LTRIM(RTRIM(COALESCE(candidate.Role, N''))))
+                   ORDER BY candidate.IsCurrent DESC, candidate.IsPublished DESC,
+                            candidate.RoleCode, candidate.Id
+               ) AS MatchOrder
+        FROM dbo.PlayAwardCategories AS candidate
+        WHERE candidate.SourceFormCandidateOrder IS NULL
+          AND candidate.CreatedBy IS NULL
+          AND candidate.AwardCategoryCode BETWEEN 1002 AND 1011
     )
-        THROW 52411, N'Aynı kategori içinde aynı rol birden fazla kez gönderilemez.', 1;
+    UPDATE candidate
+    SET SourceFormCandidateOrder = source.SourceOrder,
+        UpdatedAt = @Now
+    FROM dbo.PlayAwardCategories AS candidate
+    INNER JOIN ExistingMatches AS existing ON existing.Id = candidate.Id
+    INNER JOIN SourceMatches AS source
+        ON source.PlayId = existing.PlayId
+       AND source.AwardCategoryCode = existing.AwardCategoryCode
+       AND LOWER(LTRIM(RTRIM(source.Candidate))) = LOWER(LTRIM(RTRIM(existing.Candidate)))
+       AND LOWER(LTRIM(RTRIM(COALESCE(source.Role, N'')))) =
+           LOWER(LTRIM(RTRIM(COALESCE(existing.Role, N''))))
+       AND source.MatchOrder = existing.MatchOrder
+    WHERE NOT EXISTS
+    (
+        SELECT 1 FROM dbo.PlayAwardCategories AS mapped
+        WHERE mapped.PlayId = source.PlayId
+          AND mapped.AwardCategoryCode = source.AwardCategoryCode
+          AND mapped.SourceFormCandidateOrder = source.SourceOrder
+    );
+
+    /* Backfill old procedure-created rows which predate source-slot tracking. */
+    ;WITH RemainingSources AS
+    (
+        SELECT source.*,
+               ROW_NUMBER() OVER
+               (
+                   PARTITION BY source.PlayId, source.AwardCategoryCode
+                   ORDER BY source.SourceOrder
+               ) AS SlotOrder
+        FROM #CandidateSource AS source
+        WHERE NOT EXISTS
+        (
+            SELECT 1 FROM dbo.PlayAwardCategories AS mapped
+            WHERE mapped.PlayId = source.PlayId
+              AND mapped.AwardCategoryCode = source.AwardCategoryCode
+              AND mapped.SourceFormCandidateOrder = source.SourceOrder
+        )
+    ),
+    RemainingCandidates AS
+    (
+        SELECT candidate.Id, candidate.PlayId, candidate.AwardCategoryCode,
+               ROW_NUMBER() OVER
+               (
+                   PARTITION BY candidate.PlayId, candidate.AwardCategoryCode
+                   ORDER BY candidate.IsCurrent DESC, candidate.IsPublished DESC,
+                            candidate.RoleCode, candidate.Id
+               ) AS SlotOrder
+        FROM dbo.PlayAwardCategories AS candidate
+        WHERE candidate.SourceFormCandidateOrder IS NULL
+          AND candidate.CreatedBy IS NULL
+          AND candidate.AwardCategoryCode BETWEEN 1002 AND 1011
+    )
+    UPDATE candidate
+    SET SourceFormCandidateOrder = source.SourceOrder,
+        UpdatedAt = @Now
+    FROM dbo.PlayAwardCategories AS candidate
+    INNER JOIN RemainingCandidates AS existing ON existing.Id = candidate.Id
+    INNER JOIN RemainingSources AS source
+        ON source.PlayId = existing.PlayId
+       AND source.AwardCategoryCode = existing.AwardCategoryCode
+       AND source.SlotOrder = existing.SlotOrder;
 
     UPDATE source
     SET RoleCode = existing.RoleCode
@@ -456,12 +538,11 @@ BEGIN
         FROM dbo.PlayAwardCategories AS candidate
         WHERE candidate.PlayId = source.PlayId
           AND candidate.AwardCategoryCode = source.AwardCategoryCode
-          AND candidate.Role IS NOT NULL
-          AND LOWER(LTRIM(RTRIM(candidate.Role))) = LOWER(LTRIM(RTRIM(source.Role)))
+          AND candidate.SourceFormCandidateOrder = source.SourceOrder
         ORDER BY candidate.IsCurrent DESC, candidate.IsPublished DESC,
                  COALESCE(candidate.UpdatedAt, candidate.CreatedAt) DESC, candidate.Id
     ) AS existing
-    WHERE source.Role IS NOT NULL;
+    WHERE source.AwardCategoryCode <> 1002;
 
     ;WITH MissingRoles AS
     (
@@ -485,6 +566,140 @@ BEGIN
        AND missing.AwardCategoryCode = source.AwardCategoryCode
        AND missing.SourceOrder = source.SourceOrder;
 
+    /* Form changes update only the mapped slot and never change RoleCode. */
+    ;WITH CurrentTargets AS
+    (
+        SELECT candidate.Id,
+               ROW_NUMBER() OVER
+               (
+                   PARTITION BY candidate.PlayId, candidate.AwardCategoryCode,
+                                candidate.SourceFormCandidateOrder
+                   ORDER BY candidate.IsCurrent DESC, candidate.IsPublished DESC,
+                            COALESCE(candidate.UpdatedAt, candidate.CreatedAt) DESC,
+                            candidate.Id
+               ) AS TargetOrder
+        FROM dbo.PlayAwardCategories AS candidate
+        WHERE candidate.SourceFormCandidateOrder IS NOT NULL
+    )
+    UPDATE candidate
+    SET Candidate = source.Candidate,
+        Role = source.Role,
+        RoleCode = source.RoleCode,
+        IsPublished = 1,
+        IsActive = 1,
+        IsCurrent = 1,
+        UpdatedAt = @Now
+    FROM dbo.PlayAwardCategories AS candidate
+    INNER JOIN CurrentTargets AS target
+        ON target.Id = candidate.Id AND target.TargetOrder = 1
+    INNER JOIN #CandidateSource AS source
+        ON source.PlayId = candidate.PlayId
+       AND source.AwardCategoryCode = candidate.AwardCategoryCode
+       AND source.SourceOrder = candidate.SourceFormCandidateOrder;
+
+    /* A non-empty valid Base64 value replaces the mapped candidate photo.
+       Empty/invalid legacy values preserve the existing image. */
+    CREATE TABLE #UpdatedCandidateImages
+    (
+        CandidateId uniqueidentifier NOT NULL PRIMARY KEY,
+        OldImageId uniqueidentifier NULL,
+        NewImageId uniqueidentifier NOT NULL,
+        ImageUrl nvarchar(255) NULL,
+        CleanBase64 nvarchar(max) NOT NULL,
+        ImageData varbinary(max) NULL,
+        ContentType nvarchar(100) NULL
+    );
+
+    INSERT INTO #UpdatedCandidateImages
+        (CandidateId, OldImageId, NewImageId, ImageUrl, CleanBase64)
+    SELECT candidate.Id, candidate.PhotoImageId, NEWID(), source.ImageUrl,
+           CASE
+               WHEN source.Base64 LIKE N'data:%;base64,%'
+                   THEN REPLACE(REPLACE(REPLACE(SUBSTRING(source.Base64,
+                        CHARINDEX(N',', source.Base64) + 1, LEN(source.Base64)), CHAR(13), N''), CHAR(10), N''), N' ', N'')
+               ELSE REPLACE(REPLACE(REPLACE(source.Base64, CHAR(13), N''), CHAR(10), N''), N' ', N'')
+           END
+    FROM #CandidateSource AS source
+    INNER JOIN dbo.PlayAwardCategories AS candidate
+        ON candidate.PlayId = source.PlayId
+       AND candidate.AwardCategoryCode = source.AwardCategoryCode
+       AND candidate.SourceFormCandidateOrder = source.SourceOrder
+       AND candidate.IsCurrent = 1
+    WHERE source.Base64 IS NOT NULL;
+
+    UPDATE image
+    SET ImageData = CAST(N'' AS xml).value(
+            'xs:base64Binary(sql:column("image.CleanBase64"))', 'varbinary(max)')
+    FROM #UpdatedCandidateImages AS image
+    WHERE LEN(image.CleanBase64) % 4 = 0
+      AND image.CleanBase64 COLLATE Latin1_General_100_BIN2 NOT LIKE N'%[^A-Za-z0-9+/=]%';
+
+    UPDATE image
+    SET ContentType = CASE
+        WHEN SUBSTRING(image.ImageData, 1, 3) = 0xFFD8FF THEN N'image/jpeg'
+        WHEN SUBSTRING(image.ImageData, 1, 8) = 0x89504E470D0A1A0A THEN N'image/png'
+        WHEN SUBSTRING(image.ImageData, 1, 4) = 0x52494646
+         AND SUBSTRING(image.ImageData, 9, 4) = 0x57454250 THEN N'image/webp'
+        ELSE NULL END
+    FROM #UpdatedCandidateImages AS image
+    WHERE image.ImageData IS NOT NULL;
+
+    INSERT INTO dbo.Images
+        (Id, FileName, ContentType, ImageData, CreatedAt, CreatedBy, IsPublished)
+    SELECT image.NewImageId,
+           COALESCE(NULLIF(image.ImageUrl, N''),
+                    CONCAT(N'form-candidate-', CONVERT(nvarchar(36), image.CandidateId),
+                           CASE image.ContentType WHEN N'image/png' THEN N'.png'
+                                WHEN N'image/webp' THEN N'.webp' ELSE N'.jpg' END)),
+           image.ContentType, image.ImageData, @Now, image.CandidateId, 1
+    FROM #UpdatedCandidateImages AS image
+    WHERE image.ContentType IS NOT NULL
+      AND DATALENGTH(image.ImageData) BETWEEN 1 AND 5 * 1024 * 1024;
+
+    UPDATE candidate
+    SET PhotoImageId = image.NewImageId,
+        UpdatedAt = @Now
+    FROM dbo.PlayAwardCategories AS candidate
+    INNER JOIN #UpdatedCandidateImages AS image ON image.CandidateId = candidate.Id
+    INNER JOIN dbo.Images AS newImage ON newImage.Id = image.NewImageId;
+
+    UPDATE oldImage
+    SET IsPublished = 0,
+        UpdatedAt = @Now
+    FROM dbo.Images AS oldImage
+    INNER JOIN #UpdatedCandidateImages AS replacement
+        ON replacement.OldImageId = oldImage.Id
+    INNER JOIN dbo.Images AS newImage ON newImage.Id = replacement.NewImageId
+    WHERE oldImage.IsPublished = 1
+      AND NOT EXISTS
+      (
+          SELECT 1 FROM dbo.PlayAwardCategories AS candidate
+          WHERE candidate.PhotoImageId = oldImage.Id
+            AND candidate.IsPublished = 1
+      );
+
+    UPDATE candidate
+    SET IsPublished = 0,
+        IsActive = 0,
+        IsCurrent = 0,
+        UpdatedAt = @Now
+    FROM dbo.PlayAwardCategories AS candidate
+    INNER JOIN dbo.Plays AS play ON play.Id = candidate.PlayId
+    INNER JOIN dbo.Form AS formRecord ON formRecord.Id = play.SourceFormId
+    WHERE candidate.SourceFormCandidateOrder IS NOT NULL
+      AND formRecord.IsPublished = 1
+      AND formRecord.IsActive = 1
+      AND play.IsPublished = 1
+      AND play.IsActive = 1
+      AND NOT EXISTS
+      (
+          SELECT 1 FROM #CandidateSource AS source
+          WHERE source.PlayId = candidate.PlayId
+            AND source.AwardCategoryCode = candidate.AwardCategoryCode
+            AND source.SourceOrder = candidate.SourceFormCandidateOrder
+      )
+      AND (candidate.IsPublished = 1 OR candidate.IsActive = 1 OR candidate.IsCurrent = 1);
+
     CREATE TABLE #NewCandidates
     (
         CandidateId uniqueidentifier NOT NULL PRIMARY KEY,
@@ -494,6 +709,7 @@ BEGIN
         Candidate nvarchar(250) NOT NULL,
         Role nvarchar(200) NULL,
         RoleCode int NOT NULL,
+        SourceOrder int NOT NULL,
         ImageUrl nvarchar(255) NULL,
         CleanBase64 nvarchar(max) NULL,
         ImageData varbinary(max) NULL,
@@ -502,10 +718,10 @@ BEGIN
 
     INSERT INTO #NewCandidates
         (CandidateId, ImageId, PlayId, AwardCategoryCode, Candidate, Role,
-         RoleCode, ImageUrl, CleanBase64)
+         RoleCode, SourceOrder, ImageUrl, CleanBase64)
     SELECT NEWID(), CASE WHEN source.Base64 IS NULL THEN NULL ELSE NEWID() END,
            source.PlayId, source.AwardCategoryCode, source.Candidate, source.Role,
-           COALESCE(source.RoleCode, 0), source.ImageUrl,
+           COALESCE(source.RoleCode, 0), source.SourceOrder, source.ImageUrl,
            CASE
                WHEN source.Base64 LIKE N'data:%;base64,%'
                    THEN REPLACE(REPLACE(REPLACE(SUBSTRING(source.Base64,
@@ -577,11 +793,11 @@ BEGIN
     (
         Id, PlayId, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy,
         IsPublished, IsActive, Candidate, AwardCategoryCode,
-        IsCurrent, Role, RoleCode, PhotoImageId
+        IsCurrent, Role, RoleCode, PhotoImageId, SourceFormCandidateOrder
     )
     SELECT candidate.CandidateId, candidate.PlayId, @Now, NULL, NULL, NULL,
            1, 1, candidate.Candidate, candidate.AwardCategoryCode,
-           1, candidate.Role, candidate.RoleCode, candidate.ImageId
+           1, candidate.Role, candidate.RoleCode, candidate.ImageId, candidate.SourceOrder
     FROM #NewCandidates AS candidate;
 END;
 GO
@@ -969,6 +1185,20 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
+    /* The Form synchronizer writes a complete snapshot inside one transaction.
+       Permit it to normalize legacy intermediate values; normal application
+       writes remain protected by every check below. */
+    IF TRY_CONVERT(int, SESSION_CONTEXT(N'FormLifecycleSyncInProgress')) = 1
+        RETURN;
+
+    IF EXISTS
+    (
+        SELECT 1 FROM inserted
+        WHERE AwardCategoryCode = 1012
+          AND (IsPublished = 1 OR IsActive = 1 OR IsCurrent = 1)
+    )
+        THROW 52430, N'1012 ödül kategorisi sistemden kaldırılmıştır.', 1;
+
     -- The 1001 row is a system-managed category slot, not a person candidate.
     IF EXISTS
     (
@@ -1073,36 +1303,8 @@ BEGIN
             THROW 51304, N'Tek adayli kategoriler yalnizca tek mantiksal slot ve bos Role alani kullanabilir.', 1;
         END;
 
-        IF EXISTS
-        (
-            SELECT 1
-            FROM inserted AS candidate
-            LEFT JOIN deleted AS previousCandidate ON previousCandidate.Id = candidate.Id
-            INNER JOIN dbo.AwardCategories AS category
-                ON category.CategoryCode = candidate.AwardCategoryCode
-            INNER JOIN dbo.PlayAwardCategories AS existing
-                ON existing.Id <> candidate.Id
-               AND existing.PlayId = candidate.PlayId
-               AND existing.AwardCategoryCode = candidate.AwardCategoryCode
-            WHERE
-                (
-                    previousCandidate.Id IS NULL
-                    OR previousCandidate.PlayId <> candidate.PlayId
-                    OR previousCandidate.AwardCategoryCode <> candidate.AwardCategoryCode
-                    OR previousCandidate.RoleCode <> candidate.RoleCode
-                    OR ISNULL(previousCandidate.Role, N'') <> ISNULL(candidate.Role, N'')
-                )
-                AND category.MultiCandidate = 1
-                AND
-                (
-                    (existing.RoleCode = candidate.RoleCode AND LTRIM(RTRIM(existing.Role)) <> LTRIM(RTRIM(candidate.Role)))
-                    OR
-                    (existing.RoleCode <> candidate.RoleCode AND LTRIM(RTRIM(existing.Role)) = LTRIM(RTRIM(candidate.Role)))
-                )
-        )
-        BEGIN
-            THROW 51305, N'Bir rol adi tek RoleCode ile, bir RoleCode da tek rol adi ile eslesmelidir.', 1;
-        END;
+        /* RoleCode is the stable identity. Role is editable display data and
+           distinct role slots may intentionally use the same display name. */
     END;
 
     IF EXISTS
@@ -1140,11 +1342,28 @@ BEGIN
     SET
         defaultCategory.Candidate = currentPlay.TheaterName,
         defaultCategory.Role = N'Tiyatro',
+        defaultCategory.IsPublished = CASE
+            WHEN currentPlay.IsPublished = 1
+             AND currentPlay.IsActive = 1
+             AND
+             (
+                 currentPlay.SourceFormId IS NULL
+                 OR (formRecord.IsPublished = 1 AND formRecord.IsActive = 1)
+             ) THEN 1 ELSE 0 END,
+        defaultCategory.IsActive = CASE
+            WHEN currentPlay.IsPublished = 1
+             AND currentPlay.IsActive = 1
+             AND
+             (
+                 currentPlay.SourceFormId IS NULL
+                 OR (formRecord.IsPublished = 1 AND formRecord.IsActive = 1)
+             ) THEN 1 ELSE 0 END,
         defaultCategory.UpdatedAt = DATEADD(HOUR, 3, SYSUTCDATETIME()),
         defaultCategory.UpdatedBy = currentPlay.UpdatedBy
     FROM dbo.PlayAwardCategories AS defaultCategory
     INNER JOIN inserted AS currentPlay ON currentPlay.Id = defaultCategory.PlayId
     INNER JOIN deleted AS previousPlay ON previousPlay.Id = currentPlay.Id
+    LEFT JOIN dbo.Form AS formRecord ON formRecord.Id = currentPlay.SourceFormId
     WHERE currentPlay.RecordType = 0
       AND defaultCategory.AwardCategoryCode = 1001
       AND
@@ -1152,11 +1371,27 @@ BEGIN
           currentPlay.TheaterName <> previousPlay.TheaterName
           OR defaultCategory.Candidate <> currentPlay.TheaterName
           OR ISNULL(defaultCategory.Role, N'') <> N'Tiyatro'
+          OR defaultCategory.IsPublished <> CASE
+              WHEN currentPlay.IsPublished = 1
+               AND currentPlay.IsActive = 1
+               AND
+               (
+                   currentPlay.SourceFormId IS NULL
+                   OR (formRecord.IsPublished = 1 AND formRecord.IsActive = 1)
+               ) THEN 1 ELSE 0 END
+          OR defaultCategory.IsActive <> CASE
+              WHEN currentPlay.IsPublished = 1
+               AND currentPlay.IsActive = 1
+               AND
+               (
+                   currentPlay.SourceFormId IS NULL
+                   OR (formRecord.IsPublished = 1 AND formRecord.IsActive = 1)
+               ) THEN 1 ELSE 0 END
       );
 
     INSERT INTO dbo.PlayAwardCategories
     (
-        Id, PlayId, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy, IsPublished,
+        Id, PlayId, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy, IsPublished, IsActive,
         Candidate, AwardCategoryCode, IsCurrent, Role, RoleCode, PhotoImageId
     )
     SELECT
@@ -1166,7 +1401,22 @@ BEGIN
         play.CreatedBy,
         NULL,
         NULL,
-        play.IsPublished,
+        CASE
+            WHEN play.IsPublished = 1
+             AND play.IsActive = 1
+             AND
+             (
+                 play.SourceFormId IS NULL
+                 OR (formRecord.IsPublished = 1 AND formRecord.IsActive = 1)
+             ) THEN 1 ELSE 0 END,
+        CASE
+            WHEN play.IsPublished = 1
+             AND play.IsActive = 1
+             AND
+             (
+                 play.SourceFormId IS NULL
+                 OR (formRecord.IsPublished = 1 AND formRecord.IsActive = 1)
+             ) THEN 1 ELSE 0 END,
         play.TheaterName,
         1001,
         1,
@@ -1174,6 +1424,7 @@ BEGIN
         0,
         NULL
     FROM inserted AS play
+    LEFT JOIN dbo.Form AS formRecord ON formRecord.Id = play.SourceFormId
     WHERE play.RecordType = 0
       AND NOT EXISTS
       (
@@ -1291,6 +1542,77 @@ BEGIN
     )
     BEGIN
         THROW 51231, N'Mevcut bir oyunun RecordType degeri degistirilemez.', 1;
+    END;
+END;
+GO
+
+/* RecordType 0 plays can be opened to jury voting only while StatusCode is 1. */
+CREATE OR ALTER TRIGGER [dbo].[TR_Plays_NormalizeJuryVotingStatus]
+ON [dbo].[Plays]
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE play
+    SET play.[JuriOylamaStatus] = 0,
+        play.[UpdatedAt] = DATEADD(HOUR, 3, SYSUTCDATETIME())
+    FROM [dbo].[Plays] AS play
+    INNER JOIN inserted AS changed
+        ON changed.[Id] = play.[Id]
+    WHERE changed.[RecordType] = 0
+      AND changed.[StatusCode] <> 1
+      AND changed.[JuriOylamaStatus] = 1;
+END;
+GO
+
+/* A published blacklist entry immediately removes matching votes from circulation. */
+CREATE OR ALTER TRIGGER [dbo].[TR_Blacklist_DeactivateJuryVotes]
+ON [dbo].[Blacklist]
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE vote
+    SET vote.[IsPublished] = 0,
+        vote.[IsActive] = 0,
+        vote.[UpdatedAt] = DATEADD(HOUR, 3, SYSUTCDATETIME())
+    FROM [dbo].[JuryVotes] AS vote
+    INNER JOIN [dbo].[PlayAwardCategories] AS candidate
+        ON candidate.[Id] = vote.[PlayAwardCategoryId]
+    INNER JOIN inserted AS blacklist
+        ON blacklist.[JuryId] = vote.[JuryId]
+       AND blacklist.[PlayId] = candidate.[PlayId]
+       AND blacklist.[IsPublished] = 1
+    WHERE vote.[IsPublished] = 1
+       OR vote.[IsActive] = 1;
+END;
+GO
+
+/* Defense in depth: a blacklisted jury/play pair cannot publish a vote. */
+CREATE OR ALTER TRIGGER [dbo].[TR_JuryVotes_BlockBlacklistedJuryPlay]
+ON [dbo].[JuryVotes]
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF EXISTS
+    (
+        SELECT 1
+        FROM inserted AS vote
+        INNER JOIN [dbo].[PlayAwardCategories] AS candidate
+            ON candidate.[Id] = vote.[PlayAwardCategoryId]
+        INNER JOIN [dbo].[Blacklist] AS blacklist
+            ON blacklist.[JuryId] = vote.[JuryId]
+           AND blacklist.[PlayId] = candidate.[PlayId]
+           AND blacklist.[IsPublished] = 1
+        WHERE vote.[IsPublished] = 1
+           OR vote.[IsActive] = 1
+    )
+    BEGIN
+        THROW 51214, N'Blacklist kaydı bulunan jüri bu oyun için oy veremez.', 1;
     END;
 END;
 GO
@@ -1418,8 +1740,8 @@ INSTEAD OF DELETE
 AS
 BEGIN
     SET NOCOUNT ON;
-    IF EXISTS (SELECT 1 FROM deleted WHERE AwardCategoryCode = 1001 AND RoleCode = 0)
-        THROW 51307, N'System-managed category 1001 cannot be deleted.', 1;
+    IF EXISTS (SELECT 1 FROM deleted WHERE AwardCategoryCode IN (1001, 1002))
+        THROW 51307, N'System-managed categories 1001 and 1002 cannot be deleted.', 1;
 
     UPDATE target
     SET IsPublished = 0, IsActive = 0,

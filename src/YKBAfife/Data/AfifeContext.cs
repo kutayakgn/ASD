@@ -10,6 +10,7 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
     public DbSet<User> Users => Set<User>();
     public DbSet<UserLog> UserLogs => Set<UserLog>();
     public DbSet<AdminLog> AdminLogs => Set<AdminLog>();
+    public DbSet<JuryLog> JuryLogs => Set<JuryLog>();
     public DbSet<Play> Plays => Set<Play>();
     public DbSet<Season> Seasons => Set<Season>();
     public DbSet<AdditionalVoting> AdditionalVotings => Set<AdditionalVoting>();
@@ -95,6 +96,48 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
             entity.HasIndex(x => new { x.UserId, x.OccurredAt });
             entity.HasIndex(x => new { x.TableName, x.OccurredAt });
             entity.HasIndex(x => x.CorrelationId);
+        });
+        modelBuilder.Entity<JuryLog>(entity =>
+        {
+            entity.ToTable("JuryLogs", "dbo");
+            entity.Property(x => x.Id).HasDefaultValueSql("newsequentialid()");
+            entity.Property(x => x.CorrelationId).HasDefaultValueSql("newid()");
+            entity.Property(x => x.JuryUsername).HasMaxLength(100);
+            entity.Property(x => x.PlayName).HasMaxLength(250);
+            entity.Property(x => x.OperationName).HasMaxLength(256);
+            entity.Property(x => x.OperationType).HasMaxLength(50);
+            entity.Property(x => x.SubmittedTicketFee).HasPrecision(10, 2);
+            entity.Property(x => x.OldTicketFee).HasPrecision(10, 2);
+            entity.Property(x => x.NewTicketFee).HasPrecision(10, 2);
+            entity.Property(x => x.IpAddress).HasMaxLength(64);
+            entity.Property(x => x.UserAgent).HasMaxLength(1000);
+            entity.Property(x => x.HttpMethod).HasMaxLength(16);
+            entity.Property(x => x.RequestPath).HasMaxLength(2048);
+            entity.Property(x => x.ControllerName).HasMaxLength(128);
+            entity.Property(x => x.ActionName).HasMaxLength(128);
+            entity.Property(x => x.Application).HasMaxLength(100);
+            entity.Property(x => x.Source).HasMaxLength(50);
+            entity.Property(x => x.ResultCode).HasMaxLength(100);
+            entity.Property(x => x.FailureReason).HasMaxLength(2000);
+            entity.Property(x => x.IsAdditionalVoting).HasDefaultValue(false);
+            entity.Property(x => x.AffectedVoteCount).HasDefaultValue(0);
+            entity.Property(x => x.OccurredAt)
+                .HasColumnType("datetime2(7)")
+                .HasDefaultValueSql("DATEADD(HOUR, 3, SYSUTCDATETIME())");
+            entity.Property(x => x.Application).HasDefaultValue("AfifeJury");
+            entity.Property(x => x.Source).HasDefaultValue("JuryPanel");
+            entity.Property(x => x.IsSuccessful).HasDefaultValue(false);
+            entity.Property(x => x.IsPublished).HasDefaultValue(true);
+            entity.HasIndex(x => x.CorrelationId);
+            entity.HasIndex(x => new { x.JuryId, x.OccurredAt });
+            entity.HasIndex(x => new { x.PlayId, x.OccurredAt });
+            entity.HasIndex(x => new { x.OperationType, x.IsSuccessful, x.OccurredAt });
+            entity.HasOne(x => x.Jury).WithMany().HasForeignKey(x => x.JuryId)
+                .OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(x => x.Play).WithMany().HasForeignKey(x => x.PlayId)
+                .OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(x => x.AdditionalVoting).WithMany().HasForeignKey(x => x.AdditionalVotingId)
+                .OnDelete(DeleteBehavior.NoAction);
         });
         modelBuilder.Entity<Season>(entity =>
         {
@@ -196,6 +239,10 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
             entity.HasIndex(x => new { x.PlayId, x.AwardCategoryCode, x.RoleCode, x.IsCurrent })
                 .IsUnique()
                 .HasFilter("[IsCurrent] = 1 AND [IsPublished] = 1");
+            entity.HasIndex(x => new { x.PlayId, x.AwardCategoryCode, x.SourceFormCandidateOrder })
+                .IsUnique()
+                .HasFilter("[SourceFormCandidateOrder] IS NOT NULL AND [IsCurrent] = 1")
+                .HasDatabaseName("UX_PlayAwardCategories_FormSourceSlot");
             entity.HasOne(x => x.PhotoImage)
                 .WithMany(x => x.CandidatePhotos)
                 .HasForeignKey(x => x.PhotoImageId)
@@ -287,7 +334,11 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
         });
         modelBuilder.Entity<JuryVote>(entity =>
         {
-            entity.ToTable("JuryVotes", "dbo", table => table.UseSqlOutputClause(false));
+            entity.ToTable("JuryVotes", "dbo", table =>
+            {
+                table.UseSqlOutputClause(false);
+                table.HasCheckConstraint("CK_JuryVotes_Score", "[Score] >= 1 AND [Score] <= 10");
+            });
             entity.HasIndex(x => new { x.PlayAwardCategoryId, x.JuryId })
                 .IsUnique()
                 .HasFilter("[IsPublished] = 1");

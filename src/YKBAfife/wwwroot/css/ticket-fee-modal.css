@@ -54,7 +54,14 @@
 }
 
 .ticket-fee-input-wrap input {
+    width: auto;
+    flex: 1 1 auto;
     font-size: 16px;
+}
+
+.ticket-fee-input-wrap .ticket-fee-currency {
+    flex: 0 0 auto;
+    white-space: nowrap;
 }
 
 .ticket-fee-modal-footer {

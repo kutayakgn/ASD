@@ -97,6 +97,7 @@ internal static partial class DatabaseSchemaValidator
 
         foreach (var table in catalog.Tables.Where(x =>
                      !x.EndsWith(".AdminLogs", StringComparison.OrdinalIgnoreCase) &&
+                     !x.EndsWith(".JuryLogs", StringComparison.OrdinalIgnoreCase) &&
                      !x.EndsWith(".UsersLog", StringComparison.OrdinalIgnoreCase) &&
                      !x.EndsWith(".__EFMigrationsHistory", StringComparison.OrdinalIgnoreCase)))
         {
@@ -116,6 +117,12 @@ internal static partial class DatabaseSchemaValidator
         foreach (var foreignKey in catalog.CascadingForeignKeys)
         {
             missing.Add($"foreign key {foreignKey} must use ON UPDATE/DELETE NO ACTION");
+        }
+
+        foreach (var obsoleteIndex in catalog.ObsoleteCandidateIndexes)
+        {
+            missing.Add(
+                $"obsolete candidate index {obsoleteIndex} blocks RoleCode-based multi-candidate categories");
         }
 
         var unexpectedTriggers = catalog.Triggers.Except(
@@ -185,6 +192,12 @@ internal static partial class DatabaseSchemaValidator
                     $"expected [{expected.Value}] but found [{row}]");
             }
         }
+
+        if (actual.TryGetValue(("AwardCategory", 1012), out var retiredCategory) &&
+            retiredCategory.IsPublished)
+        {
+            invalid.Add("retired AwardCategory code 1012 must not be published");
+        }
     }
 
     private static readonly IReadOnlyDictionary<(string Type, int Code), ReferenceRow>
@@ -203,7 +216,6 @@ internal static partial class DatabaseSchemaValidator
             [("AwardCategory", 1009)] = new("Yılın En Başarılı Sahne Müziği", true, true, "1"),
             [("AwardCategory", 1010)] = new("Yılın En Başarılı Işık Tasarımı", true, true, "1"),
             [("AwardCategory", 1011)] = new("Yılın En Başarılı Hareket Düzeni (Kareografisi)", true, true, "1"),
-            [("AwardCategory", 1012)] = new("Yılın En Başarılı Genç Kuşak Sanatçısı", true, true, "1"),
             [("PlayStatus", 1)] = new("Oylama Aktif", true, null, "#27ae60"),
             [("PlayStatus", 2)] = new("Değerlendirmeyecek Oyun", true, null, "#d9322d"),
             [("PlayStatus", 3)] = new("Başvuru Yapmayacak Oyun", true, null, "#2CA9E8"),
@@ -256,7 +268,45 @@ internal static partial class DatabaseSchemaValidator
             JOIN sys.tables t ON t.object_id = dc.parent_object_id
             JOIN sys.schemas s ON s.schema_id = t.schema_id
             WHERE c.name = N'IsPublished'
-              AND REPLACE(REPLACE(REPLACE(dc.definition, N'(', N''), N')', N''), N' ', N'') = N'1';
+              AND REPLACE(REPLACE(REPLACE(dc.definition, N'(', N''), N')', N''), N' ', N'') = N'1'
+            UNION ALL
+            SELECT N'X', candidateIndex.name
+            FROM sys.indexes AS candidateIndex
+            WHERE candidateIndex.object_id = OBJECT_ID(N'dbo.PlayAwardCategories')
+              AND candidateIndex.is_unique = 1
+              AND candidateIndex.has_filter = 1
+              AND candidateIndex.filter_definition LIKE N'%IsCurrent%'
+              AND
+              (
+                  SELECT COUNT(*) FROM sys.index_columns AS indexColumn
+                  WHERE indexColumn.object_id = candidateIndex.object_id
+                    AND indexColumn.index_id = candidateIndex.index_id
+                    AND indexColumn.key_ordinal > 0
+              ) = 2
+              AND EXISTS
+              (
+                  SELECT 1
+                  FROM sys.index_columns AS indexColumn
+                  INNER JOIN sys.columns AS columnRecord
+                      ON columnRecord.object_id = indexColumn.object_id
+                     AND columnRecord.column_id = indexColumn.column_id
+                  WHERE indexColumn.object_id = candidateIndex.object_id
+                    AND indexColumn.index_id = candidateIndex.index_id
+                    AND indexColumn.key_ordinal > 0
+                    AND columnRecord.name = N'PlayId'
+              )
+              AND EXISTS
+              (
+                  SELECT 1
+                  FROM sys.index_columns AS indexColumn
+                  INNER JOIN sys.columns AS columnRecord
+                      ON columnRecord.object_id = indexColumn.object_id
+                     AND columnRecord.column_id = indexColumn.column_id
+                  WHERE indexColumn.object_id = candidateIndex.object_id
+                    AND indexColumn.index_id = candidateIndex.index_id
+                    AND indexColumn.key_ordinal > 0
+                    AND columnRecord.name = N'AwardCategoryCode'
+              );
             """;
 
         var result = new Catalog();
@@ -278,6 +328,7 @@ internal static partial class DatabaseSchemaValidator
                 "F" => result.CascadingForeignKeys,
                 "Q" => result.PrimaryKeyTables,
                 "B" => result.IsPublishedDefaultOneTables,
+                "X" => result.ObsoleteCandidateIndexes,
                 _ => throw new DataException($"Unknown schema catalog kind '{kind}'.")
             }).Add(name);
         }
@@ -296,6 +347,7 @@ internal static partial class DatabaseSchemaValidator
         public HashSet<string> CascadingForeignKeys { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> PrimaryKeyTables { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> IsPublishedDefaultOneTables { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public HashSet<string> ObsoleteCandidateIndexes { get; } = new(StringComparer.OrdinalIgnoreCase);
     }
 
     [GeneratedRegex(@"CREATE\s+(?:UNIQUE\s+)?(?:NONCLUSTERED\s+)?INDEX\s+\[(?<name>[^]]+)\]",

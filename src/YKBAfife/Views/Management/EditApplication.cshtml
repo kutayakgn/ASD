@@ -32,9 +32,8 @@
             <div class="application-form-grid">
                 <div class="add-jury-field">
                     <label asp-for="ApplicationNumber"></label>
-                    <input asp-for="ApplicationNumber" required maxlength="6"
-                           data-track-change data-initial-value="@Model.ApplicationNumber"
-                           data-fail-message="Başvuru no zorunludur." />
+                    <input asp-for="ApplicationNumber" disabled />
+                    <input asp-for="ApplicationNumber" type="hidden" id="ApplicationNumber-hidden" />
                 </div>
 
                 <fieldset class="add-jury-status application-status-field">

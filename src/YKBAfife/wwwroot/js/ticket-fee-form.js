@@ -1,18 +1,19 @@
 (() => {
+    const normalize = (input) => {
+        const normalizedValue = input.value.replace(/\D/g, "").slice(0, 5);
+        if (input.value !== normalizedValue) input.value = normalizedValue;
+    };
+
     const validate = (input) => {
         input.setCustomValidity("");
         let message = "";
 
-        if (input.validity.valueMissing || input.value.trim() === "") {
+        if (input.value === "") {
             message = "Bilet ücreti boş olamaz.";
-        } else if (input.validity.badInput) {
-            message = "Geçerli formatta bir bilet ücreti giriniz.";
-        } else if (Number(input.value) < 1 || input.validity.rangeUnderflow) {
-            message = "Bilet ücreti 1'den az olamaz.";
-        } else if (input.validity.stepMismatch) {
-            message = "Bilet ücreti en fazla iki ondalık basamak içermelidir.";
-        } else if (!input.validity.valid) {
-            message = "Geçerli formatta bir bilet ücreti giriniz.";
+        } else if (!/^\d{1,5}$/.test(input.value)) {
+            message = "Bilet ücreti en fazla 5 basamaklı tam sayı olmalıdır.";
+        } else if (Number(input.value) === 0) {
+            message = "Bilet ücreti 0'dan büyük olmalıdır.";
         } else if (Number(input.value) === Number(input.dataset.originalTicketFee)) {
             message = "Bilet ücreti mevcut değerle aynı olamaz.";
         }
@@ -22,6 +23,7 @@
     document.addEventListener("input", (event) => {
         const input = event.target.closest("[data-ticket-fee-input]");
         if (!input) return;
+        normalize(input);
         validate(input);
     });
 
@@ -30,6 +32,7 @@
         if (!form) return;
         const input = form.querySelector("[data-ticket-fee-input]");
         if (!input) return;
+        normalize(input);
         const message = validate(input);
         if (!message) return;
 

@@ -11,6 +11,7 @@
         const display = control.querySelector("[data-lazy-select-display]");
         const panel = control.querySelector("[data-lazy-select-panel]");
         const search = control.querySelector("[data-lazy-select-search]");
+        const clearSearch = control.querySelector("[data-lazy-select-clear]");
         const optionsHost = control.querySelector("[data-lazy-select-options]");
         const status = control.querySelector("[data-lazy-select-status]");
         let options = [];
@@ -89,6 +90,11 @@
 
         trigger.addEventListener("click", () => panel.hidden ? open() : close());
         search.addEventListener("input", render);
+        clearSearch?.addEventListener("click", () => {
+            search.value = "";
+            render();
+            search.focus();
+        });
         search.addEventListener("keydown", (event) => {
             if (event.key === "Escape") close(true);
             if (event.key === "ArrowDown") {

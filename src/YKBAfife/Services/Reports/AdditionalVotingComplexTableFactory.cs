@@ -24,13 +24,15 @@ public static class AdditionalVotingComplexTableFactory
         DataActionName = "AdditionalVotingTable",
         CurrentTabKey = TabKey,
         ShowSearch = false,
+        IsEditableRows = true,
+
         MinimumTableWidth = 1120,
         Tabs =
         [
             new ComplexTableTabViewModel
             {
                 Key = TabKey,
-                Title = "Ek Oylama/Oy Düzenleme Hakkı",
+                Title = "",
                 SortBy = report.SortBy,
                 SortDirection = report.SortDirection,
                 CurrentPage = report.CurrentPage,
@@ -51,10 +53,12 @@ public static class AdditionalVotingComplexTableFactory
                 {
                     Id = $"additional-voting-{row.Id:N}",
                     Link = $"/diger-ayarlar/ek-oylamalar/{row.Id}",
+                    EditUrl = $"/diger-ayarlar/ek-oylamalar/{row.Id}/duzenle",
+                    EditAccessibleLabel = $"{row.StartDate:dd.MM.yyyy} tarihli ek oylama hakkını düzenle",
                     Cells =
                     [
-                        Cell(row.StartDate.ToString("dd.MM.yyyy")),
-                        Cell(row.EndDate.ToString("dd.MM.yyyy")),
+                        Cell($"{row.StartDate:dd.MM.yyyy} 00:00:01"),
+                        Cell($"{row.EndDate:dd.MM.yyyy} 23:59:59"),
                         Cell(row.AppliesToAllJuries ? "Tüm Jüriler" : $"{row.JuryCount} jüri"),
                         Cell(row.AppliesToAllPlays ? "Tüm Oyunlar" : $"{row.PlayCount} oyun"),
                         Cell(row.FirstVoteUserCount.ToString()),

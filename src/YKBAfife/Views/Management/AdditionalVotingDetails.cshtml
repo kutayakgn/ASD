@@ -14,8 +14,8 @@
     <section class="season-detail-section" aria-labelledby="additional-voting-information-title">
         <h2 id="additional-voting-information-title">Hak Bilgileri</h2>
         <dl class="season-details-grid additional-voting-details-grid">
-            <div class="play-detail-field"><dt>Ek Oylama Başlangıç Süresi</dt><dd>@Model.StartDate.ToString("dd.MM.yyyy")</dd></div>
-            <div class="play-detail-field"><dt>Ek Oylama Bitiş Süresi</dt><dd>@Model.EndDate.ToString("dd.MM.yyyy")</dd></div>
+            <div class="play-detail-field"><dt>Ek Oylama Başlangıç Süresi</dt><dd>@Model.StartDate.ToString("dd.MM.yyyy") 00:00:01</dd></div>
+            <div class="play-detail-field"><dt>Ek Oylama Bitiş Süresi</dt><dd>@Model.EndDate.ToString("dd.MM.yyyy") 23:59:59</dd></div>
             <div class="play-detail-field"><dt>Oy Verebilecek Jüriler</dt><dd>@(Model.AppliesToAllJuries ? "Tüm Jüriler" : string.Join(", ", Model.JuryNames))</dd></div>
             <div class="play-detail-field"><dt>Oy Verilebilecek Oyunlar</dt><dd>@(Model.AppliesToAllPlays ? "Tüm Oyunlar" : string.Join(", ", Model.PlayNames))</dd></div>
             <div class="play-detail-field"><dt>İlk Defa Oy Kullananlar</dt><dd>@(Model.FirstVoteUserNames.Count == 0 ? "-" : string.Join(", ", Model.FirstVoteUserNames))</dd></div>

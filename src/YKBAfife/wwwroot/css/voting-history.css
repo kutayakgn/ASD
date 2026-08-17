@@ -66,29 +66,53 @@
 
 .lazy-search-select-search-wrap {
     position: relative;
-    margin: 0 8px 8px;
+    display: flex;
+    width: calc(100% - 32px);
+    margin: 8px 16px 8px;
+    align-items: center;
 }
 
-.lazy-search-select-search {
+.lazy-search-select .lazy-search-select-search[type="search"] {
     width: 100%;
-    min-height: 36px;
-    padding: 8px 34px 8px 10px;
+    min-width: 0;
+    min-height: 44px;
+    box-sizing: border-box;
+    padding: 10px 84px 10px 8px;
     color: #171717;
     background: #fff;
-    border: 1px solid #cfcfcf;
+    border: 1px solid #bdbdbd;
+    border-radius: 0;
+    -webkit-appearance: none;
+    appearance: none;
+    outline: none;
 }
 
-    .lazy-search-select-search:focus {
-        border-color: #918150;
+    .lazy-search-select .lazy-search-select-search[type="search"]:focus {
         outline: none;
     }
 
-.lazy-search-select-search-wrap img {
+.lazy-search-select-search::-webkit-search-decoration,
+.lazy-search-select-search::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.lazy-search-select-search:placeholder-shown + .lazy-search-select-clear {
+    display: none;
+}
+
+.lazy-search-select-clear img {
+    width: 16px;
+    height: 16px;
+}
+
+.lazy-search-select-search-wrap > .lazy-search-select-magnifier,
+.lazy-search-select-search-wrap > img:not(.lazy-search-select-magnifier) {
     position: absolute;
     top: 50%;
-    right: 10px;
-    width: 15px;
-    height: 15px;
+    right: 12px;
+    width: 16px;
+    height: 16px;
     pointer-events: none;
     transform: translateY(-50%);
 }
@@ -101,7 +125,7 @@
 .lazy-search-select-option {
     display: block;
     width: 100%;
-    padding: 8px 10px;
+    padding: 8px 16px;
     color: #171717;
     background: #fff;
     border: 0;

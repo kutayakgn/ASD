@@ -87,8 +87,7 @@
     background: #171717;
 }
 
-.generic-popup-button:hover,
-.generic-popup-button:focus-visible {
+.generic-popup-button:hover {
     color: #fff;
     background: #918150;
     border-color: #918150;

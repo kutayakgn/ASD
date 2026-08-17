@@ -83,6 +83,15 @@ internal static class AfifeRelationalModelConfiguration
 
         modelBuilder.Entity<UserLog>().HasOne<User>().WithMany().HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.NoAction).HasConstraintName("FK_UsersLog_Users_UserId");
+        modelBuilder.Entity<JuryLog>().HasOne(x => x.Jury).WithMany()
+            .HasForeignKey(x => x.JuryId).OnDelete(DeleteBehavior.NoAction)
+            .HasConstraintName("FK_JuryLogs_Users_JuryId");
+        modelBuilder.Entity<JuryLog>().HasOne(x => x.Play).WithMany()
+            .HasForeignKey(x => x.PlayId).OnDelete(DeleteBehavior.NoAction)
+            .HasConstraintName("FK_JuryLogs_Plays_PlayId");
+        modelBuilder.Entity<JuryLog>().HasOne(x => x.AdditionalVoting).WithMany()
+            .HasForeignKey(x => x.AdditionalVotingId).OnDelete(DeleteBehavior.NoAction)
+            .HasConstraintName("FK_JuryLogs_AdditionalVotings_AdditionalVotingId");
 
         modelBuilder.Entity<Announcement>().HasOne(x => x.ImageAsset)
             .WithMany(x => x.AnnouncementImages).HasForeignKey(x => x.ImageId)
@@ -357,6 +366,9 @@ internal static class AfifeRelationalModelConfiguration
             .HasDatabaseName("UX_PlayAwardCategories_Current_Play_Category_Role");
         modelBuilder.Entity<PlayAwardCategory>().HasIndex(x => new { x.PlayId, x.AwardCategoryCode, x.RoleCode, x.Candidate })
             .HasDatabaseName("UX_PlayAwardCategories_Play_Category_Role_Candidate");
+        modelBuilder.Entity<PlayAwardCategory>().HasIndex(x => new { x.PlayId, x.AwardCategoryCode, x.SourceFormCandidateOrder })
+            .IsUnique().HasFilter("[SourceFormCandidateOrder] IS NOT NULL AND [IsCurrent] = 1")
+            .HasDatabaseName("UX_PlayAwardCategories_FormSourceSlot");
         modelBuilder.Entity<PlayAwardCategory>().HasIndex(x => x.PlayId)
             .IsUnique().HasFilter("[AwardCategoryCode] = 1001 AND [RoleCode] = 0")
             .HasDatabaseName("UX_PlayAwardCategories_DefaultPlayCategory");

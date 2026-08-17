@@ -36,7 +36,8 @@ public sealed class PlayReportService(AfifeContext context) : IPlayReportService
         if (normalized.JuryVotingStatus.HasValue)
         {
             plays = plays.Where(play =>
-                (!play.RecordType && play.JuriOylamaStatus) == normalized.JuryVotingStatus.Value);
+                (!play.RecordType && play.StatusCode == 1 && play.JuriOylamaStatus) ==
+                normalized.JuryVotingStatus.Value);
         }
 
         if (normalized.KunyeGirisStatus.HasValue)
@@ -52,7 +53,7 @@ public sealed class PlayReportService(AfifeContext context) : IPlayReportService
 
         var totalCount = await plays.CountAsync(cancellationToken);
         var juryVotingEnabledCount = await plays.CountAsync(
-            play => !play.RecordType && play.JuriOylamaStatus,
+            play => !play.RecordType && play.StatusCode == 1 && play.JuriOylamaStatus,
             cancellationToken);
         var totalPages = Math.Max(1, (int)Math.Ceiling(totalCount / (double)PlayTableViewModel.PageSize));
         var currentPage = Math.Min(normalized.Page, totalPages);
@@ -62,12 +63,13 @@ public sealed class PlayReportService(AfifeContext context) : IPlayReportService
             PlayId = play.Id,
             PlayName = play.PlayName,
             TheaterName = play.TheaterName,
+            StatusCode = play.StatusCode,
             RecordType = play.RecordType,
             HasSimilarPlay = similarPlayIds.Contains(play.Id),
             IsNew = !play.RecordType &&
                     (!play.UpdatedAt.HasValue || play.UpdatedAt == play.CreatedAt),
             CreatedAt = play.CreatedAt,
-            JuriOylamaStatus = !play.RecordType && play.JuriOylamaStatus,
+            JuriOylamaStatus = !play.RecordType && play.StatusCode == 1 && play.JuriOylamaStatus,
             KunyeGirisStatus = !play.RecordType && play.KunyeGirisStatus,
             Slug = play.Slug
         });

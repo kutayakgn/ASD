@@ -159,7 +159,7 @@
         }
 
         const row = event.target.closest("tr[data-row-link]");
-        if (!row || event.target.closest("a, button, input, select, textarea, .complex-table-toggle-cell")) return;
+        if (!row || event.target.closest("a, button, input, select, textarea, .complex-table-toggle-cell, .complex-table-delete-column")) return;
         if (row.dataset.rowLink) window.location.href = row.dataset.rowLink;
     });
 

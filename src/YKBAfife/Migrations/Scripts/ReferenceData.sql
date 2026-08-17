@@ -89,8 +89,7 @@ VALUES
     ('40000000-0000-0000-0000-000000000008', 1008, N'Yılın En Başarılı Giysi Tasarımı', 1, 1),
     ('40000000-0000-0000-0000-000000000010', 1009, N'Yılın En Başarılı Sahne Müziği', 1, 1),
     ('40000000-0000-0000-0000-000000000009', 1010, N'Yılın En Başarılı Işık Tasarımı', 1, 1),
-    ('40000000-0000-0000-0000-000000000012', 1011, N'Yılın En Başarılı Hareket Düzeni (Kareografisi)', 1, 1),
-    ('40000000-0000-0000-0000-000000000011', 1012, N'Yılın En Başarılı Genç Kuşak Sanatçısı', 1, 1);
+    ('40000000-0000-0000-0000-000000000012', 1011, N'Yılın En Başarılı Hareket Düzeni (Kareografisi)', 1, 1);
 
 IF EXISTS
 (
@@ -117,12 +116,20 @@ SET CategoryName = source.CategoryName,
 FROM dbo.AwardCategories AS target
 INNER JOIN @AwardCategories AS source ON source.CategoryCode = target.CategoryCode;
 
+/* Category 1012 is retired. Retain the FK target as unpublished history so
+   existing candidate/vote/audit rows remain referentially valid. */
+UPDATE dbo.AwardCategories
+SET IsPublished = 0,
+    UpdatedAt = DATEADD(HOUR, 3, SYSUTCDATETIME())
+WHERE CategoryCode = 1012
+  AND IsPublished = 1;
+
 IF COL_LENGTH(N'dbo.AwardCategories', N'MultiCandidate') IS NOT NULL
    AND COL_LENGTH(N'dbo.AwardCategories', N'HasRoleAndPhoto') IS NOT NULL
 BEGIN
     EXEC sys.sp_executesql N'
     UPDATE dbo.AwardCategories
-    SET MultiCandidate = CASE WHEN CategoryCode BETWEEN 1003 AND 1012 THEN 1 ELSE 0 END,
-        HasRoleAndPhoto = CASE WHEN CategoryCode BETWEEN 1002 AND 1012 THEN 1 ELSE 0 END
-    WHERE CategoryCode BETWEEN 1001 AND 1012;';
+    SET MultiCandidate = CASE WHEN CategoryCode BETWEEN 1003 AND 1011 THEN 1 ELSE 0 END,
+        HasRoleAndPhoto = CASE WHEN CategoryCode BETWEEN 1002 AND 1011 THEN 1 ELSE 0 END
+    WHERE CategoryCode BETWEEN 1001 AND 1011;';
 END;

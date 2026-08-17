@@ -26,7 +26,7 @@ public sealed class RankingTableViewModel
 
 public sealed class RankingRowViewModel
 {
-    public int Position { get; init; }
+    public int? Position { get; init; }
     public Guid PlayAwardCategoryId { get; init; }
     public string CategoryName { get; init; } = string.Empty;
     public string DisplayName { get; init; } = string.Empty;

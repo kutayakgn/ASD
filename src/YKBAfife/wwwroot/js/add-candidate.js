@@ -81,10 +81,10 @@
 
         const render = (file) => {
             const hasPhoto = Boolean(file);
-            if (fileName) fileName.textContent = file?.name || "Dosya Ekle";
+            if (fileName) fileName.textContent = file?.name || "Dosya Yükle";
             if (picker) picker.disabled = hasPhoto;
             if (primaryIcon) primaryIcon.src = hasPhoto ? "/icons/trash.svg" : "/icons/upload.svg";
-            if (primary) primary.setAttribute("aria-label", hasPhoto ? "Yüklenen fotoğrafı kaldır" : "Dosya ekle");
+            if (primary) primary.setAttribute("aria-label", hasPhoto ? "Yüklenen fotoğrafı kaldır" : "Dosya yükle");
             if (actions) actions.hidden = !hasPhoto;
         };
 
