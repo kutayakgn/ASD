@@ -2,18 +2,25 @@
 @{
     var selectedJuryIds = Model.SelectedJuryIds.ToHashSet();
     var selectedStatus = Model.StatusOptions.FirstOrDefault(status => status.StatusCode == Model.StatusCode);
+    var nameMaxLength = Model is YKBAfife.Models.ViewModels.AddPlayViewModel
+        ? YKBAfife.Models.ViewModels.AddPlayViewModel.NameMaxLength
+        : 250;
 }
 <div class="add-jury-grid add-play-grid">
     <div class="add-jury-field">
         <label asp-for="PlayName"></label>
-        <input asp-for="PlayName" required minlength="2" maxlength="250" autocomplete="off" />
+        <input asp-for="PlayName" required minlength="2" maxlength="@nameMaxLength" autocomplete="off" placeholder="Oyun Adı Yazın" />
         <span asp-validation-for="PlayName"></span>
     </div>
     <div class="add-jury-field">
         <label asp-for="TheaterName"></label>
-        <input asp-for="TheaterName" required minlength="2" maxlength="250" autocomplete="organization" />
+        <input asp-for="TheaterName" required minlength="2" maxlength="@nameMaxLength" autocomplete="organization" placeholder="Tiyatro Adı Yazın" />
         <span asp-validation-for="TheaterName"></span>
     </div>
+    @if (Model is YKBAfife.Models.ViewModels.EditPlayViewModel { RecordType: false } editPlayModel)
+    {
+        <partial name="_EditPlayKunyeStatusFields" model="editPlayModel" />
+    }
     <div class="add-jury-field add-play-jury-field">
         <label id="jury-group-label">Jüri Grup Bilgisi</label>
         <div class="add-play-jury-select" data-jury-multiselect>
@@ -75,4 +82,11 @@
         </div>
         <span asp-validation-for="StatusCode"></span>
     </div>
+    @if (Model is YKBAfife.Models.ViewModels.EditPlayViewModel editPlay)
+    {
+        <div class="add-jury-field edit-play-record-type">
+            <label>Eklenme Yöntemi</label>
+            <input value="@editPlay.RecordTypeDisplay" disabled aria-disabled="true" />
+        </div>
+    }
 </div>

@@ -17,6 +17,7 @@
 
     const groups = [...juryMenu.querySelectorAll("[data-jury-group]")];
     const page = form.closest(".add-play-page");
+    const requiresJurySelection = !form.querySelector('[name="Id"]');
     let clearanceAnimationFrame = 0;
 
     const syncJuryVotingAvailability = () => {
@@ -71,10 +72,10 @@
         token.dataset.selectionValue = value;
         const label = document.createElement("span");
         label.textContent = text;
-        const removeIcon = document.createElement("span");
+        const removeIcon = document.createElement("img");
         removeIcon.className = "add-play-selection-remove-icon";
         removeIcon.setAttribute("aria-hidden", "true");
-        removeIcon.textContent = "×";
+        removeIcon.src = "/icons/x-white.svg";
         token.append(label, removeIcon);
         return token;
     };
@@ -242,7 +243,9 @@
         const theaterName = form.querySelector('[name="TheaterName"]')?.value.trim() ?? "";
         if (playName.length < 2) messages.push("Oyun adı en az 2 karakter olmalıdır.");
         if (theaterName.length < 2) messages.push("Tiyatro adı en az 2 karakter olmalıdır.");
-        if (!juryMenu.querySelector("[data-jury-checkbox]:checked")) messages.push("En az bir jüri veya jüri grubu seçiniz.");
+        if (requiresJurySelection && !juryMenu.querySelector("[data-jury-checkbox]:checked")) {
+            messages.push("En az bir jüri veya jüri grubu seçiniz.");
+        }
         if (!statusValue.value) messages.push("Oyun statüsü seçiniz.");
         if (messages.length > 0) {
             window.genericPopup?.fail(messages.join(" "));
@@ -282,7 +285,7 @@
 
             if (result.status === "exact") {
                 window.genericPopup?.fail(
-                    result.message || "Aynı oyun adı ve tiyatro adına sahip bir oyun var. Yinelenen kayıt oluşturamazsınız.");
+                    result.message || "Aynı isimli bir oyun kaydı bulunduğu için, bu oyunu kaydedemezsin.");
                 return;
             }
 

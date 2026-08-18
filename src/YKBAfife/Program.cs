@@ -1,15 +1,26 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Server.IIS;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations;
 using YKBAfife.Data;
 using YKBAfife.Data.Migrations;
+using YKBAfife.Helpers;
 using YKBAfife.Services.Authentication;
 using YKBAfife.Services.Audit;
 using YKBAfife.Services.Exports;
 using YKBAfife.Services.Reports;
+using YKBAfife.Services.Security;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel(options =>
+    options.Limits.MaxRequestBodySize = ImageUploadPolicy.MaximumRequestBodySizeBytes);
+builder.Services.Configure<IISServerOptions>(options =>
+    options.MaxRequestBodySize = ImageUploadPolicy.MaximumRequestBodySizeBytes);
+builder.Services.Configure<FormOptions>(options =>
+    options.MultipartBodyLengthLimit = ImageUploadPolicy.MaximumRequestBodySizeBytes);
 
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
@@ -17,6 +28,7 @@ builder.Logging.AddDebug();
 
 builder.Services.AddControllersWithViews(options =>
 {
+    options.Filters.Add<UnsafeInputValidationFilter>();
     options.Filters.Add<AdminActionAuditFilter>();
 });
 
@@ -26,6 +38,7 @@ var connectionString = builder.Configuration.GetConnectionString("AfifeConnectio
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<AdminAuditConnectionInterceptor>();
 builder.Services.AddScoped<AdminActionAuditFilter>();
+builder.Services.AddScoped<UnsafeInputValidationFilter>();
 builder.Services.AddScoped<IAdminActionAuditLogger, AdminActionAuditLogger>();
 builder.Services.AddDbContext<AfifeContext>((serviceProvider, options) =>
     options
@@ -71,6 +84,25 @@ builder.Services.AddAuthorization(options =>
 });
 
 var app = builder.Build();
+
+app.Use(async (context, next) =>
+{
+    context.Response.OnStarting(() =>
+    {
+        var headers = context.Response.Headers;
+        headers["Content-Security-Policy"] =
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
+            "img-src 'self' data: blob:; font-src 'self' data:; object-src 'none'; " +
+            "base-uri 'self'; frame-ancestors 'none'; form-action 'self'";
+        headers["X-Content-Type-Options"] = "nosniff";
+        headers["X-Frame-Options"] = "DENY";
+        headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+        headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+        return Task.CompletedTask;
+    });
+
+    await next();
+});
 
 if (!app.Environment.IsDevelopment())
 {

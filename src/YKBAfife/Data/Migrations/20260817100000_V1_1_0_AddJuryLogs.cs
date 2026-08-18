@@ -11,96 +11,105 @@ public sealed class V1_1_0_AddJuryLogs : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.CreateTable(
-            name: "JuryLogs",
-            schema: "dbo",
-            columns: table => new
-            {
-                Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false,
-                    defaultValueSql: "newsequentialid()"),
-                CorrelationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false,
-                    defaultValueSql: "newid()"),
-                JuryId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                JuryUsername = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                PlayId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                PlayName = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: true),
-                AdditionalVotingId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                AdditionalVotingUsageId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                AdditionalVotingUsageType = table.Column<byte>(type: "tinyint", nullable: true),
-                IsAdditionalVoting = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
-                OperationName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
-                OperationType = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                SubmittedVotesJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                OldVotesJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                NewVotesJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                SubmittedTicketFee = table.Column<decimal>(type: "decimal(10,2)", precision: 10, scale: 2, nullable: true),
-                OldTicketFee = table.Column<decimal>(type: "decimal(10,2)", precision: 10, scale: 2, nullable: true),
-                NewTicketFee = table.Column<decimal>(type: "decimal(10,2)", precision: 10, scale: 2, nullable: true),
-                RequestPayloadJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                StateSnapshotJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                AffectedVoteCount = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
-                OccurredAt = table.Column<DateTime>(type: "datetime2(7)", nullable: false,
-                    defaultValueSql: "DATEADD(HOUR, 3, SYSUTCDATETIME())"),
-                DurationMilliseconds = table.Column<long>(type: "bigint", nullable: true),
-                IpAddress = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: true),
-                UserAgent = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
-                HttpMethod = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: true),
-                RequestPath = table.Column<string>(type: "nvarchar(2048)", maxLength: 2048, nullable: true),
-                ControllerName = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: true),
-                ActionName = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: true),
-                Application = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false,
-                    defaultValue: "AfifeJury"),
-                Source = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false,
-                    defaultValue: "JuryPanel"),
-                IsSuccessful = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
-                ResultCode = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                Details = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                FailureReason = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
-                IsPublished = table.Column<bool>(type: "bit", nullable: false, defaultValue: true)
-            },
-            constraints: table =>
-            {
-                table.PrimaryKey("PK_JuryLogs", x => x.Id);
-                table.ForeignKey(
-                    name: "FK_JuryLogs_AdditionalVotings_AdditionalVotingId",
-                    column: x => x.AdditionalVotingId,
-                    principalSchema: "dbo",
-                    principalTable: "AdditionalVotings",
-                    principalColumn: "Id");
-                table.ForeignKey(
-                    name: "FK_JuryLogs_Plays_PlayId",
-                    column: x => x.PlayId,
-                    principalSchema: "dbo",
-                    principalTable: "Plays",
-                    principalColumn: "Id");
-                table.ForeignKey(
-                    name: "FK_JuryLogs_Users_JuryId",
-                    column: x => x.JuryId,
-                    principalSchema: "dbo",
-                    principalTable: "Users",
-                    principalColumn: "Id");
-            });
+        migrationBuilder.Sql(
+            """
+            IF OBJECT_ID(N'dbo.JuryLogs', N'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.JuryLogs
+                (
+                    Id uniqueidentifier NOT NULL
+                        CONSTRAINT DF_JuryLogs_Id DEFAULT (newsequentialid()),
+                    CorrelationId uniqueidentifier NOT NULL
+                        CONSTRAINT DF_JuryLogs_CorrelationId DEFAULT (newid()),
+                    JuryId uniqueidentifier NULL,
+                    JuryUsername nvarchar(100) NULL,
+                    PlayId uniqueidentifier NULL,
+                    PlayName nvarchar(250) NULL,
+                    AdditionalVotingId uniqueidentifier NULL,
+                    AdditionalVotingUsageId uniqueidentifier NULL,
+                    AdditionalVotingUsageType tinyint NULL,
+                    IsAdditionalVoting bit NOT NULL
+                        CONSTRAINT DF_JuryLogs_IsAdditionalVoting DEFAULT ((0)),
+                    OperationName nvarchar(256) NOT NULL,
+                    OperationType nvarchar(50) NOT NULL,
+                    SubmittedVotesJson nvarchar(max) NULL,
+                    OldVotesJson nvarchar(max) NULL,
+                    NewVotesJson nvarchar(max) NULL,
+                    SubmittedTicketFee decimal(10,2) NULL,
+                    OldTicketFee decimal(10,2) NULL,
+                    NewTicketFee decimal(10,2) NULL,
+                    RequestPayloadJson nvarchar(max) NULL,
+                    StateSnapshotJson nvarchar(max) NULL,
+                    AffectedVoteCount int NOT NULL
+                        CONSTRAINT DF_JuryLogs_AffectedVoteCount DEFAULT ((0)),
+                    OccurredAt datetime2(7) NOT NULL
+                        CONSTRAINT DF_JuryLogs_OccurredAt
+                        DEFAULT (DATEADD(HOUR, (3), SYSUTCDATETIME())),
+                    DurationMilliseconds bigint NULL,
+                    IpAddress nvarchar(64) NULL,
+                    UserAgent nvarchar(1000) NULL,
+                    HttpMethod nvarchar(16) NULL,
+                    RequestPath nvarchar(2048) NULL,
+                    ControllerName nvarchar(128) NULL,
+                    ActionName nvarchar(128) NULL,
+                    Application nvarchar(100) NOT NULL
+                        CONSTRAINT DF_JuryLogs_Application DEFAULT (N'AfifeJury'),
+                    Source nvarchar(50) NOT NULL
+                        CONSTRAINT DF_JuryLogs_Source DEFAULT (N'JuryPanel'),
+                    IsSuccessful bit NOT NULL
+                        CONSTRAINT DF_JuryLogs_IsSuccessful DEFAULT ((0)),
+                    ResultCode nvarchar(100) NULL,
+                    Details nvarchar(max) NULL,
+                    FailureReason nvarchar(2000) NULL,
+                    IsPublished bit NOT NULL
+                        CONSTRAINT DF_JuryLogs_IsPublished DEFAULT ((1)),
+                    CONSTRAINT PK_JuryLogs PRIMARY KEY (Id),
+                    CONSTRAINT FK_JuryLogs_AdditionalVotings_AdditionalVotingId
+                        FOREIGN KEY (AdditionalVotingId) REFERENCES dbo.AdditionalVotings(Id),
+                    CONSTRAINT FK_JuryLogs_Plays_PlayId
+                        FOREIGN KEY (PlayId) REFERENCES dbo.Plays(Id),
+                    CONSTRAINT FK_JuryLogs_Users_JuryId
+                        FOREIGN KEY (JuryId) REFERENCES dbo.Users(Id)
+                );
+            END;
 
-        migrationBuilder.CreateIndex(
-            name: "IX_JuryLogs_CorrelationId",
-            schema: "dbo",
-            table: "JuryLogs",
-            column: "CorrelationId");
-        migrationBuilder.CreateIndex(
-            name: "IX_JuryLogs_JuryId_OccurredAt",
-            schema: "dbo",
-            table: "JuryLogs",
-            columns: new[] { "JuryId", "OccurredAt" });
-        migrationBuilder.CreateIndex(
-            name: "IX_JuryLogs_PlayId_OccurredAt",
-            schema: "dbo",
-            table: "JuryLogs",
-            columns: new[] { "PlayId", "OccurredAt" });
-        migrationBuilder.CreateIndex(
-            name: "IX_JuryLogs_OperationType_IsSuccessful_OccurredAt",
-            schema: "dbo",
-            table: "JuryLogs",
-            columns: new[] { "OperationType", "IsSuccessful", "OccurredAt" });
+            IF NOT EXISTS
+            (
+                SELECT 1 FROM sys.indexes
+                WHERE object_id = OBJECT_ID(N'dbo.JuryLogs')
+                  AND name = N'IX_JuryLogs_CorrelationId'
+            )
+                CREATE INDEX IX_JuryLogs_CorrelationId
+                    ON dbo.JuryLogs(CorrelationId);
+
+            IF NOT EXISTS
+            (
+                SELECT 1 FROM sys.indexes
+                WHERE object_id = OBJECT_ID(N'dbo.JuryLogs')
+                  AND name = N'IX_JuryLogs_JuryId_OccurredAt'
+            )
+                CREATE INDEX IX_JuryLogs_JuryId_OccurredAt
+                    ON dbo.JuryLogs(JuryId, OccurredAt);
+
+            IF NOT EXISTS
+            (
+                SELECT 1 FROM sys.indexes
+                WHERE object_id = OBJECT_ID(N'dbo.JuryLogs')
+                  AND name = N'IX_JuryLogs_PlayId_OccurredAt'
+            )
+                CREATE INDEX IX_JuryLogs_PlayId_OccurredAt
+                    ON dbo.JuryLogs(PlayId, OccurredAt);
+
+            IF NOT EXISTS
+            (
+                SELECT 1 FROM sys.indexes
+                WHERE object_id = OBJECT_ID(N'dbo.JuryLogs')
+                  AND name = N'IX_JuryLogs_OperationType_IsSuccessful_OccurredAt'
+            )
+                CREATE INDEX IX_JuryLogs_OperationType_IsSuccessful_OccurredAt
+                    ON dbo.JuryLogs(OperationType, IsSuccessful, OccurredAt);
+            """)
+            .Annotation(MigrationSqlResources.ReviewedDataSafeSqlAnnotation, true);
 
         MigrationSqlResources.Execute(migrationBuilder, "AuditTriggers.sql");
     }

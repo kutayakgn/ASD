@@ -72,8 +72,8 @@
 
 .complex-table-delete-button {
     display: inline-grid;
-    width: 36px;
-    height: 36px;
+    width: 48px;
+    height: 44px;
     padding: 0;
     place-items: center;
     background: transparent;

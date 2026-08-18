@@ -108,10 +108,12 @@ public sealed class PlayReportService(AfifeContext context) : IPlayReportService
         string sortDirection)
     {
         var descending = sortDirection == "desc";
-        var prioritizedRows = rows
-            .OrderByDescending(row => row.HasSimilarPlay)
-            .ThenByDescending(row => row.IsNew)
-            .ThenByDescending(row => row.IsNew ? row.CreatedAt : null);
+        var prioritizedRows = rows.OrderBy(row =>
+            row.IsNew
+                ? 0
+                : row.HasSimilarPlay
+                    ? 1
+                    : 2);
 
         return sortBy switch
         {

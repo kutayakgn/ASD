@@ -245,15 +245,14 @@ public sealed partial class ManagementController
         ReadCandidatePhotoAsync(IFormFile? photo, CancellationToken cancellationToken)
     {
         if (photo is null) return (null, null, null, null);
-        const long maximumPhotoSize = 5 * 1024 * 1024;
-        if (photo.Length == 0 || photo.Length > maximumPhotoSize)
-            return (null, null, null, "Fotoğraf boyutu 5 MB'dan küçük olmalıdır.");
+        if (photo.Length == 0 || photo.Length > ImageUploadPolicy.MaximumFileSizeBytes)
+            return (null, null, null, ImageUploadPolicy.MaximumFileSizeMessage);
 
         await using var photoStream = new MemoryStream();
         await photo.CopyToAsync(photoStream, cancellationToken);
         var data = photoStream.ToArray();
         var contentType = photo.ContentType.Trim().ToLowerInvariant();
-        if (!IsSupportedPhoto(data, contentType))
+        if (!IsSupportedPhoto(data, contentType, Path.GetFileName(photo.FileName)))
             return (null, null, null, "Yalnızca JPEG, PNG veya WebP formatında fotoğraf yükleyebilirsiniz.");
 
         return (data, contentType, Path.GetFileName(photo.FileName), null);

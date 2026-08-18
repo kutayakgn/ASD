@@ -25,6 +25,7 @@
 #applications-table th.applications-status-column,
 #applications-table td.applications-status-column {
     width: clamp(112px, 11.111vw, 160px) !important;
+    padding: 10px 16px;
 }
 
 @media (max-width: 760px) {

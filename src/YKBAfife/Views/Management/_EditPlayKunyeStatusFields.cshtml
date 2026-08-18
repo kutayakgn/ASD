@@ -1,0 +1,28 @@
+@model YKBAfife.Models.ViewModels.EditPlayViewModel
+
+<fieldset class="add-candidate-status" data-jury-voting-status-fieldset>
+    <legend>Jüri Oylama Sitesi Statü</legend>
+    <label>
+        <input asp-for="JuriOylamaStatus"
+               type="radio"
+               value="true"
+               data-jury-voting-active
+               disabled="@(Model.StatusCode != 1 ? "disabled" : null)" />
+        <span>Aktif</span>
+    </label>
+    <label>
+        <input asp-for="JuriOylamaStatus" type="radio" value="false" />
+        <span>Aktif Değil</span>
+    </label>
+</fieldset>
+<fieldset class="add-candidate-status">
+    <legend>Künye Giriş Sistemi Statü</legend>
+    <label>
+        <input asp-for="KunyeGirisStatus" type="radio" value="true" />
+        <span>Aktif</span>
+    </label>
+    <label>
+        <input asp-for="KunyeGirisStatus" type="radio" value="false" />
+        <span>Aktif Değil</span>
+    </label>
+</fieldset>

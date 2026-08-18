@@ -1,4 +1,5 @@
 using System.Data;
+using System.Buffers.Binary;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Mvc;
@@ -326,10 +327,11 @@ public sealed partial class ManagementController(
         string? photoFileName = null;
         if (model.Photo is not null)
         {
-            const long maximumPhotoSize = 5 * 1024 * 1024;
-            if (model.Photo.Length == 0 || model.Photo.Length > maximumPhotoSize)
+            if (model.Photo.Length == 0 ||
+                model.Photo.Length > ImageUploadPolicy.MaximumFileSizeBytes)
             {
-                ModelState.AddModelError(nameof(model.Photo), "Fotoğraf boyutu 5 MB'dan küçük olmalıdır.");
+                ModelState.AddModelError(
+                    nameof(model.Photo), ImageUploadPolicy.MaximumFileSizeMessage);
             }
             else
             {
@@ -338,7 +340,7 @@ public sealed partial class ManagementController(
                 photoData = photoStream.ToArray();
                 photoContentType = model.Photo.ContentType.Trim().ToLowerInvariant();
                 photoFileName = Path.GetFileName(model.Photo.FileName);
-                if (!IsSupportedPhoto(photoData, photoContentType))
+                if (!IsSupportedPhoto(photoData, photoContentType, photoFileName))
                 {
                     ModelState.AddModelError(
                         nameof(model.Photo),
@@ -505,10 +507,11 @@ public sealed partial class ManagementController(
 
         if (model.Photo is not null)
         {
-            const long maximumPhotoSize = 5 * 1024 * 1024;
-            if (model.Photo.Length == 0 || model.Photo.Length > maximumPhotoSize)
+            if (model.Photo.Length == 0 ||
+                model.Photo.Length > ImageUploadPolicy.MaximumFileSizeBytes)
             {
-                ModelState.AddModelError(nameof(model.Photo), "Fotoğraf boyutu 5 MB'dan küçük olmalıdır.");
+                ModelState.AddModelError(
+                    nameof(model.Photo), ImageUploadPolicy.MaximumFileSizeMessage);
             }
             else
             {
@@ -518,7 +521,7 @@ public sealed partial class ManagementController(
                 photoContentType = model.Photo.ContentType.Trim().ToLowerInvariant();
                 photoFileName = Path.GetFileName(model.Photo.FileName);
 
-                if (!IsSupportedPhoto(photoData, photoContentType))
+                if (!IsSupportedPhoto(photoData, photoContentType, photoFileName))
                 {
                     ModelState.AddModelError(
                         nameof(model.Photo),
@@ -636,23 +639,45 @@ public sealed partial class ManagementController(
                 .SetProperty(user => user.IsJuryPresident, false)
                 .SetProperty(user => user.UpdatedAt, TurkeyTime.Now)
                 .SetProperty(user => user.UpdatedBy, currentUserId), cancellationToken);
-    private static bool IsSupportedPhoto(byte[] data, string contentType)
+    private static bool IsSupportedPhoto(
+        byte[] data,
+        string contentType,
+        string? fileName)
     {
+        var extension = Path.GetExtension(fileName ?? string.Empty).ToLowerInvariant();
+
         if (contentType == "image/jpeg")
         {
-            return data.Length >= 3 && data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF;
+            return extension is ".jpg" or ".jpeg" &&
+                   data.Length >= 4 &&
+                   data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF &&
+                   data[^2] == 0xFF && data[^1] == 0xD9;
         }
 
         if (contentType == "image/png")
         {
             byte[] signature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-            return data.Length >= signature.Length && data.AsSpan(0, signature.Length).SequenceEqual(signature);
+            byte[] ending = [0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82];
+            return extension == ".png" &&
+                   data.Length >= 33 &&
+                   data.AsSpan(0, signature.Length).SequenceEqual(signature) &&
+                   data.AsSpan(12, 4).SequenceEqual("IHDR"u8) &&
+                   data.AsSpan(data.Length - ending.Length).SequenceEqual(ending);
         }
 
-        return contentType == "image/webp" &&
-               data.Length >= 12 &&
-               data.AsSpan(0, 4).SequenceEqual("RIFF"u8) &&
-               data.AsSpan(8, 4).SequenceEqual("WEBP"u8);
+        if (contentType != "image/webp" || extension != ".webp" || data.Length < 16 ||
+            !data.AsSpan(0, 4).SequenceEqual("RIFF"u8) ||
+            !data.AsSpan(8, 4).SequenceEqual("WEBP"u8))
+        {
+            return false;
+        }
+
+        var chunk = data.AsSpan(12, 4);
+        return (chunk.SequenceEqual("VP8 "u8) ||
+                chunk.SequenceEqual("VP8L"u8) ||
+                chunk.SequenceEqual("VP8X"u8)) &&
+               BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(4, 4)) ==
+               (uint)(data.Length - 8);
     }
 
 
@@ -727,7 +752,7 @@ public sealed partial class ManagementController(
             return Json(new
             {
                 status = "exact",
-                message = "Aynı oyun adı ve tiyatro adına sahip bir oyun var. Yinelenen kayıt oluşturamazsınız."
+                message = "Aynı isimli bir oyun kaydı bulunduğu için, bu oyunu kaydedemezsin."
             });
         }
 
@@ -755,6 +780,20 @@ public sealed partial class ManagementController(
         model.PlayName = model.PlayName?.Trim() ?? string.Empty;
         model.TheaterName = model.TheaterName?.Trim() ?? string.Empty;
         model.SelectedJuryIds = model.SelectedJuryIds?.Distinct().ToList() ?? [];
+
+        if (model.PlayName.Length > AddPlayViewModel.NameMaxLength)
+        {
+            ModelState.AddModelError(
+                nameof(model.PlayName),
+                $"Oyun adı en fazla {AddPlayViewModel.NameMaxLength} karakter olmalıdır.");
+        }
+
+        if (model.TheaterName.Length > AddPlayViewModel.NameMaxLength)
+        {
+            ModelState.AddModelError(
+                nameof(model.TheaterName),
+                $"Tiyatro adı en fazla {AddPlayViewModel.NameMaxLength} karakter olmalıdır.");
+        }
 
         if (!model.StatusCode.HasValue || !await context.PlayStatuses.AsNoTracking().AnyAsync(
                 status => status.IsPublished && status.StatusCode != 1 && status.StatusCode == model.StatusCode.Value,
@@ -796,7 +835,7 @@ public sealed partial class ManagementController(
         {
             return await ReturnAddPlayFailureAsync(
                 model,
-                "Aynı oyun adı ve tiyatro adına sahip bir oyun var. Yinelenen kayıt oluşturamazsınız.",
+                "Aynı isimli bir oyun kaydı bulunduğu için, bu oyunu kaydedemezsin.",
                 cancellationToken);
         }
 
@@ -829,7 +868,7 @@ public sealed partial class ManagementController(
                 await transaction.RollbackAsync(cancellationToken);
                 return await ReturnAddPlayFailureAsync(
                     model,
-                    "Aynı oyun adı ve tiyatro adına sahip bir oyun var. Yinelenen kayıt oluşturamazsınız.",
+                    "Aynı isimli bir oyun kaydı bulunduğu için, bu oyunu kaydedemezsin.",
                     cancellationToken);
             }
 
@@ -977,11 +1016,7 @@ public sealed partial class ManagementController(
                            user.IsPublished && user.IsActive && user.RoleCode == 2)
             .Select(user => user.Id)
             .ToListAsync(cancellationToken);
-        if (validJuryIds.Count == 0)
-        {
-            ModelState.AddModelError(nameof(model.SelectedJuryIds), "En az bir jüri veya jüri grubu seçiniz.");
-        }
-        else if (validJuryIds.Count != model.SelectedJuryIds.Count)
+        if (validJuryIds.Count != model.SelectedJuryIds.Count)
         {
             ModelState.AddModelError(nameof(model.SelectedJuryIds), "Jüri seçimlerinden biri artık kullanılamıyor.");
         }
@@ -996,7 +1031,7 @@ public sealed partial class ManagementController(
         if (similarity.HasExactMatch)
         {
             return await ReturnEditPlayFailureAsync(model,
-                "Aynı oyun adı ve tiyatro adına sahip başka bir oyun var. Yinelenen kayıt oluşturamazsınız.",
+                "Aynı isimli bir oyun kaydı bulunduğu için, bu oyunu kaydedemezsin.",
                 cancellationToken);
         }
         if (similarity.SimilarPlays.Count > 0 && !model.ConfirmSimilarPlay)
@@ -1021,7 +1056,7 @@ public sealed partial class ManagementController(
             {
                 await transaction.RollbackAsync(cancellationToken);
                 return await ReturnEditPlayFailureAsync(model,
-                    "Aynı oyun adı ve tiyatro adına sahip başka bir oyun var. Yinelenen kayıt oluşturamazsınız.",
+                    "Aynı isimli bir oyun kaydı bulunduğu için, bu oyunu kaydedemezsin.",
                     cancellationToken);
             }
 
@@ -1235,16 +1270,41 @@ public sealed partial class ManagementController(
             .Where(group => assignedGroupCodes.Contains(group.Code) && group.IsPublished)
             .ToDictionaryAsync(group => group.Code, group => group.GroupName, cancellationToken);
 
+        var selectableGroupMembers = await context.Users
+            .AsNoTracking()
+            .Where(user => user.IsPublished &&
+                           user.IsActive &&
+                           user.RoleCode == 2 &&
+                           user.GroupCode.HasValue &&
+                           assignedGroupCodes.Contains(user.GroupCode.Value))
+            .Select(user => new { GroupCode = user.GroupCode!.Value, user.Id })
+            .ToArrayAsync(cancellationToken);
+        var selectableMemberIdsByGroup = selectableGroupMembers
+            .GroupBy(member => member.GroupCode)
+            .ToDictionary(group => group.Key, group => group.Select(member => member.Id).ToHashSet());
+
+        static string JuryDisplayName(string firstName, string lastName, string username)
+        {
+            var fullName = $"{firstName} {lastName}".Trim();
+            return string.IsNullOrWhiteSpace(fullName) ? username : fullName;
+        }
+
         var juryGroupInfo = assignedJuries
-            .Where(jury => jury.GroupCode.HasValue && assignedGroupNames.ContainsKey(jury.GroupCode.Value))
-            .Select(jury => assignedGroupNames[jury.GroupCode!.Value])
-            .Concat(assignedJuries
-                .Where(jury => !jury.GroupCode.HasValue || !assignedGroupNames.ContainsKey(jury.GroupCode.Value))
-                .Select(jury =>
+            .GroupBy(jury => jury.GroupCode)
+            .SelectMany(group =>
+            {
+                if (group.Key.HasValue &&
+                    assignedGroupNames.TryGetValue(group.Key.Value, out var groupName) &&
+                    selectableMemberIdsByGroup.TryGetValue(group.Key.Value, out var selectableMemberIds) &&
+                    selectableMemberIds.Count > 0 &&
+                    selectableMemberIds.All(memberId => group.Any(jury => jury.Id == memberId)))
                 {
-                    var fullName = $"{jury.FirstName} {jury.LastName}".Trim();
-                    return string.IsNullOrWhiteSpace(fullName) ? jury.Username : fullName;
-                }))
+                    return new[] { groupName };
+                }
+
+                return group.Select(jury =>
+                    JuryDisplayName(jury.FirstName, jury.LastName, jury.Username));
+            })
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Distinct(StringComparer.CurrentCultureIgnoreCase)
             .OrderBy(value => value, StringComparer.CurrentCultureIgnoreCase)
@@ -1652,10 +1712,11 @@ public sealed partial class ManagementController(
         string? photoFileName = null;
         if (category.HasRoleAndPhoto && input.Photo is not null)
         {
-            const long maximumPhotoSize = 5 * 1024 * 1024;
-            if (input.Photo.Length == 0 || input.Photo.Length > maximumPhotoSize)
+            if (input.Photo.Length == 0 ||
+                input.Photo.Length > ImageUploadPolicy.MaximumFileSizeBytes)
             {
-                return RedirectToCandidateSectionWithPopup(slug, "fail", "Fotoğraf boyutu 5 MB'dan küçük olmalıdır.");
+                return RedirectToCandidateSectionWithPopup(
+                    slug, "fail", ImageUploadPolicy.MaximumFileSizeMessage);
             }
 
             await using var photoStream = new MemoryStream();
@@ -1663,7 +1724,7 @@ public sealed partial class ManagementController(
             photoData = photoStream.ToArray();
             photoContentType = input.Photo.ContentType.Trim().ToLowerInvariant();
             photoFileName = Path.GetFileName(input.Photo.FileName);
-            if (!IsSupportedPhoto(photoData, photoContentType))
+            if (!IsSupportedPhoto(photoData, photoContentType, photoFileName))
             {
                 return RedirectToCandidateSectionWithPopup(
                     slug,

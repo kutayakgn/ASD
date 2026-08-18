@@ -286,8 +286,8 @@ body {
 }
 
     .play-details-back img {
-        width: 16px;
-        height: 16px;
+        width: 12px;
+        height: 12px;
     }
 
     .play-details-back:hover,
@@ -337,6 +337,10 @@ body {
     text-decoration: none;
     transition: color .15s ease-in-out, background-color .15s ease-in-out, border-color .15s ease-in-out;
 }
+
+    .play-detail-action.bordered {
+        background: #fff;
+    }
 
 .play-detail-action-secondary {
     color: #171717;
@@ -450,12 +454,15 @@ body {
     flex: 0 0 10px;
     border-radius: 50%;
 }
+    .play-status-dot.bordered {
+        border: 1px solid #1717172e;
+    }
 
-.play-details-divider {
-    height: 1px;
-    margin: 24px 0 24px 0;
-    background: #d8d4ca;
-}
+    .play-details-divider {
+        height: 1px;
+        margin: 24px 0 24px 0;
+        background: #d8d4ca;
+    }
 
 .add-candidate {
     font-family: Outfit;
@@ -474,7 +481,7 @@ body {
     margin: 0;
     padding: 0;
     border: 0;
-    gap: 4px;
+    gap: 32px;
 }
 
 .add-candidate-mode-group {
@@ -510,10 +517,10 @@ body {
 }
 
     .add-candidate-field label, .add-candidate-status legend {
-        color: #777064;
-        font-size: 13px;
-        font-weight: 500;
-        line-height: 18px;
+        color: #171717;
+        font-size: 14px;
+        font-weight: 400;
+        line-height: 20px;
     }
 
     .add-candidate-field input, .add-candidate-field select {
@@ -535,7 +542,7 @@ body {
 .add-candidate-status {
     min-height: 70px;
     flex-wrap: wrap;
-    align-content: flex-start;
+    align-content: center;
 }
 
 .add-candidate-status {
@@ -657,6 +664,11 @@ body {
     border: 1px solid #bdbdbd;
     border-radius: 0;
     outline: none;
+    font-family: Outfit;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 20px;
 }
 
     .add-jury-field input:not([type="file"]):disabled {
@@ -1133,7 +1145,7 @@ body.has-photo-preview {
     gap: 12px;
     color: #171717;
     background: #fff;
-    border: 1px solid #777;
+    border: 1px solid #bdbdbd;
     font: inherit;
     text-align: left;
 }

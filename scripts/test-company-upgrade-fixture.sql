@@ -16,6 +16,10 @@ DECLARE @InactiveDirectorId uniqueidentifier = '55555555-5555-5555-5555-55555555
 DECLARE @JuryId uniqueidentifier = '66666666-6666-6666-6666-666666666666';
 DECLARE @RetiredCandidateId uniqueidentifier = '77777777-7777-7777-7777-777777777777';
 DECLARE @RetiredImageId uniqueidentifier = '88888888-8888-8888-8888-888888888888';
+DECLARE @LargeCandidatePhoto varbinary(max) =
+    0x89504E470D0A1A0A + CONVERT(varbinary(max), REPLICATE('A', 5000));
+DECLARE @LargeCandidateBase64 nvarchar(max) = CAST(N'' AS xml).value(
+    'xs:base64Binary(sql:variable("@LargeCandidatePhoto"))', 'nvarchar(max)');
 
 DISABLE TRIGGER dbo.TR_Form_NormalizeSeasonAndSynchronize ON dbo.Form;
 
@@ -35,7 +39,8 @@ VALUES
     CONVERT(date, SYSDATETIME()), N'[]', N'Test Başvuran', N'Yetkili',
     N'5550000000', N'upgrade-test@example.com', N'Legacy Yönetmen',
     N'Test İletişim', N'5550000000', NULL, NULL, NULL,
-    N'[{"Name":"Yardımcı Erkek Bir","Role":"Ortak Rol","ImageUrl":"","Base64":""},'
+    N'[{"Name":"Yardımcı Erkek Bir","Role":"Ortak Rol","ImageUrl":"buyuk-aday.png","Base64":"'
+      + @LargeCandidateBase64 + N'"},'
       + N'{"Name":"Yardımcı Erkek İki","Role":"Ortak Rol","ImageUrl":"","Base64":""}]',
     NULL, NULL, NULL, NULL, NULL, NULL, 1, 1
 );
