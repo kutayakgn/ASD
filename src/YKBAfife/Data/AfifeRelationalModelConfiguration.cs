@@ -363,7 +363,8 @@ internal static class AfifeRelationalModelConfiguration
         modelBuilder.Entity<JuryVote>().HasIndex(x => new { x.PlayAwardCategoryId, x.JuryId })
             .HasDatabaseName("UX_JuryVotes_JuryId_PlayAwardCategoryId");
         modelBuilder.Entity<PlayAwardCategory>().HasIndex(x => new { x.PlayId, x.AwardCategoryCode, x.RoleCode, x.IsCurrent })
-            .HasDatabaseName("UX_PlayAwardCategories_Current_Play_Category_Role");
+            .HasFilter("[IsCurrent] = 1 AND [IsPublished] = 1")
+            .HasDatabaseName("IX_PlayAwardCategories_Current_Play_Category_Role");
         modelBuilder.Entity<PlayAwardCategory>().HasIndex(x => new { x.PlayId, x.AwardCategoryCode, x.RoleCode, x.Candidate })
             .HasDatabaseName("UX_PlayAwardCategories_Play_Category_Role_Candidate");
         modelBuilder.Entity<PlayAwardCategory>().HasIndex(x => new { x.PlayId, x.AwardCategoryCode, x.SourceFormCandidateOrder })
@@ -426,7 +427,7 @@ internal static class AfifeRelationalModelConfiguration
         {
             t.UseSqlOutputClause(false);
             t.HasCheckConstraint("CK_Plays_AdminRecord_StatusCode", "[RecordType] = 0 OR [StatusCode] <> 1");
-            t.HasCheckConstraint("CK_Plays_AdminRecord_StatusesDisabled", "[RecordType] = 0 OR ([JuriOylamaStatus] = 0 AND [KunyeGirisStatus] = 0)");
+            t.HasCheckConstraint("CK_Plays_AdminRecord_KunyeStatusDisabled", "[RecordType] = 0 OR [KunyeGirisStatus] = 0");
             t.HasCheckConstraint("CK_Plays_KunyeMustRemainPublished", "[RecordType] = 1 OR [IsPublished] = 1");
             t.HasCheckConstraint("CK_Plays_SourceFormRequiresKunye", "[SourceFormId] IS NULL OR [RecordType] = 0");
         });

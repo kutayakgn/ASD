@@ -18,6 +18,7 @@ namespace YKBAfife.Data.Migrations
 
             MigrationSqlResources.Execute(migrationBuilder, "Programmability.sql");
             MigrationSqlResources.Execute(migrationBuilder, "AuditTriggers.sql");
+            MigrationSqlResources.EnsureCandidateUniquenessContract(migrationBuilder);
 
             migrationBuilder.Sql("EXEC dbo.usp_SynchronizeFormsToPlays;")
                 .Annotation(MigrationSqlResources.ReviewedDataSafeSqlAnnotation, true);

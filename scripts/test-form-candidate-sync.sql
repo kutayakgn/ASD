@@ -43,6 +43,16 @@ VALUES
     1, 1
 );
 
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM dbo.Plays
+    WHERE SourceFormId = @FormId
+      AND JuriOylamaStatus = 0
+      AND KunyeGirisStatus = 0
+)
+    THROW 52989, N'Form kaydından oluşan oyunun jüri oylama ve künye giriş statüleri kapalı başlamadı.', 1;
+
 SELECT candidate.AwardCategoryCode, candidate.Candidate, candidate.Role,
        candidate.RoleCode, image.ContentType, DATALENGTH(image.ImageData) AS ImageBytes
 FROM dbo.Plays AS play

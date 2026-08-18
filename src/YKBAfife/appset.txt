@@ -126,8 +126,8 @@ Yeni künye oyununun başlangıç değerleri:
 | `CreatedAt` | `Form.CreatedDate` |
 | `Slug` | `kunye-{ApplicationNumber}-{FormId ilk 8}` |
 | iletişim alanları | Form başvuru/iletişim alanlarından |
-| `JuriOylamaStatus` | `1` |
-| `KunyeGirisStatus` | `1` |
+| `JuriOylamaStatus` | `0`; admin gerekirse sonradan açar |
+| `KunyeGirisStatus` | `0`; admin gerekirse sonradan açar |
 | `RecordType` | `0` — künye oyunu |
 | `SourceFormId` | Form kimliği |
 | `IsActive`, `IsPublished` | `1` |
@@ -175,7 +175,7 @@ Fotoğraf varsa Base64 temizlenir; JPEG, PNG veya WEBP imzası doğrulanır; 1 b
 ### 6.1 `RecordType`
 
 - `0` — Künye/Form kaynaklı oyun. Form'a bağlanabilir, aday ve blacklist içerebilir, künye/jüri sitesi toggle'ları kullanılabilir.
-- `1` — Yönetim panelinden eklenen admin oyunu. Aday/kategori ve blacklist alamaz; `StatusCode = 1` olamaz; `JuriOylamaStatus` ve `KunyeGirisStatus` zorunlu olarak kapalıdır.
+- `1` — Yönetim panelinden eklenen admin oyunu. Aday/kategori ve blacklist alamaz; `StatusCode = 1` olamaz. `KunyeGirisStatus` kapalı kalır; `JuriOylamaStatus` yönetim panelindeki toggle ile bağımsız olarak açılıp kapatılabilir.
 
 Admin oyunu oluşturulurken en az bir aktif/yayımlanmış jüri atanır ve yalnızca 2–6 statülerinden biri seçilebilir. Aynı oyun + tiyatro adının tam tekrarı serializable transaction altında tekrar kontrol edilir. Admin oyunu soft delete edilebilir; künye oyunu panelden veya doğrudan SQL DELETE ile silinemez, yalnızca kaynak Form yaşam döngüsüyle pasifleştirilebilir.
 
@@ -194,7 +194,7 @@ Admin oyunu oluşturulurken en az bir aktif/yayımlanmış jüri atanır ve yaln
 
 ### 6.3 Künye ve jüri sitesi toggle'ları
 
-Yönetim panelinde yalnızca künye oyunları için `JuriOylamaStatus` ve `KunyeGirisStatus` değiştirilebilir. Admin oyunlarında alanlar false'a normalize edilir ve arayüz devre dışı gösterir. Bu toggle'ların bu repository içinde yeni oy yazımını engelleyen bir endpoint kontrolü yoktur.
+Yönetim panelinde `JuriOylamaStatus` hem künye hem admin oyunları için, `StatusCode` değerinden bağımsız değiştirilebilir. `KunyeGirisStatus` yalnızca künye oyunları için değiştirilebilir. Jüri uygulamasının `/oylama/oyun-listesi` ekranı `IsPublished = 1` ve `JuriOylamaStatus = 1` olan bütün oyunları gösterir.
 
 ## 7. Jüri, atama, izlenme ve bilet ücreti
 

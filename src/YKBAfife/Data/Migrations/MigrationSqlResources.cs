@@ -174,6 +174,37 @@ internal static partial class MigrationSqlResources
     private static void AddReviewedSql(MigrationBuilder migrationBuilder, string sql) =>
         migrationBuilder.Sql(sql)
             .Annotation(ReviewedDataSafeSqlAnnotation, true);
+
+    public static void EnsureCandidateUniquenessContract(MigrationBuilder migrationBuilder) =>
+        AddReviewedSql(migrationBuilder,
+            """
+            IF OBJECT_ID(N'dbo.PlayAwardCategories', N'U') IS NOT NULL
+            BEGIN
+                IF EXISTS
+                (
+                    SELECT 1 FROM sys.indexes
+                    WHERE object_id = OBJECT_ID(N'dbo.PlayAwardCategories')
+                      AND name = N'UX_PlayAwardCategories_Current_Play_Category_Role'
+                )
+                    DROP INDEX [UX_PlayAwardCategories_Current_Play_Category_Role]
+                        ON dbo.PlayAwardCategories;
+
+                IF EXISTS
+                (
+                    SELECT 1 FROM sys.indexes
+                    WHERE object_id = OBJECT_ID(N'dbo.PlayAwardCategories')
+                      AND name = N'IX_PlayAwardCategories_Current_Play_Category_Role'
+                )
+                    DROP INDEX [IX_PlayAwardCategories_Current_Play_Category_Role]
+                        ON dbo.PlayAwardCategories;
+
+                CREATE NONCLUSTERED INDEX [IX_PlayAwardCategories_Current_Play_Category_Role]
+                    ON dbo.PlayAwardCategories
+                       (PlayId, AwardCategoryCode, RoleCode, IsCurrent)
+                    WHERE IsCurrent = 1 AND IsPublished = 1;
+            END;
+            """);
+
     public static string Read(string resourceFileName)
     {
         var assembly = typeof(MigrationSqlResources).Assembly;

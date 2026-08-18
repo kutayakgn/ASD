@@ -18,6 +18,8 @@ DECLARE @RetiredCandidateId uniqueidentifier = '77777777-7777-7777-7777-77777777
 DECLARE @RetiredImageId uniqueidentifier = '88888888-8888-8888-8888-888888888888';
 DECLARE @DuplicateRoleCandidateOneId uniqueidentifier = '99999999-9999-9999-9999-999999999991';
 DECLARE @DuplicateRoleCandidateTwoId uniqueidentifier = '99999999-9999-9999-9999-999999999992';
+DECLARE @SharedRoleDifferentCandidateOneId uniqueidentifier = '99999999-9999-9999-9999-999999999993';
+DECLARE @SharedRoleDifferentCandidateTwoId uniqueidentifier = '99999999-9999-9999-9999-999999999994';
 DECLARE @LargeCandidatePhoto varbinary(max) =
     0x89504E470D0A1A0A + CONVERT(varbinary(max), REPLICATE('A', 5000));
 DECLARE @LargeCandidateBase64 nvarchar(max) = CAST(N'' AS xml).value(
@@ -40,7 +42,8 @@ VALUES
     N'Şirket Upgrade Test Oyunu', N'Şirket Upgrade Test Tiyatrosu',
     CONVERT(date, SYSDATETIME()), N'[]', N'Test Başvuran', N'Yetkili',
     N'5550000000', N'upgrade-test@example.com', N'Legacy Yönetmen',
-    N'Test İletişim', N'5550000000', NULL, NULL,
+    N'Test İletişim', N'5550000000', NULL,
+    N'[{"Name":"Erkek Aday Bir","Role":"Ortak Erkek Rol"},{"Name":"Erkek Aday İki","Role":"Ortak Erkek Rol"}]',
     N'[{"Name":"deneme","Role":"Yardımcı Rol"},{"Name":"deneme","Role":"Yardımcı Rol"}]',
     N'[{"Name":"Yardımcı Erkek Bir","Role":"Ortak Rol","ImageUrl":"buyuk-aday.png","Base64":"'
       + @LargeCandidateBase64 + N'"},'
@@ -100,6 +103,24 @@ VALUES
 (
     @DuplicateRoleCandidateTwoId, @PlayId, SYSDATETIME(), NULL, NULL, NULL,
     1, 0, N'Eski Yardımcı Aday İki', 1005, 0, N'Yardımcı Rol', 3, NULL, NULL
+);
+
+/* Same play/category/RoleCode with different candidate names is valid. The
+   legacy unique current-role index used to reject the second current row. */
+INSERT INTO dbo.PlayAwardCategories
+(
+    Id, PlayId, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy,
+    IsPublished, IsActive, Candidate, AwardCategoryCode,
+    IsCurrent, Role, RoleCode, PhotoImageId, SourceFormCandidateOrder
+)
+VALUES
+(
+    @SharedRoleDifferentCandidateOneId, @PlayId, SYSDATETIME(), NULL, NULL, NULL,
+    1, 1, N'Eski Erkek Aday Bir', 1004, 1, N'Ortak Erkek Rol', 17, NULL, NULL
+),
+(
+    @SharedRoleDifferentCandidateTwoId, @PlayId, SYSDATETIME(), NULL, NULL, NULL,
+    1, 0, N'Eski Erkek Aday İki', 1004, 0, N'Ortak Erkek Rol', 17, NULL, NULL
 );
 
 INSERT INTO dbo.Plays

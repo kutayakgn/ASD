@@ -1435,7 +1435,7 @@ namespace YKBAfife.Data.Migrations
                         {
                             t.HasCheckConstraint("CK_Plays_AdminRecord_StatusCode", "[RecordType] = 0 OR [StatusCode] <> 1");
 
-                            t.HasCheckConstraint("CK_Plays_AdminRecord_StatusesDisabled", "[RecordType] = 0 OR ([JuriOylamaStatus] = 0 AND [KunyeGirisStatus] = 0)");
+                            t.HasCheckConstraint("CK_Plays_AdminRecord_KunyeStatusDisabled", "[RecordType] = 0 OR [KunyeGirisStatus] = 0");
 
                             t.HasCheckConstraint("CK_Plays_KunyeMustRemainPublished", "[RecordType] = 1 OR [IsPublished] = 1");
 
@@ -1524,8 +1524,7 @@ namespace YKBAfife.Data.Migrations
                         .HasFilter("[IsPublished] = 1");
 
                     b.HasIndex("PlayId", "AwardCategoryCode", "RoleCode", "IsCurrent")
-                        .IsUnique()
-                        .HasDatabaseName("UX_PlayAwardCategories_Current_Play_Category_Role")
+                        .HasDatabaseName("IX_PlayAwardCategories_Current_Play_Category_Role")
                         .HasFilter("[IsCurrent] = 1 AND [IsPublished] = 1");
 
                     b.ToTable("PlayAwardCategories", "dbo");

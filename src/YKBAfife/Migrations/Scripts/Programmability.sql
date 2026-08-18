@@ -559,17 +559,16 @@ BEGIN
     ) AS existing
     WHERE source.AwardCategoryCode <> 1002;
 
-    /* Legacy company data can contain more than one candidate slot carrying
-       the same RoleCode in a category (typically one current and one retired
-       row). Publishing both slots after a Form name update would violate the
-       unique candidate/current-role indexes. Preserve the first stable slot
-       and allocate a fresh RoleCode to every later conflicting Form slot. */
+    /* Only an exact (play, category, RoleCode, candidate) repetition is
+       forbidden. Different candidates may intentionally share a RoleCode.
+       Repair only legacy slots that would become an exact duplicate. */
     ;WITH DuplicateSourceRoles AS
     (
         SELECT source.PlayId, source.AwardCategoryCode, source.SourceOrder,
                ROW_NUMBER() OVER
                (
-                   PARTITION BY source.PlayId, source.AwardCategoryCode, source.RoleCode
+                   PARTITION BY source.PlayId, source.AwardCategoryCode, source.RoleCode,
+                                LOWER(LTRIM(RTRIM(source.Candidate)))
                    ORDER BY source.SourceOrder
                ) AS RoleOccurrence
         FROM #CandidateSource AS source
@@ -793,6 +792,8 @@ BEGIN
         WHERE existing.PlayId = source.PlayId
           AND existing.AwardCategoryCode = source.AwardCategoryCode
           AND existing.RoleCode = COALESCE(source.RoleCode, 0)
+          AND LOWER(LTRIM(RTRIM(existing.Candidate))) =
+              LOWER(LTRIM(RTRIM(source.Candidate)))
           AND existing.IsPublished = 1
     );
 
@@ -950,8 +951,8 @@ BEGIN
             COALESCE(NULLIF(formRecord.ContactPhone, N''), formRecord.Phone),
             NULL,
             formRecord.Email,
-            1,
-            1,
+            0,
+            0,
             0,
             formRecord.Id,
             1
@@ -1926,26 +1927,6 @@ BEGIN
     BEGIN
         THROW 51231, N'Mevcut bir oyunun RecordType degeri degistirilemez.', 1;
     END;
-END;
-GO
-
-/* RecordType 0 plays can be opened to jury voting only while StatusCode is 1. */
-CREATE OR ALTER TRIGGER [dbo].[TR_Plays_NormalizeJuryVotingStatus]
-ON [dbo].[Plays]
-AFTER INSERT, UPDATE
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    UPDATE play
-    SET play.[JuriOylamaStatus] = 0,
-        play.[UpdatedAt] = DATEADD(HOUR, 3, SYSUTCDATETIME())
-    FROM [dbo].[Plays] AS play
-    INNER JOIN inserted AS changed
-        ON changed.[Id] = play.[Id]
-    WHERE changed.[RecordType] = 0
-      AND changed.[StatusCode] <> 1
-      AND changed.[JuriOylamaStatus] = 1;
 END;
 GO
 

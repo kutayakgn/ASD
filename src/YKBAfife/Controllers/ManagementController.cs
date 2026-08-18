@@ -962,7 +962,7 @@ public sealed partial class ManagementController(
             TheaterName = play.TheaterName,
             StatusCode = play.StatusCode,
             RecordType = play.RecordType,
-            JuriOylamaStatus = !play.RecordType && play.JuriOylamaStatus,
+            JuriOylamaStatus = play.JuriOylamaStatus,
             KunyeGirisStatus = !play.RecordType && play.KunyeGirisStatus,
             SelectedJuryIds = await context.JuryAssignedPlays.AsNoTracking()
                 .Where(item => item.PlayId == play.Id && item.IsPublished)
@@ -1074,9 +1074,7 @@ public sealed partial class ManagementController(
             play.TheaterName = model.TheaterName;
             play.StatusCode = model.StatusCode!.Value;
             play.Slug = newSlug;
-            play.JuriOylamaStatus = !play.RecordType &&
-                                    model.StatusCode.Value == 1 &&
-                                    model.JuriOylamaStatus;
+            play.JuriOylamaStatus = model.JuriOylamaStatus;
             play.KunyeGirisStatus = !play.RecordType && model.KunyeGirisStatus;
             play.UpdatedAt = TurkeyTime.Now;
             play.UpdatedBy = currentUserId;
@@ -1144,28 +1142,12 @@ public sealed partial class ManagementController(
             return NotFound();
         }
 
-        if (play.RecordType)
+        if (play.RecordType && !isJuryVotingStatus)
         {
-            var requiresNormalization = play.JuriOylamaStatus || play.KunyeGirisStatus;
-            play.JuriOylamaStatus = false;
+            var requiresNormalization = play.KunyeGirisStatus;
             play.KunyeGirisStatus = false;
             if (requiresNormalization)
             {
-                play.UpdatedAt = TurkeyTime.Now;
-                play.UpdatedBy = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var normalizingUserId)
-                    ? normalizingUserId
-                    : null;
-                await context.SaveChangesAsync(cancellationToken);
-            }
-
-            return Json(new { isActive = false, isDisabled = true, refreshTable = false });
-        }
-
-        if (isJuryVotingStatus && play.StatusCode != 1)
-        {
-            if (play.JuriOylamaStatus)
-            {
-                play.JuriOylamaStatus = false;
                 play.UpdatedAt = TurkeyTime.Now;
                 play.UpdatedBy = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var normalizingUserId)
                     ? normalizingUserId
@@ -1180,19 +1162,19 @@ public sealed partial class ManagementController(
         Guid? updatedBy = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)
             ? userId
             : null;
-        var kunyeRecords = context.Plays.Where(item =>
+        var eligibleRecords = context.Plays.Where(item =>
             item.Id == id &&
             item.IsPublished &&
-            !item.RecordType);
+            (isJuryVotingStatus || !item.RecordType));
 
         var updatedRowCount = isJuryVotingStatus
-            ? await kunyeRecords.ExecuteUpdateAsync(
+            ? await eligibleRecords.ExecuteUpdateAsync(
                 setters => setters
                     .SetProperty(item => item.JuriOylamaStatus, isActive)
                     .SetProperty(item => item.UpdatedAt, updatedAt)
                     .SetProperty(item => item.UpdatedBy, updatedBy),
                 cancellationToken)
-            : await kunyeRecords.ExecuteUpdateAsync(
+            : await eligibleRecords.ExecuteUpdateAsync(
                 setters => setters
                     .SetProperty(item => item.KunyeGirisStatus, isActive)
                     .SetProperty(item => item.UpdatedAt, updatedAt)
@@ -1338,7 +1320,7 @@ public sealed partial class ManagementController(
             Id = play.Id,
             PlayName = play.PlayName,
             TheaterName = play.TheaterName,
-            JuriOylamaStatus = !play.RecordType && play.JuriOylamaStatus,
+            JuriOylamaStatus = play.JuriOylamaStatus,
             KunyeGirisStatus = !play.RecordType && play.KunyeGirisStatus,
             JuryGroupInfo = juryGroupInfo.Length == 0 ? "-" : string.Join(", ", juryGroupInfo),
             PlayStatus = playStatus?.StatusName ?? "-",

@@ -48,6 +48,96 @@ IF EXISTS
 )
     THROW 52980, N'Obsolete company candidate index still exists.', 1;
 
+IF EXISTS
+(
+    SELECT 1 FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.PlayAwardCategories')
+      AND name = N'UX_PlayAwardCategories_Current_Play_Category_Role'
+)
+    THROW 53000, N'Invalid unique current-role candidate index still exists.', 1;
+
+IF NOT EXISTS
+(
+    SELECT 1 FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.PlayAwardCategories')
+      AND name = N'IX_PlayAwardCategories_Current_Play_Category_Role'
+      AND is_unique = 0
+)
+    THROW 53001, N'Non-unique current-role candidate lookup index is missing.', 1;
+
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.indexes AS candidateIndex
+    WHERE candidateIndex.object_id = OBJECT_ID(N'dbo.PlayAwardCategories')
+      AND candidateIndex.name = N'UX_PlayAwardCategories_Play_Category_Role_Candidate'
+      AND candidateIndex.is_unique = 1
+      AND
+      (
+          SELECT COUNT(*)
+          FROM sys.index_columns AS indexColumn
+          WHERE indexColumn.object_id = candidateIndex.object_id
+            AND indexColumn.index_id = candidateIndex.index_id
+            AND indexColumn.key_ordinal > 0
+      ) = 4
+      AND EXISTS
+      (
+          SELECT 1 FROM sys.index_columns AS indexColumn
+          INNER JOIN sys.columns AS columnRecord
+              ON columnRecord.object_id = indexColumn.object_id
+             AND columnRecord.column_id = indexColumn.column_id
+          WHERE indexColumn.object_id = candidateIndex.object_id
+            AND indexColumn.index_id = candidateIndex.index_id
+            AND indexColumn.key_ordinal = 1 AND columnRecord.name = N'PlayId'
+      )
+      AND EXISTS
+      (
+          SELECT 1 FROM sys.index_columns AS indexColumn
+          INNER JOIN sys.columns AS columnRecord
+              ON columnRecord.object_id = indexColumn.object_id
+             AND columnRecord.column_id = indexColumn.column_id
+          WHERE indexColumn.object_id = candidateIndex.object_id
+            AND indexColumn.index_id = candidateIndex.index_id
+            AND indexColumn.key_ordinal = 2 AND columnRecord.name = N'AwardCategoryCode'
+      )
+      AND EXISTS
+      (
+          SELECT 1 FROM sys.index_columns AS indexColumn
+          INNER JOIN sys.columns AS columnRecord
+              ON columnRecord.object_id = indexColumn.object_id
+             AND columnRecord.column_id = indexColumn.column_id
+          WHERE indexColumn.object_id = candidateIndex.object_id
+            AND indexColumn.index_id = candidateIndex.index_id
+            AND indexColumn.key_ordinal = 3 AND columnRecord.name = N'RoleCode'
+      )
+      AND EXISTS
+      (
+          SELECT 1 FROM sys.index_columns AS indexColumn
+          INNER JOIN sys.columns AS columnRecord
+              ON columnRecord.object_id = indexColumn.object_id
+             AND columnRecord.column_id = indexColumn.column_id
+          WHERE indexColumn.object_id = candidateIndex.object_id
+            AND indexColumn.index_id = candidateIndex.index_id
+            AND indexColumn.key_ordinal = 4 AND columnRecord.name = N'Candidate'
+      )
+)
+    THROW 53003, N'Four-field candidate uniqueness index does not match the required contract.', 1;
+
+IF
+(
+    SELECT COUNT(*) FROM dbo.PlayAwardCategories
+    WHERE PlayId = '22222222-2222-2222-2222-222222222222'
+      AND AwardCategoryCode = 1004
+      AND RoleCode = 17
+      AND Id IN
+      (
+          '99999999-9999-9999-9999-999999999993',
+          '99999999-9999-9999-9999-999999999994'
+      )
+      AND IsPublished = 1 AND IsCurrent = 1
+) <> 2
+    THROW 53002, N'Different candidates sharing a RoleCode were not preserved.', 1;
+
 IF
 (
     SELECT COUNT(*) FROM dbo.PlayAwardCategories

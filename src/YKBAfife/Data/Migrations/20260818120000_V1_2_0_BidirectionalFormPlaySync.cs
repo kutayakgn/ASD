@@ -16,6 +16,11 @@ public sealed class V1_2_0_BidirectionalFormPlaySync : Migration
         MigrationSqlResources.Execute(migrationBuilder, "Programmability.sql");
         MigrationSqlResources.Execute(migrationBuilder, "AuditTriggers.sql");
 
+        // The old unique current-role index incorrectly rejects two different
+        // candidates sharing a RoleCode. The four-field candidate index remains
+        // the authoritative uniqueness rule.
+        MigrationSqlResources.EnsureCandidateUniquenessContract(migrationBuilder);
+
         // Re-read existing Form payloads once so photos which were previously
         // lost by JSON_VALUE's 4000-character limit are materialized in Images.
         migrationBuilder.Sql(

@@ -1848,7 +1848,6 @@ public async Task<JuryVotingComplexTableViewModel> BuildGameListTableModelAsync(
              _context.Plays.AsNoTracking().Any(play =>
                  play.Id == assignedPlay.PlayId &&
                  play.IsPublished &&
-                 play.IsActive &&
                  play.JuriOylamaStatus));
 
      var tabs = GetGameListTabs(hasAssignedVisiblePlay);
@@ -1990,7 +1989,6 @@ public async Task<JuryVotingComplexTableViewModel> BuildGameListTableModelAsync(
 
          .Where(play =>
              play.IsPublished &&
-             play.IsActive &&
              play.JuriOylamaStatus)
 
          .Where(play => tab != "assigned" || _context.JuryAssignedPlays

@@ -11,7 +11,6 @@
     const statusValue = statusSelect?.querySelector("[data-play-status-value]");
     const statusLabel = statusSelect?.querySelector("[data-play-status-label]");
     const juryVotingActive = form?.querySelector("[data-jury-voting-active]");
-    const juryVotingInactive = form?.querySelector('[name="JuriOylamaStatus"][value="false"]');
     if (!form || !jurySelect || !juryTrigger || !juryMenu || !selectedValues || !hiddenInputs ||
         !statusSelect || !statusTrigger || !statusMenu || !statusValue || !statusLabel) return;
 
@@ -21,10 +20,7 @@
     let clearanceAnimationFrame = 0;
 
     const syncJuryVotingAvailability = () => {
-        if (!juryVotingActive) return;
-        const canActivate = statusValue.value === "1";
-        juryVotingActive.disabled = !canActivate;
-        if (!canActivate) juryVotingInactive?.click();
+        if (juryVotingActive) juryVotingActive.disabled = false;
     };
 
     const syncDropdownClearance = () => {

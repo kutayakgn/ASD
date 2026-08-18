@@ -44,8 +44,8 @@ public static class PlayComplexTableFactory
                     new()
                     {
                         ToggleUrl = $"/oyunlar/{row.PlayId:D}/juri-oylama-status",
-                        ToggleChecked = !row.RecordType && row.StatusCode == 1 && row.JuriOylamaStatus,
-                        ToggleDisabled = row.RecordType || row.StatusCode != 1,
+                        ToggleChecked = row.JuriOylamaStatus,
+                        ToggleDisabled = false,
                         CssClass = "play-toggle-cell",
                         AccessibleLabel = $"{row.PlayName} jüri oylama listesi statüsünü değiştir"
                     },
