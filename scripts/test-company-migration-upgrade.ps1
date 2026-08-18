@@ -66,6 +66,26 @@ IF
 ) <> 2
     THROW 52982, N'Category 1006 candidates do not have unique RoleCodes.', 1;
 
+IF
+(
+    SELECT COUNT(*) FROM dbo.PlayAwardCategories
+    WHERE PlayId = '22222222-2222-2222-2222-222222222222'
+      AND AwardCategoryCode = 1005
+      AND Candidate = N'deneme'
+      AND IsPublished = 1 AND IsCurrent = 1
+) <> 2
+    THROW 52998, N'Duplicate legacy RoleCode repair did not preserve both Form slots.', 1;
+
+IF
+(
+    SELECT COUNT(DISTINCT RoleCode) FROM dbo.PlayAwardCategories
+    WHERE PlayId = '22222222-2222-2222-2222-222222222222'
+      AND AwardCategoryCode = 1005
+      AND Candidate = N'deneme'
+      AND IsPublished = 1 AND IsCurrent = 1
+) <> 2
+    THROW 52999, N'Duplicate legacy RoleCodes were not reassigned uniquely.', 1;
+
 IF EXISTS
 (
     SELECT 1

@@ -559,6 +559,32 @@ BEGIN
     ) AS existing
     WHERE source.AwardCategoryCode <> 1002;
 
+    /* Legacy company data can contain more than one candidate slot carrying
+       the same RoleCode in a category (typically one current and one retired
+       row). Publishing both slots after a Form name update would violate the
+       unique candidate/current-role indexes. Preserve the first stable slot
+       and allocate a fresh RoleCode to every later conflicting Form slot. */
+    ;WITH DuplicateSourceRoles AS
+    (
+        SELECT source.PlayId, source.AwardCategoryCode, source.SourceOrder,
+               ROW_NUMBER() OVER
+               (
+                   PARTITION BY source.PlayId, source.AwardCategoryCode, source.RoleCode
+                   ORDER BY source.SourceOrder
+               ) AS RoleOccurrence
+        FROM #CandidateSource AS source
+        WHERE source.AwardCategoryCode BETWEEN 1003 AND 1011
+          AND source.RoleCode > 0
+    )
+    UPDATE source
+    SET RoleCode = NULL
+    FROM #CandidateSource AS source
+    INNER JOIN DuplicateSourceRoles AS duplicateRole
+        ON duplicateRole.PlayId = source.PlayId
+       AND duplicateRole.AwardCategoryCode = source.AwardCategoryCode
+       AND duplicateRole.SourceOrder = source.SourceOrder
+    WHERE duplicateRole.RoleOccurrence > 1;
+
     ;WITH MissingRoles AS
     (
         SELECT source.PlayId, source.AwardCategoryCode, source.SourceOrder,
