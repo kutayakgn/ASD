@@ -239,9 +239,8 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
             entity.HasIndex(x => new { x.PlayId, x.AwardCategoryCode, x.RoleCode, x.IsCurrent })
                 .HasFilter("[IsCurrent] = 1 AND [IsPublished] = 1");
             entity.HasIndex(x => new { x.PlayId, x.AwardCategoryCode, x.SourceFormCandidateOrder })
-                .IsUnique()
                 .HasFilter("[SourceFormCandidateOrder] IS NOT NULL AND [IsCurrent] = 1")
-                .HasDatabaseName("UX_PlayAwardCategories_FormSourceSlot");
+                .HasDatabaseName("IX_PlayAwardCategories_FormSourceSlot");
             entity.HasOne(x => x.PhotoImage)
                 .WithMany(x => x.CandidatePhotos)
                 .HasForeignKey(x => x.PhotoImageId)

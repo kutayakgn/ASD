@@ -1514,8 +1514,7 @@ namespace YKBAfife.Data.Migrations
                         .HasFilter("[AwardCategoryCode] = 1001 AND [RoleCode] = 0");
 
                     b.HasIndex("PlayId", "AwardCategoryCode", "SourceFormCandidateOrder")
-                        .IsUnique()
-                        .HasDatabaseName("UX_PlayAwardCategories_FormSourceSlot")
+                        .HasDatabaseName("IX_PlayAwardCategories_FormSourceSlot")
                         .HasFilter("[SourceFormCandidateOrder] IS NOT NULL AND [IsCurrent] = 1");
 
                     b.HasIndex("PlayId", "AwardCategoryCode", "RoleCode", "Candidate")

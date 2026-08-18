@@ -64,6 +64,10 @@ internal static partial class DatabaseSchemaValidator
             if (string.Equals(
                     indexName,
                     "UX_PlayAwardCategories_Current_Play_Category_Role",
+                    StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(
+                    indexName,
+                    "UX_PlayAwardCategories_FormSourceSlot",
                     StringComparison.OrdinalIgnoreCase))
             {
                 continue;
@@ -83,6 +87,14 @@ internal static partial class DatabaseSchemaValidator
         {
             missing.Add(
                 "obsolete unique index UX_PlayAwardCategories_Current_Play_Category_Role");
+        }
+        if (!catalog.NonUniqueIndexes.Contains("IX_PlayAwardCategories_FormSourceSlot"))
+        {
+            missing.Add("non-unique index IX_PlayAwardCategories_FormSourceSlot");
+        }
+        if (catalog.Indexes.Contains("UX_PlayAwardCategories_FormSourceSlot"))
+        {
+            missing.Add("obsolete unique index UX_PlayAwardCategories_FormSourceSlot");
         }
         foreach (Match match in ConstraintRegex().Matches(schemaSql))
         {

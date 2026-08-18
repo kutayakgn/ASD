@@ -202,6 +202,29 @@ internal static partial class MigrationSqlResources
                     ON dbo.PlayAwardCategories
                        (PlayId, AwardCategoryCode, RoleCode, IsCurrent)
                     WHERE IsCurrent = 1 AND IsPublished = 1;
+
+                IF EXISTS
+                (
+                    SELECT 1 FROM sys.indexes
+                    WHERE object_id = OBJECT_ID(N'dbo.PlayAwardCategories')
+                      AND name = N'UX_PlayAwardCategories_FormSourceSlot'
+                )
+                    DROP INDEX [UX_PlayAwardCategories_FormSourceSlot]
+                        ON dbo.PlayAwardCategories;
+
+                IF EXISTS
+                (
+                    SELECT 1 FROM sys.indexes
+                    WHERE object_id = OBJECT_ID(N'dbo.PlayAwardCategories')
+                      AND name = N'IX_PlayAwardCategories_FormSourceSlot'
+                )
+                    DROP INDEX [IX_PlayAwardCategories_FormSourceSlot]
+                        ON dbo.PlayAwardCategories;
+
+                CREATE NONCLUSTERED INDEX [IX_PlayAwardCategories_FormSourceSlot]
+                    ON dbo.PlayAwardCategories
+                       (PlayId, AwardCategoryCode, SourceFormCandidateOrder)
+                    WHERE SourceFormCandidateOrder IS NOT NULL AND IsCurrent = 1;
             END;
             """);
 

@@ -451,6 +451,33 @@ BEGIN
     )
         THROW 52410, N'Çok adaylı kategorilerde Role alanı zorunludur.', 1;
 
+    /* Repair legacy rows that point to the same Form array slot. Keep the most
+       relevant row on the slot; release later rows so the remaining-source
+       backfill below can map them to slot 2, 3, ... without deleting history. */
+    ;WITH RankedMappedSlots AS
+    (
+        SELECT candidate.Id,
+               ROW_NUMBER() OVER
+               (
+                   PARTITION BY candidate.PlayId, candidate.AwardCategoryCode,
+                                candidate.SourceFormCandidateOrder
+                   ORDER BY candidate.IsCurrent DESC, candidate.IsPublished DESC,
+                            COALESCE(candidate.UpdatedAt, candidate.CreatedAt) DESC,
+                            candidate.Id
+               ) AS SlotOccurrence
+        FROM dbo.PlayAwardCategories AS candidate
+        WHERE candidate.SourceFormCandidateOrder IS NOT NULL
+          AND candidate.AwardCategoryCode BETWEEN 1002 AND 1011
+    )
+    UPDATE candidate
+    SET SourceFormCandidateOrder = NULL,
+        IsCurrent = 0,
+        IsActive = 0,
+        UpdatedAt = @Now
+    FROM dbo.PlayAwardCategories AS candidate
+    INNER JOIN RankedMappedSlots AS mappedSlot ON mappedSlot.Id = candidate.Id
+    WHERE mappedSlot.SlotOccurrence > 1;
+
     /* SourceOrder is the stable Form slot identity. Candidate and Role are
        editable descriptions; duplicate role names are valid distinct slots. */
     ;WITH SourceMatches AS

@@ -116,11 +116,11 @@ INSERT INTO dbo.PlayAwardCategories
 VALUES
 (
     @SharedRoleDifferentCandidateOneId, @PlayId, SYSDATETIME(), NULL, NULL, NULL,
-    1, 1, N'Eski Erkek Aday Bir', 1004, 1, N'Ortak Erkek Rol', 17, NULL, NULL
+    1, 1, N'Eski Erkek Aday Bir', 1004, 1, N'Ortak Erkek Rol', 17, NULL, 1
 ),
 (
     @SharedRoleDifferentCandidateTwoId, @PlayId, SYSDATETIME(), NULL, NULL, NULL,
-    1, 0, N'Eski Erkek Aday İki', 1004, 0, N'Ortak Erkek Rol', 17, NULL, NULL
+    1, 0, N'Eski Erkek Aday İki', 1004, 0, N'Ortak Erkek Rol', 17, NULL, 1
 );
 
 INSERT INTO dbo.Plays

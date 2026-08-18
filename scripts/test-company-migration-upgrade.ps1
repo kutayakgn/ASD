@@ -65,6 +65,23 @@ IF NOT EXISTS
 )
     THROW 53001, N'Non-unique current-role candidate lookup index is missing.', 1;
 
+IF EXISTS
+(
+    SELECT 1 FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.PlayAwardCategories')
+      AND name = N'UX_PlayAwardCategories_FormSourceSlot'
+)
+    THROW 53004, N'Invalid unique Form source-slot index still exists.', 1;
+
+IF NOT EXISTS
+(
+    SELECT 1 FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.PlayAwardCategories')
+      AND name = N'IX_PlayAwardCategories_FormSourceSlot'
+      AND is_unique = 0
+)
+    THROW 53005, N'Non-unique Form source-slot lookup index is missing.', 1;
+
 IF NOT EXISTS
 (
     SELECT 1
@@ -137,6 +154,21 @@ IF
       AND IsPublished = 1 AND IsCurrent = 1
 ) <> 2
     THROW 53002, N'Different candidates sharing a RoleCode were not preserved.', 1;
+
+IF
+(
+    SELECT COUNT(DISTINCT SourceFormCandidateOrder)
+    FROM dbo.PlayAwardCategories
+    WHERE PlayId = '22222222-2222-2222-2222-222222222222'
+      AND AwardCategoryCode = 1004
+      AND Id IN
+      (
+          '99999999-9999-9999-9999-999999999993',
+          '99999999-9999-9999-9999-999999999994'
+      )
+      AND IsPublished = 1 AND IsCurrent = 1
+) <> 2
+    THROW 53006, N'Duplicate legacy Form source slots were not repaired uniquely.', 1;
 
 IF
 (
