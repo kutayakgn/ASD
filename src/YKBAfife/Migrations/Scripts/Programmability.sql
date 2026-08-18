@@ -3,6 +3,10 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
+    IF TRY_CONVERT(int, SESSION_CONTEXT(N'FormLifecycleSyncInProgress')) = 1
+       OR TRY_CONVERT(int, SESSION_CONTEXT(N'PlayToFormSyncInProgress')) = 1
+        RETURN;
+
     BEGIN TRY
         EXEC sys.sp_set_session_context
             @key = N'FormSeasonAssignmentSyncInProgress', @value = 1;
@@ -356,6 +360,7 @@ BEGIN
     SET XACT_ABORT ON;
 
     DECLARE @Now datetime2(7) = DATEADD(HOUR, 3, SYSUTCDATETIME());
+    DECLARE @MaximumImageBytes bigint = 150 * 1024 * 1024;
 
     CREATE TABLE #CandidateSource
     (
@@ -389,15 +394,15 @@ BEGIN
     SELECT CONVERT(int, jsonItem.[key]) + 1,
            play.Id,
            category.AwardCategoryCode,
-           LEFT(LTRIM(RTRIM(JSON_VALUE(jsonItem.value, N'$.Name'))), 250),
+           LEFT(LTRIM(RTRIM(candidateValue.[Name])), 250),
            LEFT(COALESCE
            (
-               NULLIF(LTRIM(RTRIM(JSON_VALUE(jsonItem.value, N'$.Role'))), N''),
-               NULLIF(LTRIM(RTRIM(JSON_VALUE(jsonItem.value, N'$.Name'))), N'')
+               NULLIF(LTRIM(RTRIM(candidateValue.[Role])), N''),
+               NULLIF(LTRIM(RTRIM(candidateValue.[Name])), N'')
            ), 200),
            NULL,
-           LEFT(NULLIF(LTRIM(RTRIM(JSON_VALUE(jsonItem.value, N'$.ImageUrl'))), N''), 255),
-           NULLIF(LTRIM(RTRIM(JSON_VALUE(jsonItem.value, N'$.Base64'))), N'')
+           LEFT(NULLIF(LTRIM(RTRIM(candidateValue.ImageUrl)), N''), 255),
+           NULLIF(LTRIM(RTRIM(candidateValue.Base64)), N'')
     FROM dbo.Form AS formRecord
     INNER JOIN dbo.Plays AS play ON play.SourceFormId = formRecord.Id
     CROSS APPLY
@@ -421,12 +426,22 @@ BEGIN
             ELSE N'[' + category.CandidateJson + N']'
         END
     ) AS jsonItem
+    CROSS APPLY OPENJSON(jsonItem.value)
+    WITH
+    (
+        [Name] nvarchar(250) N'$.Name',
+        [Role] nvarchar(200) N'$.Role',
+        ImageUrl nvarchar(255) N'$.ImageUrl',
+        /* JSON_VALUE silently returns NULL above 4000 characters. Candidate
+           photos are intentionally read as nvarchar(max) instead. */
+        Base64 nvarchar(max) N'$.Base64'
+    ) AS candidateValue
     WHERE formRecord.IsPublished = 1
       AND formRecord.IsActive = 1
       AND play.RecordType = 0
       AND play.IsPublished = 1
       AND play.IsActive = 1
-      AND NULLIF(LTRIM(RTRIM(JSON_VALUE(jsonItem.value, N'$.Name'))), N'') IS NOT NULL;
+      AND NULLIF(LTRIM(RTRIM(candidateValue.[Name])), N'') IS NOT NULL;
 
     IF EXISTS
     (
@@ -544,6 +559,31 @@ BEGIN
     ) AS existing
     WHERE source.AwardCategoryCode <> 1002;
 
+    /* Only an exact (play, category, RoleCode, candidate) repetition is
+       forbidden. Different candidates may intentionally share a RoleCode.
+       Repair only legacy slots that would become an exact duplicate. */
+    ;WITH DuplicateSourceRoles AS
+    (
+        SELECT source.PlayId, source.AwardCategoryCode, source.SourceOrder,
+               ROW_NUMBER() OVER
+               (
+                   PARTITION BY source.PlayId, source.AwardCategoryCode, source.RoleCode,
+                                LOWER(LTRIM(RTRIM(source.Candidate)))
+                   ORDER BY source.SourceOrder
+               ) AS RoleOccurrence
+        FROM #CandidateSource AS source
+        WHERE source.AwardCategoryCode BETWEEN 1003 AND 1011
+          AND source.RoleCode > 0
+    )
+    UPDATE source
+    SET RoleCode = NULL
+    FROM #CandidateSource AS source
+    INNER JOIN DuplicateSourceRoles AS duplicateRole
+        ON duplicateRole.PlayId = source.PlayId
+       AND duplicateRole.AwardCategoryCode = source.AwardCategoryCode
+       AND duplicateRole.SourceOrder = source.SourceOrder
+    WHERE duplicateRole.RoleOccurrence > 1;
+
     ;WITH MissingRoles AS
     (
         SELECT source.PlayId, source.AwardCategoryCode, source.SourceOrder,
@@ -644,6 +684,13 @@ BEGIN
     FROM #UpdatedCandidateImages AS image
     WHERE image.ImageData IS NOT NULL;
 
+    IF EXISTS
+    (
+        SELECT 1 FROM #UpdatedCandidateImages
+        WHERE DATALENGTH(ImageData) > @MaximumImageBytes
+    )
+        THROW 52431, N'Görsel boyutu 150 MB''dan büyük olamaz.', 1;
+
     INSERT INTO dbo.Images
         (Id, FileName, ContentType, ImageData, CreatedAt, CreatedBy, IsPublished)
     SELECT image.NewImageId,
@@ -653,8 +700,17 @@ BEGIN
                                 WHEN N'image/webp' THEN N'.webp' ELSE N'.jpg' END)),
            image.ContentType, image.ImageData, @Now, image.CandidateId, 1
     FROM #UpdatedCandidateImages AS image
+    LEFT JOIN dbo.Images AS currentImage ON currentImage.Id = image.OldImageId
     WHERE image.ContentType IS NOT NULL
-      AND DATALENGTH(image.ImageData) BETWEEN 1 AND 5 * 1024 * 1024;
+      AND DATALENGTH(image.ImageData) BETWEEN 1 AND @MaximumImageBytes
+      AND
+      (
+          currentImage.Id IS NULL
+          OR currentImage.IsPublished = 0
+          OR currentImage.ContentType <> image.ContentType
+          OR DATALENGTH(currentImage.ImageData) <> DATALENGTH(image.ImageData)
+          OR currentImage.ImageData <> image.ImageData
+      );
 
     UPDATE candidate
     SET PhotoImageId = image.NewImageId,
@@ -736,6 +792,8 @@ BEGIN
         WHERE existing.PlayId = source.PlayId
           AND existing.AwardCategoryCode = source.AwardCategoryCode
           AND existing.RoleCode = COALESCE(source.RoleCode, 0)
+          AND LOWER(LTRIM(RTRIM(existing.Candidate))) =
+              LOWER(LTRIM(RTRIM(source.Candidate)))
           AND existing.IsPublished = 1
     );
 
@@ -767,6 +825,13 @@ BEGIN
     FROM #NewCandidates AS candidate
     WHERE candidate.ImageData IS NOT NULL;
 
+    IF EXISTS
+    (
+        SELECT 1 FROM #NewCandidates
+        WHERE DATALENGTH(ImageData) > @MaximumImageBytes
+    )
+        THROW 52431, N'Görsel boyutu 150 MB''dan büyük olamaz.', 1;
+
     UPDATE candidate
     SET ImageId = NULL, ImageData = NULL, CleanBase64 = NULL
     FROM #NewCandidates AS candidate
@@ -774,7 +839,7 @@ BEGIN
       AND
       (
           DATALENGTH(candidate.ImageData) = 0
-          OR DATALENGTH(candidate.ImageData) > 5 * 1024 * 1024
+          OR DATALENGTH(candidate.ImageData) > @MaximumImageBytes
           OR candidate.ContentType IS NULL
       );
 
@@ -886,8 +951,8 @@ BEGIN
             COALESCE(NULLIF(formRecord.ContactPhone, N''), formRecord.Phone),
             NULL,
             formRecord.Email,
-            1,
-            1,
+            0,
+            0,
             0,
             formRecord.Id,
             1
@@ -1175,6 +1240,325 @@ BEGIN
             @LockOwner = N'Session';
         THROW;
     END CATCH;
+END;
+GO
+
+/*
+    Keeps the editable admin projection and its source Form in sync.  The Form
+    remains the import contract, while edits made through Plays or
+    PlayAwardCategories are written back so a later Form synchronization cannot
+    restore stale names or photos.
+*/
+CREATE OR ALTER PROCEDURE dbo.usp_SynchronizePlayDataToForms
+    @PlayId uniqueidentifier = NULL
+WITH EXECUTE AS OWNER
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    IF TRY_CONVERT(int, SESSION_CONTEXT(N'FormLifecycleSyncInProgress')) = 1
+       OR TRY_CONVERT(int, SESSION_CONTEXT(N'PlayToFormSyncInProgress')) = 1
+        RETURN;
+
+    EXEC sys.sp_set_session_context
+        @key = N'PlayToFormSyncInProgress', @value = 1;
+
+    BEGIN TRY
+        DECLARE @Now datetime2(7) = DATEADD(HOUR, 3, SYSUTCDATETIME());
+
+        /* Admin-created candidates also need a stable Form array slot. */
+        ;WITH MissingSlots AS
+        (
+            SELECT
+                candidate.Id,
+                COALESCE
+                (
+                    (
+                        SELECT MAX(existing.SourceFormCandidateOrder)
+                        FROM dbo.PlayAwardCategories AS existing
+                        WHERE existing.PlayId = candidate.PlayId
+                          AND existing.AwardCategoryCode = candidate.AwardCategoryCode
+                    ),
+                    0
+                ) +
+                ROW_NUMBER() OVER
+                (
+                    PARTITION BY candidate.PlayId, candidate.AwardCategoryCode
+                    ORDER BY candidate.CreatedAt, candidate.RoleCode, candidate.Id
+                ) AS NewSourceOrder
+            FROM dbo.PlayAwardCategories AS candidate
+            INNER JOIN dbo.Plays AS play ON play.Id = candidate.PlayId
+            WHERE play.SourceFormId IS NOT NULL
+              AND (@PlayId IS NULL OR play.Id = @PlayId)
+              AND candidate.AwardCategoryCode BETWEEN 1003 AND 1011
+              AND candidate.SourceFormCandidateOrder IS NULL
+              AND candidate.IsPublished = 1
+              AND candidate.IsCurrent = 1
+        )
+        UPDATE candidate
+        SET SourceFormCandidateOrder = missing.NewSourceOrder,
+            UpdatedAt = COALESCE(candidate.UpdatedAt, @Now)
+        FROM dbo.PlayAwardCategories AS candidate
+        INNER JOIN MissingSlots AS missing ON missing.Id = candidate.Id;
+
+        CREATE TABLE #CandidatePayload
+        (
+            PlayId uniqueidentifier NOT NULL,
+            AwardCategoryCode int NOT NULL,
+            CandidateJson nvarchar(max) NOT NULL,
+            PRIMARY KEY (PlayId, AwardCategoryCode)
+        );
+
+        INSERT INTO #CandidatePayload (PlayId, AwardCategoryCode, CandidateJson)
+        SELECT play.Id,
+               category.AwardCategoryCode,
+               JSON_QUERY
+               (
+                   COALESCE
+                   (
+                       (
+                           SELECT
+                               candidate.Candidate AS [Name],
+                               candidate.Role AS [Role],
+                               candidateImage.FileName AS [ImageUrl],
+                               /* FOR JSON serializes varbinary(max) as Base64. */
+                               candidateImage.ImageData AS [Base64]
+                           FROM dbo.PlayAwardCategories AS candidate
+                           LEFT JOIN dbo.Images AS candidateImage
+                               ON candidateImage.Id = candidate.PhotoImageId
+                              AND candidateImage.IsPublished = 1
+                           WHERE candidate.PlayId = play.Id
+                             AND candidate.AwardCategoryCode = category.AwardCategoryCode
+                             AND candidate.IsPublished = 1
+                             AND candidate.IsCurrent = 1
+                           ORDER BY
+                               COALESCE(candidate.SourceFormCandidateOrder, 2147483647),
+                               candidate.RoleCode,
+                               candidate.CreatedAt,
+                               candidate.Id
+                           FOR JSON PATH
+                       ),
+                       N'[]'
+                   )
+               )
+        FROM dbo.Plays AS play
+        CROSS JOIN
+        (
+            VALUES (1003), (1004), (1005), (1006), (1007),
+                   (1008), (1009), (1010), (1011)
+        ) AS category(AwardCategoryCode)
+        WHERE play.SourceFormId IS NOT NULL
+          AND (@PlayId IS NULL OR play.Id = @PlayId);
+
+        UPDATE formRecord
+        SET
+            RepertoireName = play.PlayName,
+            TheatreName = play.TheaterName,
+            Phone = COALESCE(play.Phone, formRecord.Phone),
+            ContactName = play.ContactPersonName,
+            ContactPhone = play.ContactPersonPhone,
+            Email = COALESCE(play.Email, formRecord.Email),
+            Director = COALESCE(director.Candidate, formRecord.Director),
+            LeadActress = actress.CandidateJson,
+            LeadActor = actor.CandidateJson,
+            SupportActress = supportActress.CandidateJson,
+            SupportActor = supportActor.CandidateJson,
+            StageDesign = stageDesign.CandidateJson,
+            ClothesDesign = clothesDesign.CandidateJson,
+            StageMusic = stageMusic.CandidateJson,
+            LightDesign = lightDesign.CandidateJson,
+            Choreography = choreography.CandidateJson,
+            IsActive = play.IsActive,
+            IsPublished = play.IsPublished,
+            UpdatedDate = @Now
+        FROM dbo.Form AS formRecord
+        INNER JOIN dbo.Plays AS play ON play.SourceFormId = formRecord.Id
+        OUTER APPLY
+        (
+            SELECT TOP (1) candidate.Candidate
+            FROM dbo.PlayAwardCategories AS candidate
+            WHERE candidate.PlayId = play.Id
+              AND candidate.AwardCategoryCode = 1002
+              AND candidate.IsPublished = 1
+              AND candidate.IsCurrent = 1
+            ORDER BY COALESCE(candidate.SourceFormCandidateOrder, 0), candidate.Id
+        ) AS director
+        INNER JOIN #CandidatePayload AS actress
+            ON actress.PlayId = play.Id AND actress.AwardCategoryCode = 1003
+        INNER JOIN #CandidatePayload AS actor
+            ON actor.PlayId = play.Id AND actor.AwardCategoryCode = 1004
+        INNER JOIN #CandidatePayload AS supportActress
+            ON supportActress.PlayId = play.Id AND supportActress.AwardCategoryCode = 1005
+        INNER JOIN #CandidatePayload AS supportActor
+            ON supportActor.PlayId = play.Id AND supportActor.AwardCategoryCode = 1006
+        INNER JOIN #CandidatePayload AS stageDesign
+            ON stageDesign.PlayId = play.Id AND stageDesign.AwardCategoryCode = 1007
+        INNER JOIN #CandidatePayload AS clothesDesign
+            ON clothesDesign.PlayId = play.Id AND clothesDesign.AwardCategoryCode = 1008
+        INNER JOIN #CandidatePayload AS stageMusic
+            ON stageMusic.PlayId = play.Id AND stageMusic.AwardCategoryCode = 1009
+        INNER JOIN #CandidatePayload AS lightDesign
+            ON lightDesign.PlayId = play.Id AND lightDesign.AwardCategoryCode = 1010
+        INNER JOIN #CandidatePayload AS choreography
+            ON choreography.PlayId = play.Id AND choreography.AwardCategoryCode = 1011
+        WHERE @PlayId IS NULL OR play.Id = @PlayId;
+
+        EXEC sys.sp_set_session_context
+            @key = N'PlayToFormSyncInProgress', @value = NULL;
+    END TRY
+    BEGIN CATCH
+        EXEC sys.sp_set_session_context
+            @key = N'PlayToFormSyncInProgress', @value = NULL;
+        THROW;
+    END CATCH;
+END;
+GO
+
+CREATE OR ALTER TRIGGER dbo.TR_Images_EnforceMaximumSize
+ON dbo.Images
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF EXISTS
+    (
+        SELECT 1
+        FROM inserted
+        WHERE
+            (ContentType = N'image/jpeg' AND
+                (LOWER(FileName) NOT LIKE N'%.jpg' AND LOWER(FileName) NOT LIKE N'%.jpeg'))
+            OR (ContentType = N'image/png' AND LOWER(FileName) NOT LIKE N'%.png')
+            OR (ContentType = N'image/webp' AND LOWER(FileName) NOT LIKE N'%.webp')
+            OR ContentType NOT IN (N'image/jpeg', N'image/png', N'image/webp')
+            OR
+            (
+                ContentType = N'image/jpeg'
+                AND (DATALENGTH(ImageData) < 3 OR SUBSTRING(ImageData, 1, 3) <> 0xFFD8FF)
+            )
+            OR
+            (
+                ContentType = N'image/png'
+                AND
+                (
+                    DATALENGTH(ImageData) < 8
+                    OR SUBSTRING(ImageData, 1, 8) <> 0x89504E470D0A1A0A
+                )
+            )
+            OR
+            (
+                ContentType = N'image/webp'
+                AND
+                (
+                    DATALENGTH(ImageData) < 12
+                    OR SUBSTRING(ImageData, 1, 4) <> 0x52494646
+                    OR SUBSTRING(ImageData, 9, 4) <> 0x57454250
+                )
+            )
+    )
+        THROW 52432,
+            N'Yalnızca dosya uzantısı, içerik türü ve imzası doğrulanan JPEG, PNG veya WebP görseller yüklenebilir.',
+            1;
+
+    IF EXISTS
+    (
+        SELECT 1 FROM inserted
+        WHERE DATALENGTH(ImageData) > 150 * 1024 * 1024
+    )
+        THROW 52431, N'Görsel boyutu 150 MB''dan büyük olamaz.', 1;
+END;
+GO
+
+CREATE OR ALTER TRIGGER dbo.TR_Plays_SynchronizeSourceForm
+ON dbo.Plays
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF TRY_CONVERT(int, SESSION_CONTEXT(N'FormLifecycleSyncInProgress')) = 1
+       OR TRY_CONVERT(int, SESSION_CONTEXT(N'PlayToFormSyncInProgress')) = 1
+        RETURN;
+
+    IF NOT
+       (
+           UPDATE(PlayName) OR UPDATE(TheaterName) OR UPDATE(Phone)
+           OR UPDATE(ContactPersonName) OR UPDATE(ContactPersonPhone)
+           OR UPDATE(Email) OR UPDATE(IsActive) OR UPDATE(IsPublished)
+       )
+        RETURN;
+
+    DECLARE @AffectedPlayId uniqueidentifier;
+    DECLARE affected_play_cursor CURSOR LOCAL FAST_FORWARD FOR
+        SELECT DISTINCT changed.Id
+        FROM inserted AS changed
+        WHERE changed.SourceFormId IS NOT NULL;
+
+    OPEN affected_play_cursor;
+    FETCH NEXT FROM affected_play_cursor INTO @AffectedPlayId;
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        EXEC dbo.usp_SynchronizePlayDataToForms @PlayId = @AffectedPlayId;
+        FETCH NEXT FROM affected_play_cursor INTO @AffectedPlayId;
+    END;
+    CLOSE affected_play_cursor;
+    DEALLOCATE affected_play_cursor;
+END;
+GO
+
+CREATE OR ALTER TRIGGER dbo.TR_PlayAwardCategories_SynchronizeSourceForm
+ON dbo.PlayAwardCategories
+AFTER INSERT, UPDATE, DELETE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF TRY_CONVERT(int, SESSION_CONTEXT(N'FormLifecycleSyncInProgress')) = 1
+       OR TRY_CONVERT(int, SESSION_CONTEXT(N'PlayToFormSyncInProgress')) = 1
+        RETURN;
+
+    /* 1001 is generated automatically immediately after a Play insert. It has
+       no Form candidate JSON field and must never clear the imported arrays. */
+    IF NOT EXISTS
+    (
+        SELECT 1 FROM inserted WHERE AwardCategoryCode BETWEEN 1002 AND 1011
+        UNION ALL
+        SELECT 1 FROM deleted WHERE AwardCategoryCode BETWEEN 1002 AND 1011
+    )
+        RETURN;
+
+    IF EXISTS (SELECT 1 FROM inserted)
+       AND EXISTS (SELECT 1 FROM deleted)
+       AND NOT
+       (
+           UPDATE(PlayId) OR UPDATE(Candidate) OR UPDATE(Role)
+           OR UPDATE(PhotoImageId) OR UPDATE(AwardCategoryCode)
+           OR UPDATE(IsPublished) OR UPDATE(IsCurrent)
+       )
+        RETURN;
+
+    DECLARE @AffectedPlayId uniqueidentifier;
+    DECLARE affected_candidate_play_cursor CURSOR LOCAL FAST_FORWARD FOR
+        SELECT DISTINCT affected.PlayId
+        FROM
+        (
+            SELECT PlayId FROM inserted
+            UNION
+            SELECT PlayId FROM deleted
+        ) AS affected
+        INNER JOIN dbo.Plays AS play ON play.Id = affected.PlayId
+        WHERE play.SourceFormId IS NOT NULL;
+
+    OPEN affected_candidate_play_cursor;
+    FETCH NEXT FROM affected_candidate_play_cursor INTO @AffectedPlayId;
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        EXEC dbo.usp_SynchronizePlayDataToForms @PlayId = @AffectedPlayId;
+        FETCH NEXT FROM affected_candidate_play_cursor INTO @AffectedPlayId;
+    END;
+    CLOSE affected_candidate_play_cursor;
+    DEALLOCATE affected_candidate_play_cursor;
 END;
 GO
 
@@ -1543,26 +1927,6 @@ BEGIN
     BEGIN
         THROW 51231, N'Mevcut bir oyunun RecordType degeri degistirilemez.', 1;
     END;
-END;
-GO
-
-/* RecordType 0 plays can be opened to jury voting only while StatusCode is 1. */
-CREATE OR ALTER TRIGGER [dbo].[TR_Plays_NormalizeJuryVotingStatus]
-ON [dbo].[Plays]
-AFTER INSERT, UPDATE
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    UPDATE play
-    SET play.[JuriOylamaStatus] = 0,
-        play.[UpdatedAt] = DATEADD(HOUR, 3, SYSUTCDATETIME())
-    FROM [dbo].[Plays] AS play
-    INNER JOIN inserted AS changed
-        ON changed.[Id] = play.[Id]
-    WHERE changed.[RecordType] = 0
-      AND changed.[StatusCode] <> 1
-      AND changed.[JuriOylamaStatus] = 1;
 END;
 GO
 
@@ -2371,7 +2735,11 @@ BEGIN
         SELECT 1 FROM dbo.Form AS target WHERE target.Id = changed.Id
     );
 
-    EXEC dbo.usp_SynchronizeFormsToPlays;
+    /* A reverse synchronization has already made Form authoritative for this
+       statement. Running the forward procedure here would re-enter the graph. */
+    IF TRY_CONVERT(int, SESSION_CONTEXT(N'PlayToFormSyncInProgress')) <> 1
+       OR SESSION_CONTEXT(N'PlayToFormSyncInProgress') IS NULL
+        EXEC dbo.usp_SynchronizeFormsToPlays;
 END;
 GO
 
@@ -2381,6 +2749,10 @@ AFTER INSERT, UPDATE
 AS
 BEGIN
     SET NOCOUNT ON;
+
+    IF TRY_CONVERT(int, SESSION_CONTEXT(N'FormLifecycleSyncInProgress')) = 1
+       OR TRY_CONVERT(int, SESSION_CONTEXT(N'PlayToFormSyncInProgress')) = 1
+        RETURN;
 
     IF EXISTS (SELECT 1 FROM deleted)
        AND NOT (UPDATE(SeasonStartDate) OR UPDATE(SeasonEndDate) OR UPDATE(IsPublished))

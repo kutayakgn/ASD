@@ -56,7 +56,15 @@ public static class CandidateComplexTableFactory
                 Columns =
                 [
                     new() { Title = "Ödül Kategorisi", Key = CandidateSortColumns.Category, ColWidth = 23 },
-                    new() { Title = "Aday Adı", Key = CandidateSortColumns.Candidate, ColWidth = 19 },
+                    new()
+                    {
+                        Title = report.CategoryCode.HasValue &&
+                            report.CategoryCode.Value != CandidateCategoryPolicy.BestPlayCategoryCode
+                                ? "Adı Soyadı"
+                                : "Aday Adı",
+                        Key = CandidateSortColumns.Candidate,
+                        ColWidth = 19
+                    },
                     new() { Title = "Rol Adı", Key = CandidateSortColumns.Role, ColWidth = 15 },
                     new() { Title = "Rol Değişimi", Key = CandidateSortColumns.Replacement, ColWidth = 15 },
                     new() { Title = "Eklenme Tarihi", Key = CandidateSortColumns.CreatedAt, ColWidth = 16 },
@@ -67,8 +75,8 @@ public static class CandidateComplexTableFactory
         ],
         SummaryContent =
         [
-            new() { Text = report.TotalCount.ToString(CultureInfo.CurrentCulture), IsEmphasized = true },
-            new() { Text = " aday bulundu." }
+            new() { Text = report.TotalCount.ToString(CultureInfo.CurrentCulture) + " kayıt", IsEmphasized = true },
+            new() { Text = " bulundu." }
         ]
     };
 

@@ -249,7 +249,8 @@
                                                 data-sort-by="@column.Key"
                                                 data-sort-direction="@NextSortDirection(column.Key)"
                                                 data-page="1">
-                                            @column.Title <span aria-hidden="true">@SortIndicator(column.Key)</span>
+                                            <span class="complex-table-sort-label">@column.Title</span>
+                                            <span aria-hidden="true">@SortIndicator(column.Key)</span>
                                         </button>
                                     }
                                     else
@@ -292,7 +293,16 @@
                                 @for (var index = 0; index < activeTab.Columns.Count; index++)
                                 {
                                     var cell = index < row.Cells.Count ? row.Cells[index] : null;
-                                    <td class="@activeTab.Columns[index].CssClass @ColumnClass(index) @((cell is not null && (!string.IsNullOrWhiteSpace(cell.Link) || !string.IsNullOrWhiteSpace(cell.ModalUrl))) ? "complex-table-action-cell" : string.Empty) @((cell is not null && !string.IsNullOrWhiteSpace(cell.ToggleUrl)) ? "complex-table-toggle-cell" : string.Empty)">
+                                    var columnCssClass = activeTab.Columns[index].CssClass;
+                                    var isExplicitRowHoverColumn = columnCssClass is
+                                        "applications-status-column" or
+                                        "play-toggle-column" or
+                                        "candidate-status-column";
+                                    var usesRowAction = isInteractiveRow &&
+                                        (string.IsNullOrWhiteSpace(cell?.ToggleUrl) || isExplicitRowHoverColumn) &&
+                                        (string.IsNullOrWhiteSpace(cell?.Link) || cell.Link == row.Link) &&
+                                        (string.IsNullOrWhiteSpace(cell?.ModalUrl) || cell.ModalUrl == row.ModalUrl);
+                                    <td class="@activeTab.Columns[index].CssClass @ColumnClass(index) @(usesRowAction ? "complex-table-row-hover-cell" : string.Empty) @((cell is not null && (!string.IsNullOrWhiteSpace(cell.Link) || !string.IsNullOrWhiteSpace(cell.ModalUrl))) ? "complex-table-action-cell" : string.Empty) @((cell is not null && !string.IsNullOrWhiteSpace(cell.ToggleUrl)) ? "complex-table-toggle-cell" : string.Empty)">
                                         @if (cell is not null)
                                         {
                                             <div class="complex-table-cell-content @cell.CssClass">
@@ -346,7 +356,7 @@
                                 }
                                 @if (Model.IsEditableRows)
                                 {
-                                    <td class="complex-table-edit-column">
+                                    <td class="complex-table-edit-column @(isInteractiveRow ? "complex-table-row-hover-cell" : string.Empty)">
                                         @if (!string.IsNullOrWhiteSpace(row.EditUrl))
                                         {
                                             <a href="@row.EditUrl" class="complex-table-edit-button"
@@ -366,7 +376,7 @@
                                 }
                                 @if (Model.IsDeleteColActive)
                                 {
-                                    <td class="complex-table-delete-column @(!string.IsNullOrWhiteSpace(row.DeleteUrl) ? "complex-table-delete-action-cell" : string.Empty)"
+                                    <td class="complex-table-delete-column @(isInteractiveRow ? "complex-table-row-hover-cell" : string.Empty) @(!string.IsNullOrWhiteSpace(row.DeleteUrl) ? "complex-table-delete-action-cell" : string.Empty)"
                                         data-complex-table-delete-url="@row.DeleteUrl"
                                         data-delete-confirm-message="@row.DeleteConfirmMessage">
                                         @if (!string.IsNullOrWhiteSpace(row.DeleteUrl))
@@ -380,7 +390,10 @@
                                 }
                                 @if (Model.IsNavigationColActive)
                                 {
-                                    <td class="complex-table-navigation-column">
+                                    var navigationUsesRowAction =
+                                        (!string.IsNullOrWhiteSpace(row.Link) && row.NavigationUrl == row.Link) ||
+                                        (!string.IsNullOrWhiteSpace(row.ModalUrl) && row.NavigationUrl == row.ModalUrl);
+                                    <td class="complex-table-navigation-column @(navigationUsesRowAction ? "complex-table-row-hover-cell" : string.Empty)">
                                         @if (!string.IsNullOrWhiteSpace(row.NavigationUrl))
                                         {
                                             <a href="@row.NavigationUrl" class="complex-table-navigation-link" aria-label="@row.NavigationAccessibleLabel">
@@ -391,7 +404,7 @@
                                 }
                                 @if (Model.IsIconColActive)
                                 {
-                                    <td class="complex-table-icon-column">
+                                    <td class="complex-table-icon-column @(isInteractiveRow ? "complex-table-row-hover-cell" : string.Empty)">
                                         @if (!string.IsNullOrWhiteSpace(row.Icon))
                                         {
                                             <img src="@row.Icon" alt="" aria-hidden="true" />

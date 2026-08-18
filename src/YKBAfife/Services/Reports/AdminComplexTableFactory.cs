@@ -21,6 +21,7 @@ public static class AdminComplexTableFactory
             return new ComplexTableRowViewModel
             {
                 Id = $"admin-{row.UserId:N}",
+                Link = detailsUrl,
                 NavigationUrl = detailsUrl,
                 NavigationAccessibleLabel = $"{row.FullName} detayına git",
                 Cells =

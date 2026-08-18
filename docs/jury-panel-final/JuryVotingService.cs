@@ -729,7 +729,7 @@ namespace YkbAfife.Business.Service.JuryVoting
             }
 
             var sourceFormIsEligible =
-                play.RecordType ||
+                play.RecordType != 0 ||
                 (play.SourceFormId.HasValue &&
                  await _context.Form.AsNoTracking().AnyAsync(x =>
                      x.Id == play.SourceFormId.Value &&
@@ -1085,7 +1085,7 @@ namespace YkbAfife.Business.Service.JuryVoting
                 }
 
                 var sourceFormIsEligible =
-                    play.RecordType ||
+                    play.RecordType != 0 ||
                     (play.SourceFormId.HasValue &&
                      await _context.Form.AsNoTracking().AnyAsync(x =>
                          x.Id == play.SourceFormId.Value &&
@@ -1096,7 +1096,7 @@ namespace YkbAfife.Business.Service.JuryVoting
                 {
                     return await FailAsync(
                         JuryVotingSaveVoteResult.SourceFormNotEligible,
-                        "RecordType=false (0) oyunun bağlı olduğu başvuru aktif veya yayında değil.",
+                        "RecordType=0 oyunun bağlı olduğu başvuru aktif veya yayında değil.",
                         new { play.RecordType, play.SourceFormId });
                 }
 
@@ -1848,7 +1848,6 @@ public async Task<JuryVotingComplexTableViewModel> BuildGameListTableModelAsync(
              _context.Plays.AsNoTracking().Any(play =>
                  play.Id == assignedPlay.PlayId &&
                  play.IsPublished &&
-                 play.IsActive &&
                  play.JuriOylamaStatus));
 
      var tabs = GetGameListTabs(hasAssignedVisiblePlay);
@@ -1990,7 +1989,6 @@ public async Task<JuryVotingComplexTableViewModel> BuildGameListTableModelAsync(
 
          .Where(play =>
              play.IsPublished &&
-             play.IsActive &&
              play.JuriOylamaStatus)
 
          .Where(play => tab != "assigned" || _context.JuryAssignedPlays

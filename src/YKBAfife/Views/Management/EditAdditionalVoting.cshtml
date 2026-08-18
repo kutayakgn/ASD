@@ -1,7 +1,7 @@
 @model YKBAfife.Models.ViewModels.AdditionalVotingFormViewModel
 @{ ViewData["Title"] = "Ek Oylama Hakkını Düzenle"; }
 <section class="play-details-page add-jury-page additional-voting-form-page" aria-labelledby="additional-voting-title">
-    <a asp-action="AdditionalVotingDetails" asp-route-id="@Model.Id" class="play-details-back"><img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" /><span>Ek Oylama Detayına Dön</span></a>
+    <a asp-action="AdditionalVotingDetails" asp-route-id="@Model.Id" class="play-details-back"><img src="~/icons/arrow-left.svg" alt="" aria-hidden="true" /><span>Ek Oylama Detayı' na Dön</span></a>
     <header class="play-details-toolbar"><h1 id="additional-voting-title">Ek Oylama Hakkını Düzenle</h1></header>
     <form asp-action="EditAdditionalVoting" asp-route-id="@Model.Id" method="post" class="add-jury-form" novalidate data-additional-voting-form data-confirm-message="Ek oylama hakkını güncellemek istediğinize emin misiniz?">
         @Html.AntiForgeryToken()<input asp-for="Id" type="hidden" />

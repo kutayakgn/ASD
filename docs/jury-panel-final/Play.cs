@@ -35,9 +35,10 @@ public class Play : BaseEntity
     public bool JuriOylamaStatus { get; set; }
     public bool KunyeGirisStatus { get; set; }
 
-    // SQL Server kolonu bit'tir. Form kaynaklı oyun = false (0),
-    // admin kaydı = true (1).
-    public bool RecordType { get; set; }
+    // Uygulama tarafında 0/1 olarak kullanılır. SQL Server provider tipi
+    // AfifeContext içindeki value converter sayesinde bit olarak kalır.
+    [Column(TypeName = "bit")]
+    public int RecordType { get; set; }
 
     public Guid? SourceFormId { get; set; }
     public bool IsActive { get; set; }

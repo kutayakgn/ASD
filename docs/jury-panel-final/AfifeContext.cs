@@ -50,6 +50,15 @@ public sealed class AfifeContext : DbContext
                 .HasFilter("[IsPublished] = 1");
         });
 
+        modelBuilder.Entity<Play>(entity =>
+        {
+            entity.Property(x => x.RecordType)
+                .HasConversion(
+                    modelValue => modelValue != 0,
+                    providerValue => providerValue ? 1 : 0)
+                .HasColumnType("bit");
+        });
+
         modelBuilder.Entity<JuryLog>(entity =>
         {
             entity.ToTable("JuryLogs", "dbo");

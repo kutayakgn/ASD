@@ -26,18 +26,29 @@ public sealed class V1_0_3_EnforceVoteScoreRange : Migration
             """)
             .Annotation(MigrationSqlResources.ReviewedDataSafeSqlAnnotation, true);
 
-        migrationBuilder.AddCheckConstraint(
-            name: "CK_JuryVotes_Score",
-            schema: "dbo",
-            table: "JuryVotes",
-            sql: "[Score] >= 1 AND [Score] <= 10");
+        migrationBuilder.Sql(
+            """
+            IF OBJECT_ID(N'dbo.CK_JuryVotes_Score', N'C') IS NULL
+            BEGIN
+                ALTER TABLE dbo.JuryVotes WITH CHECK
+                    ADD CONSTRAINT CK_JuryVotes_Score
+                    CHECK ([Score] >= 1 AND [Score] <= 10);
+            END;
+
+            ALTER TABLE dbo.JuryVotes
+                CHECK CONSTRAINT CK_JuryVotes_Score;
+            """)
+            .Annotation(MigrationSqlResources.ReviewedDataSafeSqlAnnotation, true);
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropCheckConstraint(
-            name: "CK_JuryVotes_Score",
-            schema: "dbo",
-            table: "JuryVotes");
+        migrationBuilder.Sql(
+            """
+            IF OBJECT_ID(N'dbo.CK_JuryVotes_Score', N'C') IS NOT NULL
+                ALTER TABLE dbo.JuryVotes
+                    DROP CONSTRAINT CK_JuryVotes_Score;
+            """)
+            .Annotation(MigrationSqlResources.ReviewedDataSafeSqlAnnotation, true);
     }
 }

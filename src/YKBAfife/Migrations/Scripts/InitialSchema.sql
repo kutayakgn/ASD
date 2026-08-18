@@ -1497,9 +1497,9 @@ ALTER TABLE [dbo].[Plays]  WITH CHECK ADD  CONSTRAINT [CK_Plays_AdminRecord_Stat
 GO
 ALTER TABLE [dbo].[Plays] CHECK CONSTRAINT [CK_Plays_AdminRecord_StatusCode]
 GO
-ALTER TABLE [dbo].[Plays]  WITH CHECK ADD  CONSTRAINT [CK_Plays_AdminRecord_StatusesDisabled] CHECK  (([RecordType]=(0) OR [JuriOylamaStatus]=(0) AND [KunyeGirisStatus]=(0)))
+ALTER TABLE [dbo].[Plays]  WITH CHECK ADD  CONSTRAINT [CK_Plays_AdminRecord_KunyeStatusDisabled] CHECK  (([RecordType]=(0) OR [KunyeGirisStatus]=(0)))
 GO
-ALTER TABLE [dbo].[Plays] CHECK CONSTRAINT [CK_Plays_AdminRecord_StatusesDisabled]
+ALTER TABLE [dbo].[Plays] CHECK CONSTRAINT [CK_Plays_AdminRecord_KunyeStatusDisabled]
 GO
 ALTER TABLE [dbo].[Plays]  WITH CHECK ADD  CONSTRAINT [CK_Plays_KunyeMustRemainPublished] CHECK  (([RecordType]=(1) OR [IsPublished]=(1)))
 GO

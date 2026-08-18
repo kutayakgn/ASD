@@ -60,10 +60,29 @@ internal static partial class DatabaseSchemaValidator
         var schemaSql = MigrationSqlResources.Read("InitialSchema.sql");
         foreach (Match match in IndexRegex().Matches(schemaSql))
         {
-            if (!catalog.Indexes.Contains(match.Groups["name"].Value))
+            var indexName = match.Groups["name"].Value;
+            if (string.Equals(
+                    indexName,
+                    "UX_PlayAwardCategories_Current_Play_Category_Role",
+                    StringComparison.OrdinalIgnoreCase))
             {
-                missing.Add($"index {match.Groups["name"].Value}");
+                continue;
             }
+
+            if (!catalog.Indexes.Contains(indexName))
+            {
+                missing.Add($"index {indexName}");
+            }
+        }
+        if (!catalog.NonUniqueIndexes.Contains(
+                "IX_PlayAwardCategories_Current_Play_Category_Role"))
+        {
+            missing.Add("non-unique index IX_PlayAwardCategories_Current_Play_Category_Role");
+        }
+        if (catalog.Indexes.Contains("UX_PlayAwardCategories_Current_Play_Category_Role"))
+        {
+            missing.Add(
+                "obsolete unique index UX_PlayAwardCategories_Current_Play_Category_Role");
         }
         foreach (Match match in ConstraintRegex().Matches(schemaSql))
         {
@@ -244,6 +263,9 @@ internal static partial class DatabaseSchemaValidator
             SELECT N'I', i.name FROM sys.indexes i
             WHERE i.name IS NOT NULL
             UNION ALL
+            SELECT N'N', i.name FROM sys.indexes i
+            WHERE i.name IS NOT NULL AND i.is_unique = 0
+            UNION ALL
             SELECT N'K', o.name FROM sys.objects o
             WHERE o.type IN (N'PK', N'UQ', N'F', N'C', N'D')
             UNION ALL
@@ -322,6 +344,7 @@ internal static partial class DatabaseSchemaValidator
                 "T" => result.Tables,
                 "C" => result.Columns,
                 "I" => result.Indexes,
+                "N" => result.NonUniqueIndexes,
                 "K" => result.Constraints,
                 "P" => result.Procedures,
                 "R" => result.Triggers,
@@ -341,6 +364,7 @@ internal static partial class DatabaseSchemaValidator
         public HashSet<string> Tables { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> Columns { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> Indexes { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public HashSet<string> NonUniqueIndexes { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> Constraints { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> Procedures { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> Triggers { get; } = new(StringComparer.OrdinalIgnoreCase);

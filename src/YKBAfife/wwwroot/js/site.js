@@ -48,3 +48,40 @@
     mobileBreakpoint.addEventListener("change", () => setOpen(false));
     setOpen(false);
 })();
+
+(() => {
+    const maximumImageBytes = 150 * 1024 * 1024;
+    const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+    const allowedExtensions = new Set(["jpg", "jpeg", "png", "webp"]);
+
+    const showError = (message) => {
+        if (window.genericPopup?.fail) window.genericPopup.fail(message);
+        else window.alert(message);
+    };
+
+    // Capture aşamasında çalışarak sayfaya özel önizleme kodlarından önce
+    // geçersiz dosyayı temizler. Gerçek byte imzası ayrıca sunucuda doğrulanır.
+    document.addEventListener("change", (event) => {
+        const input = event.target;
+        if (!(input instanceof HTMLInputElement) || input.type !== "file") return;
+
+        const files = Array.from(input.files || []);
+        if (files.length === 0) return;
+
+        const invalidFile = files.find((file) => {
+            const extension = file.name.split(".").pop()?.toLocaleLowerCase("en-US") || "";
+            return file.size === 0 ||
+                file.size > maximumImageBytes ||
+                !allowedTypes.has(file.type.toLocaleLowerCase("en-US")) ||
+                !allowedExtensions.has(extension);
+        });
+        if (!invalidFile) return;
+
+        input.value = "";
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        showError(invalidFile.size > maximumImageBytes
+            ? "Görsel boyutu 150 MB'dan büyük olamaz."
+            : "Yalnızca JPEG, PNG veya WebP görsel dosyası yükleyebilirsiniz.");
+    }, true);
+})();

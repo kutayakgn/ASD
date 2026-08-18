@@ -184,6 +184,7 @@
 .play-filter-reset {
     color: #171717;
     background: #fff;
+    border: none;
 }
 
 .play-filter-apply {
@@ -191,19 +192,21 @@
     background: #171717;
 }
 
-    .play-filter-reset:hover,
-    .play-filter-reset:focus-visible,
-    .play-filter-apply:hover,
-    .play-filter-apply:focus-visible {
-        color: #fff;
-        background: #918150;
-        border-color: #918150;
-        outline: none;
-    }
+.play-filter-reset:hover,
+.play-filter-reset:focus-visible {
+    color: #918150;
+}
 
-.complex-table-header-action.is-active {
+.play-filter-apply:hover,
+.play-filter-apply:focus-visible {
+    color: #fff;
     background: #918150;
     border-color: #918150;
+    outline: none;
+}
+
+.complex-table-header-action.is-active {
+    border-color: #171717;
 }
 
 
@@ -211,13 +214,17 @@
 #plays-table .jury-voting-table th.play-toggle-column,
 #plays-table .jury-voting-table td.play-toggle-column {
     width: 160px !important;
+    padding: 10px 16px;
 }
 
 #plays-table .jury-voting-table th.play-toggle-column,
 #plays-table .jury-voting-table td.play-toggle-column {
     text-align: center;
+   
 }
-
+.complex-table-toggle-cell {
+    padding: 10px 16px !important;
+}
 #plays-table .play-toggle-column .jury-voting-sort-button {
     width: 100%;
     justify-content: center;
@@ -231,19 +238,30 @@
 }
 
 .play-name-with-tag {
-    display: inline-flex;
+    display: flex;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     align-items: center;
     gap: 8px;
 }
 
+.play-name-with-tag > span:first-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .play-new-tag {
     display: flex;
+    flex: 0 0 auto;
     padding: 2px 8px;
     align-items: center;
     gap: 4px;
     border-radius: 4px;
-    background:#918150;
-    color:  #FFF;
+    background: #918150;
+    color: #FFF;
     font-family: Outfit;
     font-size: 12px;
     font-style: normal;
@@ -253,6 +271,7 @@
 
 .play-similar-warning {
     display: inline-flex;
+    flex: 0 0 auto;
     align-items: center;
 }
 
@@ -267,16 +286,16 @@
     background: transparent;
 }
 
-.play-similar-warning-button img {
-    width: 16px;
-    height: 16px;
-}
+    .play-similar-warning-button img {
+        width: 16px;
+        height: 16px;
+    }
 
-.play-similar-warning-button:focus-visible {
-    border-radius: 50%;
-    outline: 2px solid #171717;
-    outline-offset: 2px;
-}
+    .play-similar-warning-button:focus-visible {
+        border-radius: 50%;
+        outline: 2px solid #171717;
+        outline-offset: 2px;
+    }
 
 .play-similar-tooltip {
     position: fixed;
@@ -294,17 +313,17 @@
     line-height: 18px;
 }
 
-.play-similar-tooltip a {
-    color: #665a35;
-    font-weight: 600;
-    text-decoration: underline;
-    text-underline-offset: 2px;
-}
+    .play-similar-tooltip a {
+        color: #665a35;
+        font-weight: 600;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+    }
 
-.play-similar-tooltip a:hover,
-.play-similar-tooltip a:focus-visible {
-    color: #918150;
-}
+        .play-similar-tooltip a:hover,
+        .play-similar-tooltip a:focus-visible {
+            color: #918150;
+        }
 
 body.play-filter-open {
     overflow: hidden;
@@ -410,7 +429,12 @@ body.play-filter-open {
 
 .add-play-select-placeholder,
 .add-play-status-trigger .is-placeholder {
-    color: rgba(23, 23, 23, .5);
+    color: #9E9E9E;
+    font-family: Outfit;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 20px;
 }
 
 .add-play-selection-token {
@@ -422,8 +446,8 @@ body.play-filter-open {
     font-weight: 600;
     line-height: 16px;
     cursor: pointer;
-    border:none;
-    width:fit-content;
+    border: none;
+    width: fit-content;
     display: flex;
     height: 24px;
     padding: 4px 12px;
@@ -441,11 +465,11 @@ body.play-filter-open {
 
 .add-play-selection-remove-icon {
     display: grid;
-    width: 18px;
-    height: 18px;
+    width: 12px;
+    height: 12px;
     place-items: center;
-    font-size: 18px;
-    line-height: 1;
+
+
 }
 
 .add-play-jury-menu,
@@ -642,24 +666,12 @@ body.play-filter-open {
 .candidate-status-cell {
     text-align: center;
 }
-.edit-play-status-grid {
-    display: grid;
-    margin-top: 24px;
-    gap: 24px;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-}
 
 .edit-play-record-type {
-    width: calc(50% - 12px);
-    margin-top: 24px;
+    width: 100%;
 }
 
-.edit-play-record-type input:disabled {
-    color: #646464;
-    background: #f5f5f5;
-}
-
-@media (max-width: 767.98px) {
-    .edit-play-status-grid { grid-template-columns: 1fr; }
-    .edit-play-record-type { width: 100%; }
-}
+    .edit-play-record-type input:disabled {
+        color: #646464;
+        background: #f5f5f5;
+    }

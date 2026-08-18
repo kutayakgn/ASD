@@ -29,9 +29,10 @@
     color: #bdbdbd;
 }
 
-    .lazy-search-select-trigger.is-placeholder {
-        color: rgba(23, 23, 23, .5);
-    }
+
+.lazy-search-select-trigger.is-placeholder {
+    color: rgba(23, 23, 23, .5);
+}
 
     .lazy-search-select-trigger:focus-visible {
         outline: 2px solid #918150;

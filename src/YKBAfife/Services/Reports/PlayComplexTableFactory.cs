@@ -15,8 +15,8 @@ public static class PlayComplexTableFactory
         new() { Title = "Tiyatro Adı", Key = PlaySortColumns.TheaterName, ColWidth = 18 },
         new() { Title = "Eklenme Yöntemi", Key = PlaySortColumns.RecordType, ColWidth = 14 },
         new() { Title = "Eklenme Tarihi", Key = PlaySortColumns.CreatedAt, ColWidth = 18 },
-        new() { Title = "Jüri Oylama Listesi", Key = PlaySortColumns.JuryVotingStatus, ColWidth = 10, CssClass = "play-toggle-column" },
-        new() { Title = "Künye Giriş Sistemi", Key = PlaySortColumns.KunyeGirisStatus, ColWidth = 10, CssClass = "play-toggle-column" }
+        new() { Title = "Jüri Oylama Listesi", Key = PlaySortColumns.JuryVotingStatus, ColWidth = 10, IsSortable = false, CssClass = "play-toggle-column" },
+        new() { Title = "Künye Giriş Sistemi", Key = PlaySortColumns.KunyeGirisStatus, ColWidth = 10, IsSortable = false, CssClass = "play-toggle-column" }
     ];
 
     public static ComplexTableViewModel Create(PlayTableViewModel report)
@@ -44,8 +44,8 @@ public static class PlayComplexTableFactory
                     new()
                     {
                         ToggleUrl = $"/oyunlar/{row.PlayId:D}/juri-oylama-status",
-                        ToggleChecked = !row.RecordType && row.StatusCode == 1 && row.JuriOylamaStatus,
-                        ToggleDisabled = row.RecordType || row.StatusCode != 1,
+                        ToggleChecked = row.JuriOylamaStatus,
+                        ToggleDisabled = false,
                         CssClass = "play-toggle-cell",
                         AccessibleLabel = $"{row.PlayName} jüri oylama listesi statüsünü değiştir"
                     },
@@ -96,10 +96,11 @@ public static class PlayComplexTableFactory
                     [
                         new()
                         {
-                            Text = activeFilterCount > 0 ? $"Filtrele({activeFilterCount})" : "Filtrele",
+                            Text = activeFilterCount > 0 ? $"Filtrele ({activeFilterCount})" : "Filtrele",
                             IsButton = true,
                             PanelTarget = "play-filter-panel",
-                            CssClass = activeFilterCount > 0 ? "is-active" : string.Empty
+                            Icon="/icons/filter.svg",
+                            CssClass = activeFilterCount > 0 ? "is-active bordered" : "bordered"
                         },
                         new() { Text = "Oyun Ekle", Icon = "/icons/plus.svg", Link = "/oyunlar/ekle" }
                     ]

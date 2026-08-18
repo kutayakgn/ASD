@@ -237,7 +237,6 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
                 .IsUnique()
                 .HasFilter("[IsPublished] = 1");
             entity.HasIndex(x => new { x.PlayId, x.AwardCategoryCode, x.RoleCode, x.IsCurrent })
-                .IsUnique()
                 .HasFilter("[IsCurrent] = 1 AND [IsPublished] = 1");
             entity.HasIndex(x => new { x.PlayId, x.AwardCategoryCode, x.SourceFormCandidateOrder })
                 .IsUnique()

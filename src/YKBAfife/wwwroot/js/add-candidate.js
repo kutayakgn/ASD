@@ -226,7 +226,7 @@
             if (!status) errors.push("Statü seçimi zorunludur.");
             if (hasRoleAndPhoto && selectedMode() === "new" && !roleInput?.value.trim()) errors.push("Rol Adı alanı zorunludur.");
             const file = photoInput?.files?.[0];
-            if (file && file.size > 5 * 1024 * 1024) errors.push("Fotoğraf boyutu 5 MB'dan küçük olmalıdır.");
+            if (file && file.size > 150 * 1024 * 1024) errors.push("Görsel boyutu 150 MB'dan büyük olamaz.");
             if (file && !["image/jpeg", "image/png", "image/webp"].includes(file.type)) errors.push("Yalnızca JPEG, PNG veya WebP formatında fotoğraf yükleyebilirsiniz.");
             if (errors.length === 0) return;
             event.preventDefault();
