@@ -31,7 +31,8 @@
         <div class="add-jury-grid">
             <div class="add-jury-field">
                 <label asp-for="Username"></label>
-                <input asp-for="Username" autocomplete="username" placeholder="Kullanıcı adı yazın" required />
+                <input asp-for="Username" autocomplete="username" placeholder="Kullanıcı adı yazın"
+                       required minlength="3" maxlength="30" pattern="[A-Za-z0-9._]+" />
                 <span asp-validation-for="Username"></span>
             </div>
 

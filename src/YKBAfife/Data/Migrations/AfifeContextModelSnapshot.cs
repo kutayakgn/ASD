@@ -1849,6 +1849,8 @@ namespace YKBAfife.Data.Migrations
                     b.ToTable("Users", "dbo", t =>
                         {
                             t.HasCheckConstraint("CK_Users_JuryPresident", "[IsJuryPresident] = 0 OR ([RoleCode] = 2 AND [IsActive] = 1)");
+
+                            t.HasCheckConstraint("CK_Users_Username_InstagramFormat", "LEN([Username]) BETWEEN 3 AND 30 AND DATALENGTH([Username]) = LEN([Username]) * 2 AND [Username] COLLATE Latin1_General_100_BIN2 NOT LIKE '%[^A-Za-z0-9._]%'");
                         });
 
                     b.HasAnnotation("SqlServer:UseSqlOutputClause", false);

@@ -34,10 +34,10 @@
         <div class="add-jury-grid">
             <div class="add-jury-field">
                 <label asp-for="Username"></label>
-                <input asp-for="Username" required minlength="3" maxlength="100"
+                <input asp-for="Username" required minlength="3" maxlength="30"
                        autocomplete="username"
-                       pattern="[A-Za-z0-9&#199;&#286;&#304;&#214;&#350;&#220;&#231;&#287;&#305;&#246;&#351;&#252;._-]+"
-                       data-fail-message="Kullan&#305;c&#305; ad&#305; bo&#351;luk veya ._- d&#305;&#351;&#305;nda noktalama i&#351;areti i&#231;eremez." />
+                       pattern="[A-Za-z0-9._]+"
+                       data-fail-message="Kullan&#305;c&#305; ad&#305; yaln&#305;zca &#304;ngilizce harf, rakam, nokta ve alt &#231;izgi i&#231;erebilir; bo&#351;luk i&#231;eremez." />
             </div>
             <div class="add-jury-field">
                 <label asp-for="Email"></label>

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using YKBAfife.Helpers;
 
 namespace YKBAfife.Models.ViewModels;
 
@@ -37,8 +38,9 @@ public sealed class AdminManagementViewModel
 public sealed class AddAdminViewModel
 {
     [Required(ErrorMessage = "Kullanıcı adı zorunludur.")]
-    [StringLength(100, MinimumLength = 3, ErrorMessage = "Kullanıcı adı 3-100 karakter arasında olmalıdır.")]
-    [RegularExpression(@"^[\p{L}\p{N}._-]+$", ErrorMessage = "Kullanıcı adı boşluk veya ._- dışında noktalama işareti içeremez.")]
+    [StringLength(UsernamePolicy.MaximumLength, MinimumLength = UsernamePolicy.MinimumLength,
+        ErrorMessage = UsernamePolicy.LengthErrorMessage)]
+    [RegularExpression(UsernamePolicy.Pattern, ErrorMessage = UsernamePolicy.FormatErrorMessage)]
     [Display(Name = "Kullanıcı Adı")]
     public string Username { get; set; } = string.Empty;
 

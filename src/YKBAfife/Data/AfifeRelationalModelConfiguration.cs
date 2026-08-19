@@ -420,9 +420,16 @@ internal static class AfifeRelationalModelConfiguration
     private static void ConfigureChecks(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<User>().ToTable("Users", "dbo", t =>
+        {
             t.HasCheckConstraint(
                 "CK_Users_JuryPresident",
-                "[IsJuryPresident] = 0 OR ([RoleCode] = 2 AND [IsActive] = 1)"));
+                "[IsJuryPresident] = 0 OR ([RoleCode] = 2 AND [IsActive] = 1)");
+            t.HasCheckConstraint(
+                "CK_Users_Username_InstagramFormat",
+                "LEN([Username]) BETWEEN 3 AND 30 AND " +
+                "DATALENGTH([Username]) = LEN([Username]) * 2 AND " +
+                "[Username] COLLATE Latin1_General_100_BIN2 NOT LIKE '%[^A-Za-z0-9._]%'");
+        });
         modelBuilder.Entity<Play>().ToTable("Plays", "dbo", t =>
         {
             t.UseSqlOutputClause(false);

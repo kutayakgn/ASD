@@ -1,12 +1,15 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Http;
+using YKBAfife.Helpers;
 
 namespace YKBAfife.Models.ViewModels;
 
 public sealed class AddJuryViewModel
 {
     [Required(ErrorMessage = "Kullanıcı adı zorunludur.")]
-    [StringLength(100, MinimumLength = 3, ErrorMessage = "Kullanıcı adı 3-100 karakter arasında olmalıdır.")]
+    [StringLength(UsernamePolicy.MaximumLength, MinimumLength = UsernamePolicy.MinimumLength,
+        ErrorMessage = UsernamePolicy.LengthErrorMessage)]
+    [RegularExpression(UsernamePolicy.Pattern, ErrorMessage = UsernamePolicy.FormatErrorMessage)]
     [Display(Name = "Kullanıcı Adı")]
     public string Username { get; set; } = string.Empty;
 
