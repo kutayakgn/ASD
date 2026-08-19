@@ -51,6 +51,9 @@ public sealed class DatabaseMigrationHostedService(
                 logger.LogInformation("Database migrations completed successfully.");
             }
 
+            await LegacyColumnCleanupRunner.RunAsync(
+                context, connection, logger, cancellationToken);
+
             await DatabaseSchemaValidator.ValidateAsync(context, connection, cancellationToken);
             logger.LogInformation("Database schema validation completed successfully.");
         }

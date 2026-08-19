@@ -28,6 +28,27 @@ try {
         throw "MigrationSqlResources must execute ProgrammabilityPrerequisites.sql before Programmability.sql."
     }
 
+    $baselineOrderPattern = '(?s)Execute\(migrationBuilder, "PrepareLegacyForm\.sql".*?' +
+        'ExecuteMissingTables\(migrationBuilder, "InitialSchema\.sql".*?' +
+        'Execute\(migrationBuilder, "LegacyUpgrade\.sql".*?' +
+        'Execute\(migrationBuilder, "ReferenceData\.sql".*?' +
+        'ExecuteMissingSchemaObjects\(migrationBuilder, "InitialSchema\.sql".*?' +
+        'EnsureCandidateUniquenessContract\(migrationBuilder\)'
+    if ($migrationResourceHelper -notmatch $baselineOrderPattern) {
+        throw "The centralized legacy baseline dependency order was changed. Review partial/empty database compatibility."
+    }
+
+    $baselineCallers = @(
+        '20260803125913_InitialManagedBaseline.cs',
+        '20260805090000_EnsureCanonicalReferenceData.cs'
+    )
+    foreach ($baselineCaller in $baselineCallers) {
+        $callerContent = Get-Content (Join-Path $projectRoot "Data/Migrations/$baselineCaller") -Raw
+        if ($callerContent -notmatch 'MigrationSqlResources\.ExecuteLegacyBaselineUpgrade\(migrationBuilder\)') {
+            throw "$baselineCaller must use the centralized legacy baseline pipeline."
+        }
+    }
+
     dotnet build $projectFile -c $Configuration --no-restore
     if ($LASTEXITCODE -ne 0) { throw "Build failed." }
 

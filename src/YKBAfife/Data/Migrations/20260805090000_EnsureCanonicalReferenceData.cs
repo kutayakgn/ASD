@@ -20,11 +20,7 @@ public sealed class EnsureCanonicalReferenceData : Migration
             """)
             .Annotation(MigrationSqlResources.ReviewedDataSafeSqlAnnotation, true);
 
-        MigrationSqlResources.Execute(migrationBuilder, "PrepareLegacyForm.sql", onlyWhenBaselineExists: true);
-        MigrationSqlResources.ExecuteMissingTables(migrationBuilder, "InitialSchema.sql");
-        MigrationSqlResources.Execute(migrationBuilder, "ReferenceData.sql");
-        MigrationSqlResources.Execute(migrationBuilder, "LegacyUpgrade.sql", onlyWhenBaselineExists: true);
-        MigrationSqlResources.ExecuteMissingSchemaObjects(migrationBuilder, "InitialSchema.sql");
+        MigrationSqlResources.ExecuteLegacyBaselineUpgrade(migrationBuilder);
 
         migrationBuilder.Sql("""
             EXEC sys.sp_set_session_context

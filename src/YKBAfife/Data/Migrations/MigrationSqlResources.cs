@@ -8,6 +8,21 @@ internal static partial class MigrationSqlResources
 {
     public const string ReviewedDataSafeSqlAnnotation = "Afife:ReviewedDataSafeSql";
 
+    /// <summary>
+    /// Brings an empty, partial legacy, or previously managed database to the
+    /// canonical baseline in the only supported dependency order. The caller
+    /// must set AfifeBaselineAlreadyExists before invoking this pipeline.
+    /// </summary>
+    public static void ExecuteLegacyBaselineUpgrade(MigrationBuilder migrationBuilder)
+    {
+        Execute(migrationBuilder, "PrepareLegacyForm.sql", onlyWhenBaselineExists: true);
+        ExecuteMissingTables(migrationBuilder, "InitialSchema.sql");
+        Execute(migrationBuilder, "LegacyUpgrade.sql", onlyWhenBaselineExists: true);
+        Execute(migrationBuilder, "ReferenceData.sql");
+        ExecuteMissingSchemaObjects(migrationBuilder, "InitialSchema.sql");
+        EnsureCandidateUniquenessContract(migrationBuilder);
+    }
+
     public static void Execute(
         MigrationBuilder migrationBuilder,
         string resourceFileName,
@@ -98,6 +113,19 @@ internal static partial class MigrationSqlResources
             var index = CreateIndexRegex().Match(command);
             if (index.Success)
             {
+                var indexName = index.Groups["name"].Value;
+                if (string.Equals(
+                        indexName,
+                        "UX_PlayAwardCategories_Current_Play_Category_Role",
+                        StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(
+                        indexName,
+                        "UX_PlayAwardCategories_FormSourceSlot",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
                 AddReviewedSql(migrationBuilder, $"""
                     IF TRY_CONVERT(bit, SESSION_CONTEXT(N'AfifeBaselineAlreadyExists')) <> 1
                         RETURN;
@@ -202,6 +230,29 @@ internal static partial class MigrationSqlResources
                     ON dbo.PlayAwardCategories
                        (PlayId, AwardCategoryCode, RoleCode, IsCurrent)
                     WHERE IsCurrent = 1 AND IsPublished = 1;
+
+                IF EXISTS
+                (
+                    SELECT 1 FROM sys.indexes
+                    WHERE object_id = OBJECT_ID(N'dbo.PlayAwardCategories')
+                      AND name = N'UX_PlayAwardCategories_FormSourceSlot'
+                )
+                    DROP INDEX [UX_PlayAwardCategories_FormSourceSlot]
+                        ON dbo.PlayAwardCategories;
+
+                IF EXISTS
+                (
+                    SELECT 1 FROM sys.indexes
+                    WHERE object_id = OBJECT_ID(N'dbo.PlayAwardCategories')
+                      AND name = N'IX_PlayAwardCategories_FormSourceSlot'
+                )
+                    DROP INDEX [IX_PlayAwardCategories_FormSourceSlot]
+                        ON dbo.PlayAwardCategories;
+
+                CREATE NONCLUSTERED INDEX [IX_PlayAwardCategories_FormSourceSlot]
+                    ON dbo.PlayAwardCategories
+                       (PlayId, AwardCategoryCode, SourceFormCandidateOrder)
+                    WHERE SourceFormCandidateOrder IS NOT NULL AND IsCurrent = 1;
             END;
             """);
 

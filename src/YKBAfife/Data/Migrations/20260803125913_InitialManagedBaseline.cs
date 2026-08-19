@@ -51,11 +51,7 @@ namespace YKBAfife.Data.Migrations
             // Existing databases keep every row and schema object. Empty databases
             // are provisioned from the reviewed, canonical SQL Server schema.
             MigrationSqlResources.Execute(migrationBuilder, "InitialSchema.sql", skipWhenBaselineExists: true);
-            MigrationSqlResources.Execute(migrationBuilder, "PrepareLegacyForm.sql", onlyWhenBaselineExists: true);
-            MigrationSqlResources.ExecuteMissingTables(migrationBuilder, "InitialSchema.sql");
-            MigrationSqlResources.Execute(migrationBuilder, "ReferenceData.sql");
-            MigrationSqlResources.Execute(migrationBuilder, "LegacyUpgrade.sql", onlyWhenBaselineExists: true);
-            MigrationSqlResources.ExecuteMissingSchemaObjects(migrationBuilder, "InitialSchema.sql");
+            MigrationSqlResources.ExecuteLegacyBaselineUpgrade(migrationBuilder);
 
             migrationBuilder.Sql("""
                 EXEC sys.sp_set_session_context

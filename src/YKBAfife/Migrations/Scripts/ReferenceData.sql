@@ -101,9 +101,11 @@ IF EXISTS
     THROW 51033, 'Reference bootstrap blocked: a canonical AwardCategories Id is assigned to another code.', 1;
 
 INSERT INTO dbo.AwardCategories
-    (Id, CategoryName, CategoryCode, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy, IsPublished)
+    (Id, CategoryName, CategoryCode, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy,
+     IsPublished, MultiCandidate, HasRoleAndPhoto)
 SELECT source.Id, source.CategoryName, source.CategoryCode,
-       '2026-07-16T15:39:19.4137221', NULL, NULL, NULL, 1
+       '2026-07-16T15:39:19.4137221', NULL, NULL, NULL, 1,
+       source.MultiCandidate, source.HasRoleAndPhoto
 FROM @AwardCategories AS source
 WHERE NOT EXISTS
 (
