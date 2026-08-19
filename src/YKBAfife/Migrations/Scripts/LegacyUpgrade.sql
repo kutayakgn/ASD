@@ -32,10 +32,30 @@ IF EXISTS (SELECT UserId, PlayId FROM dbo.JuryGameTicketFees WHERE IsPublished =
     THROW 51017, 'Legacy upgrade blocked: duplicate published JuryGameTicketFees pairs exist.', 1;
 IF EXISTS (SELECT PlayAwardCategoryId, JuryId FROM dbo.JuryVotes WHERE IsPublished = 1 GROUP BY PlayAwardCategoryId, JuryId HAVING COUNT(*) > 1)
     THROW 51018, 'Legacy upgrade blocked: duplicate published JuryVotes pairs exist.', 1;
-IF EXISTS (SELECT PlayId, AwardCategoryCode, RoleCode, Candidate FROM dbo.PlayAwardCategories WHERE IsPublished = 1 GROUP BY PlayId, AwardCategoryCode, RoleCode, Candidate HAVING COUNT(*) > 1)
-    THROW 51019, 'Legacy upgrade blocked: duplicate published candidate identities exist.', 1;
-IF EXISTS (SELECT PlayId, AwardCategoryCode, RoleCode FROM dbo.PlayAwardCategories WHERE IsPublished = 1 AND IsCurrent = 1 GROUP BY PlayId, AwardCategoryCode, RoleCode HAVING COUNT(*) > 1)
-    THROW 51020, 'Legacy upgrade blocked: multiple current candidates exist in one role slot.', 1;
+/* Only the exact four-field identity is unique. Preserve duplicate legacy rows
+   as unpublished history instead of blocking the complete deployment. */
+;WITH DuplicateCandidateIdentities AS
+(
+    SELECT candidate.Id,
+           ROW_NUMBER() OVER
+           (
+               PARTITION BY candidate.PlayId, candidate.AwardCategoryCode,
+                            candidate.RoleCode, candidate.Candidate
+               ORDER BY candidate.IsCurrent DESC,
+                        COALESCE(candidate.UpdatedAt, candidate.CreatedAt) DESC,
+                        candidate.Id
+           ) AS IdentityOccurrence
+    FROM dbo.PlayAwardCategories AS candidate
+    WHERE candidate.IsPublished = 1
+)
+UPDATE candidate
+SET IsPublished = 0,
+    IsCurrent = 0,
+    UpdatedAt = COALESCE(candidate.UpdatedAt, DATEADD(HOUR, 3, SYSUTCDATETIME()))
+FROM dbo.PlayAwardCategories AS candidate
+INNER JOIN DuplicateCandidateIdentities AS duplicateIdentity
+    ON duplicateIdentity.Id = candidate.Id
+WHERE duplicateIdentity.IdentityOccurrence > 1;
 /* Additive columns retain every legacy column and row. */
 IF COL_LENGTH(N'dbo.AwardCategories', N'MultiCandidate') IS NULL
     ALTER TABLE dbo.AwardCategories ADD MultiCandidate bit NOT NULL CONSTRAINT DF_AwardCategories_MultiCandidate DEFAULT (0) WITH VALUES;

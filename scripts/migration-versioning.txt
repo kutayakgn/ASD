@@ -1,11 +1,31 @@
 DATABASE MIGRATION VERSIONING
 
+Supported starting points
+-------------------------
+The managed baseline supports all three deployment paths below:
+
+1. A brand-new/empty SQL Server database.
+2. A partial legacy UAT/Live database whose tables and columns may be old or
+   missing and whose EF migration history may be empty.
+3. A current Test/company database that already contains some or all managed
+   migrations.
+
+The legacy recovery order is centralized in
+Data/Migrations/MigrationSqlResources.ExecuteLegacyBaselineUpgrade. Do not copy
+or reorder this sequence inside individual migrations. It prepares legacy Form,
+creates missing tables, upgrades existing legacy objects, loads reference data,
+creates missing constraints/indexes, and finally enforces candidate uniqueness.
+
 Published history
 -----------------
 EF migration identifiers recorded in a shared/company database are immutable.
 Never rename, remove, reorder, or squash a migration after it has reached that
 database. The migrations before V1_0_0_FormCandidateLifecycleCheckpoint remain
 as the permanent legacy deployment chain.
+
+V1_2_0 has two historical migration files. This is an already published legacy
+exception. Keep both immutable; scripts/new-versioned-migration.ps1 prevents a
+version from being reused from now on.
 
 Versioned checkpoints
 ---------------------
@@ -25,6 +45,36 @@ migration for every small edit. Create it with:
     powershell -ExecutionPolicy Bypass -File scripts/new-versioned-migration.ps1 `
       -Version 1.1.0 -Purpose AddSeasonArchive
 
+The helper refuses a reused version and validates the complete migration model
+after creation. If validation fails, fix the new unpublished migration before
+committing it; never modify a migration already applied to a shared database.
+
+Safe schema-change recipes
+--------------------------
+Adding a table:
+- Add the entity and configuration first, then create one versioned checkpoint.
+- Add nullable/defaulted columns before required constraints.
+- Create indexes after the table and its backfill are valid.
+
+Adding a required column or relationship:
+- Release the new column as nullable or with a deterministic default.
+- Backfill existing rows and verify there are no invalid/null values.
+- Add the foreign key/index after the referenced rows exist. Prefer NO ACTION
+  unless cascade deletion is an explicit, reviewed business rule.
+- Tighten nullability only in a separately reviewed compatibility checkpoint.
+
+Removing a table, column, or relationship:
+- Stop writing it and make application reads compatible first.
+- Deprecate it for at least one release. Do not physically drop it in a normal
+  migration; the project's SQL generator and validation script reject physical
+  data-loss operations.
+- If physical archival/purge is ever required, perform it as a separately
+  approved operational change with a verified backup, not an automatic startup
+  migration.
+
+Procedures, functions, views, and triggers must remain idempotent with CREATE OR
+ALTER and must be applied after their table/column prerequisites.
+
 Safe return to an earlier application version
 ---------------------------------------------
 Database rollback never drops columns, tables, indexes, or rows.
@@ -37,5 +87,14 @@ Database rollback never drops columns, tables, indexes, or rows.
 3. Never run database update <old migration> against company data. Compatibility
    Down methods intentionally retain additive schema and are not physical rollback.
 
-Run scripts/validate-migrations.ps1 before every deployment and retain its
-idempotent SQL artifact with the application release.
+Deployment gate
+---------------
+Before every deployment run:
+
+    powershell -ExecutionPolicy Bypass -File scripts/test-migration-deployment.ps1
+
+This command validates destructive-operation guards and the EF snapshot, creates
+the idempotent SQL artifact, migrates a completely empty database, upgrades an
+oldest/partial-preprod fixture, upgrades a current/company fixture, validates
+application startup, and verifies the Release publish output. Retain
+artifacts/migrations/YKBAfife-idempotent.sql with the application release.
