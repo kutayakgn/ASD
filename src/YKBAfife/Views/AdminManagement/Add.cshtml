@@ -43,8 +43,9 @@
             </div>
             <div class="add-jury-field">
                 <label asp-for="Password"></label>
-                <input asp-for="Password" type="text" required minlength="8" maxlength="100"
-                       autocomplete="new-password" data-fail-message="&#350;ifre en az 8 karakter olmal&#305;d&#305;r." />
+                <input asp-for="Password" type="password" required minlength="8" maxlength="100"
+                       autocomplete="new-password" pattern="@YKBAfife.Helpers.PasswordPolicy.Pattern"
+                       data-fail-message="@YKBAfife.Helpers.PasswordPolicy.ErrorMessage" />
             </div>
             <fieldset class="add-jury-status admin-status-field">
                 <legend>Stat&#252;</legend>

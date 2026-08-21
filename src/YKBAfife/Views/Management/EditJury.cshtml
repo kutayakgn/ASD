@@ -45,8 +45,11 @@
             <div class="add-jury-field">
                 <label asp-for="Password"></label>
                 <input asp-for="Password"
-                       type="text"
+                       type="password"
                        autocomplete="new-password"
+                       minlength="8"
+                       maxlength="100"
+                       pattern="@YKBAfife.Helpers.PasswordPolicy.Pattern"
                        placeholder="Yeni şifre yazın (değiştirmeyecekseniz boş bırakın)" />
                 <span asp-validation-for="Password"></span>
             </div>

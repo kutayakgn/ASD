@@ -27,7 +27,9 @@ public sealed class EditAdminViewModel
     [Display(Name = "Adı Soyadı")]
     public string FullName { get; set; } = string.Empty;
 
-    [StringLength(100, MinimumLength = 8, ErrorMessage = "Yeni şifre en az 8 karakter olmalıdır.")]
+    [StringLength(PasswordPolicy.MaximumLength, MinimumLength = PasswordPolicy.MinimumLength,
+        ErrorMessage = PasswordPolicy.ErrorMessage)]
+    [RegularExpression(PasswordPolicy.Pattern, ErrorMessage = PasswordPolicy.ErrorMessage)]
     [Display(Name = "Şifre")]
     public string? Password { get; set; }
 

@@ -303,6 +303,7 @@
 
             input.value = option.dataset.value || "";
             label.textContent = option.textContent.trim();
+            label.title = option.textContent.trim();
             select.querySelectorAll("[data-complex-table-select-option]").forEach((item) => {
                 item.setAttribute("aria-selected", item === option ? "true" : "false");
             });

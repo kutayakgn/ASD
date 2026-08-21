@@ -1132,7 +1132,7 @@ body.has-photo-preview {
 }
 
     .add-candidate-select.is-open {
-        z-index: 40;
+        z-index: 100;
     }
 
 .add-candidate-select-trigger {
@@ -1194,7 +1194,7 @@ body.has-photo-preview {
 
 .add-candidate-select-menu {
     position: absolute;
-    z-index: 45;
+    z-index: 105;
     top: calc(100% + 6px);
     right: 0;
     left: 0;
@@ -1278,8 +1278,8 @@ body.has-photo-preview {
 }
 
 .candidate-delete-action {
-    color: #b31d1d;
-    border-color: #b31d1d;
+    color: #171717;
+    border-color: #171717;
 }
 
 .edit-candidate-page [data-valmsg-for] {

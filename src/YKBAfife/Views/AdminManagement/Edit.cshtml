@@ -54,9 +54,10 @@
             </div>
             <div class="add-jury-field">
                 <label asp-for="Password"></label>
-                <input asp-for="Password" type="text" minlength="8" maxlength="100"
+                <input asp-for="Password" type="password" minlength="8" maxlength="100"
+                       pattern="@YKBAfife.Helpers.PasswordPolicy.Pattern"
                        autocomplete="new-password" placeholder="De&#287;i&#351;tirmek istemiyorsan&#305;z bo&#351; b&#305;rak&#305;n"
-                       data-fail-message="Yeni &#351;ifre en az 8 karakter olmal&#305;d&#305;r." />
+                       data-fail-message="@YKBAfife.Helpers.PasswordPolicy.ErrorMessage" />
             </div>
             @if (Model.CanEditStatus)
 
