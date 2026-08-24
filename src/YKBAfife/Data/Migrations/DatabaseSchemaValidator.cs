@@ -130,6 +130,7 @@ internal static partial class DatabaseSchemaValidator
                      !x.EndsWith(".AdminLogs", StringComparison.OrdinalIgnoreCase) &&
                      !x.EndsWith(".JuryLogs", StringComparison.OrdinalIgnoreCase) &&
                      !x.EndsWith(".UsersLog", StringComparison.OrdinalIgnoreCase) &&
+                     !x.EndsWith(".JuryPasswordResetTokens", StringComparison.OrdinalIgnoreCase) &&
                      !x.EndsWith(".__EFMigrationsHistory", StringComparison.OrdinalIgnoreCase)))
         {
             var parts = table.Split('.', 2);

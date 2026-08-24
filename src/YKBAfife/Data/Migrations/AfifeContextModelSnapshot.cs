@@ -403,176 +403,6 @@ namespace YKBAfife.Data.Migrations
                     b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
                 });
 
-            modelBuilder.Entity("YKBAfife.Models.Entities.JuryLog", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("newsequentialid()");
-
-                    b.Property<string>("ActionName")
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.Property<int>("AffectedVoteCount")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(0);
-
-                    b.Property<Guid?>("AdditionalVotingId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid?>("AdditionalVotingUsageId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<byte?>("AdditionalVotingUsageType")
-                        .HasColumnType("tinyint");
-
-                    b.Property<string>("Application")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasDefaultValue("AfifeJury");
-
-                    b.Property<string>("ControllerName")
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.Property<Guid>("CorrelationId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("newid()");
-
-                    b.Property<string>("Details")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<long?>("DurationMilliseconds")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("FailureReason")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
-                    b.Property<string>("HttpMethod")
-                        .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
-
-                    b.Property<string>("IpAddress")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<bool>("IsAdditionalVoting")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
-
-                    b.Property<bool>("IsPublished")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
-
-                    b.Property<bool>("IsSuccessful")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
-
-                    b.Property<Guid?>("JuryId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("JuryUsername")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<decimal?>("NewTicketFee")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("decimal(10,2)");
-
-                    b.Property<string>("NewVotesJson")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("OccurredAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2(7)")
-                        .HasDefaultValueSql("DATEADD(HOUR, 3, SYSUTCDATETIME())");
-
-                    b.Property<decimal?>("OldTicketFee")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("decimal(10,2)");
-
-                    b.Property<string>("OldVotesJson")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("OperationName")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("OperationType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<Guid?>("PlayId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("PlayName")
-                        .HasMaxLength(250)
-                        .HasColumnType("nvarchar(250)");
-
-                    b.Property<string>("RequestPath")
-                        .HasMaxLength(2048)
-                        .HasColumnType("nvarchar(2048)");
-
-                    b.Property<string>("RequestPayloadJson")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ResultCode")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Source")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasDefaultValue("JuryPanel");
-
-                    b.Property<string>("StateSnapshotJson")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal?>("SubmittedTicketFee")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("decimal(10,2)");
-
-                    b.Property<string>("SubmittedVotesJson")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("UserAgent")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AdditionalVotingId");
-
-                    b.HasIndex("CorrelationId")
-                        .HasDatabaseName("IX_JuryLogs_CorrelationId");
-
-                    b.HasIndex("JuryId", "OccurredAt")
-                        .HasDatabaseName("IX_JuryLogs_JuryId_OccurredAt");
-
-                    b.HasIndex("OperationType", "IsSuccessful", "OccurredAt")
-                        .HasDatabaseName("IX_JuryLogs_OperationType_IsSuccessful_OccurredAt");
-
-                    b.HasIndex("PlayId", "OccurredAt")
-                        .HasDatabaseName("IX_JuryLogs_PlayId_OccurredAt");
-
-                    b.ToTable("JuryLogs", "dbo");
-
-                    b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
-                });
-
             modelBuilder.Entity("YKBAfife.Models.Entities.Announcement", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1154,29 +984,217 @@ namespace YKBAfife.Data.Migrations
 
             modelBuilder.Entity("YKBAfife.Models.Entities.JuryLog", b =>
                 {
-                    b.HasOne("YKBAfife.Models.Entities.AdditionalVoting", "AdditionalVoting")
-                        .WithMany()
-                        .HasForeignKey("AdditionalVotingId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("FK_JuryLogs_AdditionalVotings_AdditionalVotingId");
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("newsequentialid()");
 
-                    b.HasOne("YKBAfife.Models.Entities.User", "Jury")
-                        .WithMany()
-                        .HasForeignKey("JuryId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("FK_JuryLogs_Users_JuryId");
+                    b.Property<string>("ActionName")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
-                    b.HasOne("YKBAfife.Models.Entities.Play", "Play")
-                        .WithMany()
-                        .HasForeignKey("PlayId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("FK_JuryLogs_Plays_PlayId");
+                    b.Property<Guid?>("AdditionalVotingId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Navigation("AdditionalVoting");
+                    b.Property<Guid?>("AdditionalVotingUsageId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Navigation("Jury");
+                    b.Property<byte?>("AdditionalVotingUsageType")
+                        .HasColumnType("tinyint");
 
-                    b.Navigation("Play");
+                    b.Property<int>("AffectedVoteCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<string>("Application")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasDefaultValue("AfifeJury");
+
+                    b.Property<string>("ControllerName")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<Guid>("CorrelationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("newid()");
+
+                    b.Property<string>("Details")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long?>("DurationMilliseconds")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("HttpMethod")
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<bool>("IsAdditionalVoting")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("IsPublished")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsSuccessful")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<Guid?>("JuryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("JuryUsername")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal?>("NewTicketFee")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("NewVotesJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2(7)")
+                        .HasDefaultValueSql("DATEADD(HOUR, 3, SYSUTCDATETIME())");
+
+                    b.Property<decimal?>("OldTicketFee")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("OldVotesJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OperationName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("OperationType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<Guid?>("PlayId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("PlayName")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<string>("RequestPath")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<string>("RequestPayloadJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ResultCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasDefaultValue("JuryPanel");
+
+                    b.Property<string>("StateSnapshotJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal?>("SubmittedTicketFee")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("SubmittedVotesJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AdditionalVotingId");
+
+                    b.HasIndex("CorrelationId");
+
+                    b.HasIndex("JuryId", "OccurredAt");
+
+                    b.HasIndex("PlayId", "OccurredAt");
+
+                    b.HasIndex("OperationType", "IsSuccessful", "OccurredAt");
+
+                    b.ToTable("JuryLogs", "dbo");
+
+                    b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
+                });
+
+            modelBuilder.Entity("YKBAfife.Models.Entities.JuryPasswordResetToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("newsequentialid()");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2(7)");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2(7)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<byte[]>("TokenHash")
+                        .IsRequired()
+                        .HasColumnType("binary(32)");
+
+                    b.Property<DateTime?>("UsedAtUtc")
+                        .HasColumnType("datetime2(7)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("UX_JuryPasswordResetTokens_TokenHash");
+
+                    b.HasIndex("UserId", "CreatedAtUtc")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("IX_JuryPasswordResetTokens_UserId_CreatedAtUtc");
+
+                    b.ToTable("JuryPasswordResetTokens", "dbo", t =>
+                        {
+                            t.HasCheckConstraint("CK_JuryPasswordResetTokens_Expiry", "[ExpiresAtUtc] > [CreatedAtUtc] AND [ExpiresAtUtc] <= DATEADD(MINUTE, 5, [CreatedAtUtc])");
+
+                            t.HasCheckConstraint("CK_JuryPasswordResetTokens_UsedAt", "[UsedAtUtc] IS NULL OR [UsedAtUtc] >= [CreatedAtUtc]");
+                        });
+
+                    b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
                 });
 
             modelBuilder.Entity("YKBAfife.Models.Entities.JuryVote", b =>
@@ -1433,9 +1451,9 @@ namespace YKBAfife.Data.Migrations
 
                     b.ToTable("Plays", "dbo", t =>
                         {
-                            t.HasCheckConstraint("CK_Plays_AdminRecord_StatusCode", "[RecordType] = 0 OR [StatusCode] <> 1");
-
                             t.HasCheckConstraint("CK_Plays_AdminRecord_KunyeStatusDisabled", "[RecordType] = 0 OR [KunyeGirisStatus] = 0");
+
+                            t.HasCheckConstraint("CK_Plays_AdminRecord_StatusCode", "[RecordType] = 0 OR [StatusCode] <> 1");
 
                             t.HasCheckConstraint("CK_Plays_KunyeMustRemainPublished", "[RecordType] = 1 OR [IsPublished] = 1");
 
@@ -2183,6 +2201,45 @@ namespace YKBAfife.Data.Migrations
                         .HasConstraintName("FK_JuryGameTicketFees_Users");
 
                     b.Navigation("Play");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("YKBAfife.Models.Entities.JuryLog", b =>
+                {
+                    b.HasOne("YKBAfife.Models.Entities.AdditionalVoting", "AdditionalVoting")
+                        .WithMany()
+                        .HasForeignKey("AdditionalVotingId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_JuryLogs_AdditionalVotings_AdditionalVotingId");
+
+                    b.HasOne("YKBAfife.Models.Entities.User", "Jury")
+                        .WithMany()
+                        .HasForeignKey("JuryId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_JuryLogs_Users_JuryId");
+
+                    b.HasOne("YKBAfife.Models.Entities.Play", "Play")
+                        .WithMany()
+                        .HasForeignKey("PlayId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_JuryLogs_Plays_PlayId");
+
+                    b.Navigation("AdditionalVoting");
+
+                    b.Navigation("Jury");
+
+                    b.Navigation("Play");
+                });
+
+            modelBuilder.Entity("YKBAfife.Models.Entities.JuryPasswordResetToken", b =>
+                {
+                    b.HasOne("YKBAfife.Models.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK_JuryPasswordResetTokens_Users_UserId");
 
                     b.Navigation("User");
                 });

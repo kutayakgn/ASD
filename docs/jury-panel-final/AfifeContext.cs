@@ -25,6 +25,7 @@ public sealed class AfifeContext : DbContext
     public DbSet<AdditionalVotingUsage> AdditionalVotingUsages => Set<AdditionalVotingUsage>();
     public DbSet<Blacklist> Blacklists => Set<Blacklist>();
     public DbSet<JuryLog> JuryLogs => Set<JuryLog>();
+    public DbSet<JuryPasswordResetToken> JuryPasswordResetTokens => Set<JuryPasswordResetToken>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<User> Users => Set<User>();
 
@@ -73,6 +74,21 @@ public sealed class AfifeContext : DbContext
                 .HasDatabaseName("IX_JuryLogs_PlayId_OccurredAt");
             entity.HasIndex(x => new { x.OperationType, x.IsSuccessful, x.OccurredAt })
                 .HasDatabaseName("IX_JuryLogs_OperationType_IsSuccessful_OccurredAt");
+        });
+
+        modelBuilder.Entity<JuryPasswordResetToken>(entity =>
+        {
+            entity.ToTable("JuryPasswordResetTokens", "dbo");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.TokenHash)
+                .HasColumnType("binary(32)")
+                .IsRequired();
+            entity.Property(x => x.RowVersion).IsRowVersion();
+            entity.HasIndex(x => x.TokenHash)
+                .HasDatabaseName("UX_JuryPasswordResetTokens_TokenHash")
+                .IsUnique();
+            entity.HasIndex(x => new { x.UserId, x.CreatedAtUtc })
+                .HasDatabaseName("IX_JuryPasswordResetTokens_UserId_CreatedAtUtc");
         });
 
         modelBuilder.Entity<AdditionalVotingUsage>()
