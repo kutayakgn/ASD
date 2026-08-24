@@ -212,11 +212,14 @@ public sealed class RankingReportService(AfifeContext context) : IRankingReportS
         }
 
         var tab = RankingTabs.All.Contains(query.Tab) ? query.Tab : RankingTabs.CategoryTrim;
+        var requestedRankingType = RankingTypes.All.Contains(query.RankingType)
+            ? query.RankingType
+            : RankingTypes.Trimmed;
         var rankingType = tab switch
         {
             RankingTabs.CategoryArithmetic => RankingTypes.Arithmetic,
             RankingTabs.Confidence => RankingTypes.Confidence,
-            RankingTabs.AllGames => RankingTypes.Trimmed,
+            RankingTabs.AllGames => requestedRankingType,
             _ => RankingTypes.Trimmed
         };
         var categoryCode = categories.Any(category => category.CategoryCode == query.CategoryCode)
