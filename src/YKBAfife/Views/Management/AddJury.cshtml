@@ -29,7 +29,11 @@
             <div class="add-jury-field">
                 <label asp-for="Username"></label>
                 <input asp-for="Username" autocomplete="username" placeholder="Kullanıcı adı yazın"
-                       required minlength="3" maxlength="30" pattern="[A-Za-z0-9._]+" />
+                       required
+                       minlength="@YKBAfife.Helpers.UsernamePolicy.MinimumLength"
+                       maxlength="@YKBAfife.Helpers.UsernamePolicy.MaximumLength"
+                       pattern="@YKBAfife.Helpers.UsernamePolicy.Pattern"
+                       data-jury-username />
                 <span asp-validation-for="Username"></span>
             </div>
 
@@ -60,9 +64,9 @@
                        inputmode="numeric"
                        autocomplete="tel"
                        placeholder="Telefon numarası yazın"
-                       minlength="10"
-                       maxlength="11"
-                       pattern="[0-9]{10,11}"
+                       minlength="@YKBAfife.Helpers.PhonePolicy.MinimumLength"
+                       maxlength="@YKBAfife.Helpers.PhonePolicy.MaximumLength"
+                       pattern="@YKBAfife.Helpers.PhonePolicy.HtmlPattern"
                        data-jury-phone
                        required />
                 <span asp-validation-for="Phone"></span>
@@ -84,7 +88,7 @@
             </fieldset>
 
             <fieldset class="add-jury-status">
-                <legend>Jüri Başkanlığı</legend>
+                <legend>Jüri Tipi</legend>
                 <label class="add-jury-option">
                     <input asp-for="IsJuryPresident" type="checkbox" />
                     <span>Bu jüriyi Jüri Başkanı olarak belirle</span>

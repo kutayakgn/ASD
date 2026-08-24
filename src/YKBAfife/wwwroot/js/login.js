@@ -3,6 +3,13 @@
     const input = document.querySelector("[data-password-input]");
     if (!toggle || !input) return;
 
+    const syncToggleVisibility = () => {
+        toggle.hidden = input.value.length === 0;
+    };
+
+    syncToggleVisibility();
+    input.addEventListener("input", syncToggleVisibility);
+
     toggle.addEventListener("click", () => {
         const isVisible = input.type === "text";
         input.type = isVisible ? "password" : "text";

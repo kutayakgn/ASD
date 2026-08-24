@@ -290,7 +290,7 @@ public sealed partial class ManagementController(
         model.Id = id;
         model.Username = model.Username?.Trim() ?? string.Empty;
         model.Email = model.Email?.Trim() ?? string.Empty;
-        model.Password = string.IsNullOrWhiteSpace(model.Password) ? null : model.Password;
+        model.Password ??= string.Empty;
         model.FullName = string.Join(
             ' ',
             (model.FullName ?? string.Empty).Split(
@@ -1315,6 +1315,8 @@ public sealed partial class ManagementController(
                 cancellationToken);
             candidatesTable = CandidateComplexTableFactory.Create(candidateReport);
         }
+        var normalizedReturnUrl = NormalizePlayReturnUrl(returnUrl);
+
         return View(new PlayDetailsViewModel
         {
             Id = play.Id,
@@ -1335,7 +1337,8 @@ public sealed partial class ManagementController(
                 ? updater
                 : null,
             Slug = SlugHelper.Resolve(play.Slug, play.PlayName),
-            ReturnUrl = NormalizePlayReturnUrl(returnUrl),
+            ReturnUrl = normalizedReturnUrl,
+            ReturnLabel = GetPlayReturnLabel(normalizedReturnUrl),
             CandidatesTable = candidatesTable
         });
     }
@@ -3405,8 +3408,34 @@ public sealed partial class ManagementController(
     private bool IsAjaxRequest() =>
         string.Equals(Request.Headers.XRequestedWith, "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
 
-    private static string NormalizePlayReturnUrl(string? returnUrl) =>
-        string.Equals(returnUrl, "/", StringComparison.Ordinal) ? "/" : "/oyunlar";
+    private string NormalizePlayReturnUrl(string? returnUrl) =>
+        !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)
+            ? returnUrl
+            : "/oyunlar";
+
+    private static string GetPlayReturnLabel(string returnUrl)
+    {
+        var path = returnUrl.Split('?', '#')[0].TrimEnd('/');
+
+        if (path.Length == 0)
+        {
+            return "Ana Sayfaya Dön";
+        }
+
+        if (path.Equals("/juriler", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("/juriler/", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Jürilere Dön";
+        }
+
+        if (path.Equals("/oyunlar", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("/oyunlar/", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Oyunlara Dön";
+        }
+
+        return "Geri Dön";
+    }
     private ViewResult Page(string title, string description) =>
         View("Page", new ManagementPageViewModel(title, description));
 

@@ -1,4 +1,5 @@
 (() => {
+    const usernameInput = document.querySelector("[data-jury-username]");
     const phoneInput = document.querySelector("[data-jury-phone]");
     const input = document.querySelector("[data-jury-photo-input]");
     const fileName = document.querySelector("[data-jury-file-name]");
@@ -16,6 +17,23 @@
     let previewUrl = existingPhotoUrl;
     let previewIsObjectUrl = false;
     let hasPhoto = Boolean(existingPhotoUrl);
+
+    const setUsernameValidationMessage = () => {
+        if (!usernameInput) return;
+
+        usernameInput.setCustomValidity("");
+        if (usernameInput.validity.valueMissing) {
+            usernameInput.setCustomValidity("Kullanıcı adı zorunludur.");
+        } else if (usernameInput.validity.tooShort || usernameInput.validity.tooLong) {
+            usernameInput.setCustomValidity("Kullanıcı adı 3-30 karakter arasında olmalıdır.");
+        } else if (usernameInput.validity.patternMismatch) {
+            usernameInput.setCustomValidity(
+                "Kullanıcı adı yalnızca İngilizce harf, rakam, nokta ve alt çizgi içerebilir; boşluk içeremez.");
+        }
+    };
+
+    usernameInput?.addEventListener("input", setUsernameValidationMessage);
+    usernameInput?.addEventListener("invalid", setUsernameValidationMessage);
 
     const setPhoneValidationMessage = () => {
         if (!phoneInput) return;
@@ -68,7 +86,7 @@
     };
 
     const confirmPhotoRemoval = () => {
-        const message = "Fotoğrafı kaldırmak istediğinize emin misiniz?";
+        const message = "Kayıtlı jüri fotoğrafını silmek istediğinize emin misiniz?";
         if (window.genericPopup?.question) {
             window.genericPopup.question(message, resetPhoto);
             return;

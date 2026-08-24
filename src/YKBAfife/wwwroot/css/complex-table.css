@@ -157,6 +157,7 @@ p {
 .modal-body .jury-voting-table-wrapper {
     overflow-x: auto;
     padding: 0px;
+    min-height: 450px;
 }
 
 .jury-voting-table-wrapper {
@@ -209,9 +210,7 @@ tr {
         white-space: nowrap;
     }
 
-    .jury-voting-table tbody {
-        border-bottom: 1px solid #e3dfd3;
-    }
+
 
 .modal-body .jury-voting-table td {
     padding: 12px 24px;
@@ -1014,9 +1013,9 @@ tr {
     padding-bottom: var(--candidate-dropdown-bottom-space, 0);
 }
 
-#play-candidates-table .complex-table-heading,
-#play-candidates-table .complex-table-heading-tools,
-#play-candidates-table .play-candidates-table-select-filter {
-    position: relative;
-    z-index: 60;
-}
+    #play-candidates-table .complex-table-heading,
+    #play-candidates-table .complex-table-heading-tools,
+    #play-candidates-table .play-candidates-table-select-filter {
+        position: relative;
+        z-index: 60;
+    }

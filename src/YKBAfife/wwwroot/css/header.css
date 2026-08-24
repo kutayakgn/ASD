@@ -387,14 +387,14 @@
 
         .admin-user-menu .admin-user-logout {
             width: 100%;
-            color: #b31d1d;
+            color: #171717;
             text-align: left;
         }
 
             .admin-user-menu .admin-user-logout:hover,
             .admin-user-menu .admin-user-logout:focus {
-                color: #8f1717;
-                background: #fff1f1;
+                color: #ffff;
+                background: #918150;
             }
 
     @media (max-width: 575.98px) {

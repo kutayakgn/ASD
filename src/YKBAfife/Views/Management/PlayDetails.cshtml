@@ -14,7 +14,7 @@
 <section class="play-details-page">
 	<a href="@Model.ReturnUrl" class="play-details-back">
 		<img src="~/icons/arrow-left.svg" alt="" aria-hidden="true" />
-		<span>Oyunlar' a Dön</span>
+		<span>@Model.ReturnLabel</span>
 	</a>
 
 	<header class="play-details-toolbar">
@@ -45,7 +45,7 @@
 					  method="post"
 					  class="play-detail-action-form"
 					  data-generic-confirm
-					  data-confirm-message="Silmek istediğinize emin misiniz?"
+					  data-confirm-message="Listeye kayıtlı bir oyunu silmek istediğinize emin misiniz?"
 					  data-confirm-text="Evet"
 					  data-cancel-text="İptal">
 					@Html.AntiForgeryToken()

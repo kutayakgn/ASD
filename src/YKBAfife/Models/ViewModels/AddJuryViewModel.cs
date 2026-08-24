@@ -34,8 +34,9 @@ public sealed class AddJuryViewModel
     public string FullName { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "Telefon numarası zorunludur.")]
-    [RegularExpression(@"^\d{10,11}$", ErrorMessage = "Telefon numarası 10 veya 11 rakamdan oluşmalıdır.")]
-    [StringLength(11, MinimumLength = 10, ErrorMessage = "Telefon numarası 10 veya 11 rakamdan oluşmalıdır.")]
+    [RegularExpression(PhonePolicy.Pattern, ErrorMessage = PhonePolicy.ErrorMessage)]
+    [StringLength(PhonePolicy.MaximumLength, MinimumLength = PhonePolicy.MinimumLength,
+        ErrorMessage = PhonePolicy.ErrorMessage)]
     [Display(Name = "Telefon")]
     public string Phone { get; set; } = string.Empty;
 

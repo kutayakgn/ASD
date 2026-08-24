@@ -31,8 +31,6 @@
                 @Html.AntiForgeryToken()
                 <input asp-for="ReturnUrl" type="hidden" />
 
-                <div asp-validation-summary="ModelOnly" class="validation-summary" role="alert"></div>
-
                 <div class="auth-field">
                     <label asp-for="Username">Kullan&#305;c&#305; Ad&#305;</label>
                     <input asp-for="Username"
@@ -59,7 +57,7 @@
                     </div>
                     <span asp-validation-for="Password"></span>
                 </div>
-
+                <div asp-validation-summary="ModelOnly" class="validation-summary" role="alert"></div>
                 <button type="submit" class="auth-submit">Giri&#351; Yap</button>
             </form>
         </section>

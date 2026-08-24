@@ -21,6 +21,7 @@ public sealed class EditJuryViewModel
     [Display(Name = "E-posta")]
     public string Email { get; set; } = string.Empty;
 
+    [Required(ErrorMessage = "Şifre zorunludur.")]
     [StringLength(PasswordPolicy.MaximumLength, MinimumLength = PasswordPolicy.MinimumLength,
         ErrorMessage = PasswordPolicy.ErrorMessage)]
     [RegularExpression(PasswordPolicy.Pattern, ErrorMessage = PasswordPolicy.ErrorMessage)]
@@ -35,8 +36,9 @@ public sealed class EditJuryViewModel
     public string FullName { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "Telefon numarası zorunludur.")]
-    [RegularExpression(@"^\d{10,11}$", ErrorMessage = "Telefon numarası 10 veya 11 rakamdan oluşmalıdır.")]
-    [StringLength(11, MinimumLength = 10, ErrorMessage = "Telefon numarası 10 veya 11 rakamdan oluşmalıdır.")]
+    [RegularExpression(PhonePolicy.Pattern, ErrorMessage = PhonePolicy.ErrorMessage)]
+    [StringLength(PhonePolicy.MaximumLength, MinimumLength = PhonePolicy.MinimumLength,
+        ErrorMessage = PhonePolicy.ErrorMessage)]
     [Display(Name = "Telefon")]
     public string Phone { get; set; } = string.Empty;
 

@@ -454,15 +454,16 @@ body {
     flex: 0 0 10px;
     border-radius: 50%;
 }
+
     .play-status-dot.bordered {
         border: 1px solid #1717172e;
     }
 
-    .play-details-divider {
-        height: 1px;
-        margin: 24px 0 24px 0;
-        background: #d8d4ca;
-    }
+.play-details-divider {
+    height: 1px;
+    margin: 24px 0 24px 0;
+    background: #d8d4ca;
+}
 
 .add-candidate {
     font-family: Outfit;
@@ -670,6 +671,13 @@ body {
     font-weight: 400;
     line-height: 20px;
 }
+
+    .add-jury-field input:not([type="file"]):focus,
+    .add-jury-field select:focus,
+    .add-jury-field input:not([type="file"]):focus-visible,
+    .add-jury-field select:focus-visible {
+        border-color: #171717;
+    }
 
     .add-jury-field input:not([type="file"]):disabled {
         color: #BDBDBD;
@@ -916,10 +924,33 @@ body {
         outline: none;
     }
 
-        .add-jury-photo-action:hover img,
-        .add-jury-photo-action:focus-visible img {
-            filter: none;
-        }
+    .add-jury-photo-action::before {
+        content: "";
+        width: 18px;
+        height: 18px;
+        flex: 0 0 18px;
+        background-color: currentColor;
+        mask-position: center;
+        mask-repeat: no-repeat;
+        mask-size: contain;
+        -webkit-mask-position: center;
+        -webkit-mask-repeat: no-repeat;
+        -webkit-mask-size: contain;
+    }
+
+    .add-jury-photo-action[data-jury-photo-view]::before {
+        mask-image: url("/icons/eye.svg");
+        -webkit-mask-image: url("/icons/eye.svg");
+    }
+
+    .add-jury-photo-action[data-jury-photo-replace]::before {
+        mask-image: url("/icons/upload.svg");
+        -webkit-mask-image: url("/icons/upload.svg");
+    }
+
+    .add-jury-photo-action > img {
+        display: none;
+    }
 
 .add-jury-photo-modal {
     position: fixed;
@@ -1007,7 +1038,6 @@ body.has-photo-preview {
         cursor: default;
         opacity: 1;
     }
-
 /* Keep the optional photo field aligned with the two-column form grid. */
 .add-jury-photo-field {
     grid-column: auto;
@@ -1244,7 +1274,6 @@ body.has-photo-preview {
         max-height: min(280px, 42vh);
     }
 }
-
 /* Candidate detail and edit */
 .candidate-details-layout {
     display: block;
