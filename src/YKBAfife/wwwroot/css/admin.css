@@ -285,9 +285,19 @@ body {
     text-decoration: none;
 }
 
-    .play-details-back img {
+    .play-details-back::before {
+        content: "";
         width: 12px;
         height: 12px;
+        flex: 0 0 12px;
+        background-color: currentColor;
+        mask: url("/icons/arrow-left.svg") center / contain no-repeat;
+        -webkit-mask: url("/icons/arrow-left.svg") center / contain no-repeat;
+        transition: background-color .15s ease-in-out;
+    }
+
+    .play-details-back img {
+        display: none;
     }
 
     .play-details-back:hover,
@@ -295,6 +305,25 @@ body {
         color: #918150;
         outline: none;
     }
+
+/* Decorative SVG icons inside interactive controls follow the control hover state. */
+.admin-main :where(button, a[href]:not([aria-disabled="true"])) img[src*="/icons/"] {
+    transition: filter .15s ease-in-out;
+}
+
+.excel-export-button,
+.complex-table-header-action,
+.play-detail-action-primary,
+.add-candidate-submit,
+.add-jury-submit,
+.ticket-fee-save-button {
+    --interactive-icon-hover-filter: brightness(0) saturate(100%) invert(1);
+}
+
+.admin-main :where(button:not(:disabled), a[href]:not([aria-disabled="true"])):is(:hover, :focus-visible)
+img[src*="/icons/"] {
+    filter: var(--interactive-icon-hover-filter, brightness(0) saturate(100%) invert(52%) sepia(17%) saturate(897%) hue-rotate(8deg) brightness(93%) contrast(86%));
+}
 
 .play-details-toolbar {
     display: flex;
@@ -1023,7 +1052,10 @@ body.has-photo-preview {
     background: transparent;
     border: 0;
     cursor: pointer;
-    font: inherit;
+    font-size: 14px;
+    line-height: 20px;
+    font-family: Outfit;
+   
     text-align: left;
 }
 

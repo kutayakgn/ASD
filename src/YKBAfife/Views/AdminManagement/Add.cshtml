@@ -27,23 +27,27 @@
             <div class="add-jury-field">
                 <label asp-for="Username"></label>
                 <input asp-for="Username" required minlength="3" maxlength="30"
+                       placeholder="Kullan&#305;c&#305; Ad&#305; Yaz&#305;n"
                        autocomplete="username" pattern="[A-Za-z0-9._]+"
                        data-fail-message="Kullan&#305;c&#305; ad&#305; yaln&#305;zca &#304;ngilizce harf, rakam, nokta ve alt &#231;izgi i&#231;erebilir; bo&#351;luk i&#231;eremez." />
             </div>
             <div class="add-jury-field">
                 <label asp-for="Email"></label>
                 <input asp-for="Email" type="email" required maxlength="255"
+                       placeholder="E-posta Yaz&#305;n"
                        autocomplete="email" pattern="[A-Za-z0-9._%+\-]+@@[A-Za-z0-9.-]+\.[A-Za-z]{2,}" data-fail-message="E-posta adresi T&#252;rk&#231;e karakter i&#231;eremez ve ge&#231;erli formatta olmal&#305;d&#305;r." />
             </div>
             <div class="add-jury-field">
                 <label asp-for="FullName"></label>
                 <input asp-for="FullName" required minlength="3" maxlength="201"
+                       placeholder="Ad&#305; Soyad&#305; Yaz&#305;n"
                        pattern=".*\S+\s+\S+.*" autocomplete="name"
                        data-fail-message="Ad ve soyad bilgisini birlikte giriniz." />
             </div>
             <div class="add-jury-field">
                 <label asp-for="Password"></label>
                 <input asp-for="Password" type="password" required minlength="8" maxlength="100"
+                       placeholder="&#350;ifre Yaz&#305;n"
                        autocomplete="new-password" pattern="@YKBAfife.Helpers.PasswordPolicy.Pattern"
                        data-fail-message="@YKBAfife.Helpers.PasswordPolicy.ErrorMessage" />
             </div>

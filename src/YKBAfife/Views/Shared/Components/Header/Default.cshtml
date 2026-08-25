@@ -85,8 +85,8 @@
 							</button>
 							<ul class="dropdown-menu dropdown-menu-end admin-dropdown-menu">
 								<li><a class="dropdown-item@(isAdminManagementPage ? " active" : string.Empty)" asp-controller="AdminManagement" asp-action="Index">Admin Yönetimi</a></li>
-								<li><a class="dropdown-item@(ActiveClass("Applications", "ApplicationDetails", "EditApplication"))" asp-controller="Management" asp-action="Applications">Başvurular</a></li>
 								<li><a class="dropdown-item@(ActiveClass("ArchiveComparison"))" asp-controller="Management" asp-action="ArchiveComparison">Arşiv Karşılaştırma</a></li>
+								<li><a class="dropdown-item@(ActiveClass("Applications", "ApplicationDetails", "EditApplication"))" asp-controller="Management" asp-action="Applications">Başvurular</a></li>
 								<li><a class="dropdown-item@(ActiveClass("TicketSales"))" asp-controller="Management" asp-action="TicketSales">Bilet Satışları</a></li>
 								<li><a class="dropdown-item@(ActiveClass("Blacklists"))" asp-controller="Management" asp-action="Blacklists">Blacklists</a></li>
 								<li><a class="dropdown-item@(ActiveClass("VotingHistory"))" asp-controller="Management" asp-action="VotingHistory">Oylama Geçmişi</a></li>

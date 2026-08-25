@@ -1672,6 +1672,13 @@ public sealed partial class ManagementController(
             return RedirectToCandidateSectionWithPopup(slug, "fail", "Geçerli bir ödül kategorisi seçiniz.");
         }
 
+        var categorySupportsRoleAndPhoto =
+            CandidateCategoryPolicy.SupportsRoleAndPhoto(category.CategoryCode);
+        if (!categorySupportsRoleAndPhoto)
+        {
+            input.Role = null;
+        }
+
         if (input.Candidate.Length is < 2 or > 250)
         {
             return RedirectToCandidateSectionWithPopup(slug, "fail", "Adı Soyadı alanı 2 ile 250 karakter arasında olmalıdır.");
@@ -1682,7 +1689,7 @@ public sealed partial class ManagementController(
             return RedirectToCandidateSectionWithPopup(slug, "fail", "Statü seçimi zorunludur.");
         }
 
-        if (category.HasRoleAndPhoto && input.Role is null && !isChangeMode)
+        if (categorySupportsRoleAndPhoto && input.Role is null && !isChangeMode)
         {
             return RedirectToCandidateSectionWithPopup(slug, "fail", "Rol Adı alanı zorunludur.");
         }
@@ -1695,7 +1702,13 @@ public sealed partial class ManagementController(
         byte[]? photoData = null;
         string? photoContentType = null;
         string? photoFileName = null;
-        if (category.HasRoleAndPhoto && input.Photo is not null)
+        if (!categorySupportsRoleAndPhoto && input.Photo is not null)
+        {
+            return RedirectToCandidateSectionWithPopup(
+                slug, "fail", "Bu ödül kategorisine fotoğraf eklenemez.");
+        }
+
+        if (categorySupportsRoleAndPhoto && input.Photo is not null)
         {
             if (input.Photo.Length == 0 ||
                 input.Photo.Length > ImageUploadPolicy.MaximumFileSizeBytes)
@@ -1769,7 +1782,7 @@ public sealed partial class ManagementController(
                 roleCode = replacedCandidate.RoleCode;
                 role = replacedCandidate.Role;
                 sourceFormCandidateOrder = replacedCandidate.SourceFormCandidateOrder;
-                if (category.HasRoleAndPhoto && string.IsNullOrWhiteSpace(role))
+                if (categorySupportsRoleAndPhoto && string.IsNullOrWhiteSpace(role))
                 {
                     await transaction.RollbackAsync(cancellationToken);
                     return RedirectToCandidateSectionWithPopup(
