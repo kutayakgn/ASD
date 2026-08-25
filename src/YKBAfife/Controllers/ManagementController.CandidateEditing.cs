@@ -37,21 +37,30 @@ public sealed partial class ManagementController
         ).SingleOrDefaultAsync(cancellationToken);
         if (data is null) return NotFound();
         if (CandidateCategoryPolicy.IsSystemManaged(data.Candidate.AwardCategoryCode)) return BadRequest();
+        var supportsRoleAndPhoto =
+            CandidateCategoryPolicy.SupportsRoleAndPhoto(data.Candidate.AwardCategoryCode);
 
         model.Candidate = model.Candidate?.Trim() ?? string.Empty;
         model.Role = string.IsNullOrWhiteSpace(model.Role) ? null : model.Role.Trim();
+        if (!supportsRoleAndPhoto) model.Role = null;
         if (model.Candidate.Length is < 2 or > 250)
             return await EditCandidateFailureAsync(id, "Adı Soyadı alanı 2 ile 250 karakter arasında olmalıdır.", cancellationToken);
         if (!model.IsActive.HasValue)
             return await EditCandidateFailureAsync(id, "Statü seçimi zorunludur.", cancellationToken);
-        if (data.Category.HasRoleAndPhoto && string.IsNullOrWhiteSpace(model.Role))
+        if (supportsRoleAndPhoto && string.IsNullOrWhiteSpace(model.Role))
             return await EditCandidateFailureAsync(id, "Rol Adı alanı zorunludur.", cancellationToken);
         if (model.Role?.Length > 200)
             return await EditCandidateFailureAsync(id, "Rol Adı en fazla 200 karakter olabilir.", cancellationToken);
         if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId))
             return Challenge();
 
-        var photoResult = await ReadCandidatePhotoAsync(model.Photo, cancellationToken);
+        if (!supportsRoleAndPhoto && (model.Photo is not null || model.RemovePhoto))
+            return await EditCandidateFailureAsync(
+                id, "Bu ödül kategorisinde rol veya fotoğraf düzenlenemez.", cancellationToken);
+
+        var photoResult = supportsRoleAndPhoto
+            ? await ReadCandidatePhotoAsync(model.Photo, cancellationToken)
+            : (null, null, null, null);
         if (photoResult.Error is not null)
             return await EditCandidateFailureAsync(id, photoResult.Error, cancellationToken);
 
@@ -64,13 +73,13 @@ public sealed partial class ManagementController
                 .Where(item => item.PlayId == data.Play.Id && item.IsPublished)
                 .ToListAsync(cancellationToken);
             var candidate = candidates.Single(item => item.Id == id);
-            var roleChanged = data.Category.HasRoleAndPhoto &&
+            var roleChanged = supportsRoleAndPhoto &&
                 !string.Equals(candidate.Role?.Trim(), model.Role, StringComparison.Ordinal);
             var roleGroup = candidates.Where(item =>
                 item.AwardCategoryCode == candidate.AwardCategoryCode &&
                 item.RoleCode == candidate.RoleCode).ToArray();
 
-            if (data.Category.HasRoleAndPhoto)
+            if (supportsRoleAndPhoto)
             {
                 if (roleChanged && roleGroup.Length > 1 && !model.ConfirmRoleGroupUpdate)
                 {
@@ -208,7 +217,8 @@ public sealed partial class ManagementController
             Role = data.Candidate.Role,
             OriginalRole = data.Candidate.Role ?? string.Empty,
             IsActive = data.Candidate.IsActive,
-            HasRoleAndPhoto = data.Category.HasRoleAndPhoto,
+            HasRoleAndPhoto = CandidateCategoryPolicy.SupportsRoleAndPhoto(
+                data.Candidate.AwardCategoryCode),
             HasExistingPhoto = data.Candidate.PhotoImageId.HasValue,
             ExistingPhotoUrl = data.Candidate.PhotoImageId.HasValue
                 ? Url.Action(nameof(CandidatePhoto), new { id = data.Candidate.Id }) ?? string.Empty

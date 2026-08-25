@@ -52,7 +52,10 @@
             <div class="play-detail-field"><dt>Oyun</dt><dd>@Model.PlayName</dd></div>
             <div class="play-detail-field"><dt>Ödül Kategorisi</dt><dd>@Model.CategoryName</dd></div>
             <div class="play-detail-field"><dt>Adı Soyadı</dt><dd>@Model.Candidate</dd></div>
-            <div class="play-detail-field"><dt>Rol Adı</dt><dd>@Model.Role</dd></div>
+            @if (Model.HasRoleAndPhoto)
+            {
+                <div class="play-detail-field"><dt>Rol Adı</dt><dd>@Model.Role</dd></div>
+            }
             <div class="play-detail-field"><dt>Rol Değişimi</dt><dd>@Model.CurrentState</dd></div>
             <div class="play-detail-field"><dt>Statü</dt><dd>@Model.Status</dd></div>
             <div class="play-detail-field"><dt>Ekleyen</dt><dd>@AuditValue(Model.CreatedByName, Model.CreatedAt)</dd></div>

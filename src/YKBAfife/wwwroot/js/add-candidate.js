@@ -131,6 +131,8 @@
         const roleInput = component.querySelector("[data-candidate-role]");
         const photoField = component.querySelector("[data-candidate-photo-field]");
         const photo = setupPhoto(component);
+        const candidateInput = form?.querySelector("[name='Input.Candidate']");
+        const statusInputs = [...(form?.querySelectorAll("input[name='Input.IsActive']") ?? [])];
 
         const selectedMode = () => component.querySelector("input[name='Input.Mode']:checked")?.value ?? "new";
         const selectedCategoryOption = () => categorySelect?.querySelector(
@@ -192,6 +194,15 @@
             syncPhoto();
         };
 
+        const resetModeFields = () => {
+            if (categorySelect) clearSelect(categorySelect);
+            if (replacementSelect) clearSelect(replacementSelect);
+            if (candidateInput) candidateInput.value = "";
+            if (roleInput) roleInput.value = "";
+            statusInputs.forEach((input) => { input.checked = false; });
+            photo.reset();
+        };
+
         component.querySelectorAll("[data-candidate-select]").forEach((select) => {
             select.querySelector("[data-candidate-select-trigger]")?.addEventListener("click", () => {
                 if (select.classList.contains("is-open")) closeSelect(select);
@@ -204,7 +215,8 @@
 
         component.querySelectorAll("input[name='Input.Mode']").forEach((input) => {
             input.addEventListener("change", () => {
-                if (input.checked && input.value === "new" && roleInput) roleInput.value = "";
+                if (!input.checked) return;
+                resetModeFields();
                 syncAll();
             });
         });
@@ -217,7 +229,7 @@
 
         form?.addEventListener("submit", (event) => {
             const errors = [];
-            const candidate = form.querySelector("[name='Input.Candidate']")?.value.trim() || "";
+            const candidate = candidateInput?.value.trim() || "";
             const status = form.querySelector("input[name='Input.IsActive']:checked");
             const photoInput = component.querySelector("[data-candidate-photo-input]");
             const supportsRoleAndPhoto = selectedCategoryOption()?.dataset.supportsRolePhoto === "true";
