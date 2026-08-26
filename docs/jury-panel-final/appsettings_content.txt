@@ -9,6 +9,7 @@
   }
 },
 "JuryVotingPasswordReset": {
+  "Enabled": false,
   "PublicBaseUrl": "https://www.example.com/oylama/sifre-sifirla",
   "TokenLifetimeMinutes": 5,
   "MinimumRequestIntervalSeconds": 60,

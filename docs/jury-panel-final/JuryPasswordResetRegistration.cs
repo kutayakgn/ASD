@@ -1,7 +1,6 @@
-using System.Threading.RateLimiting;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace YkbAfife.Business.Service.JuryVoting;
 
@@ -12,34 +11,22 @@ public static class JuryPasswordResetRegistration
         IConfiguration configuration)
     {
         services.AddOptions<JuryVotingPasswordResetOptions>()
-            .Bind(configuration.GetSection(JuryVotingPasswordResetOptions.SectionName))
-            .ValidateDataAnnotations()
-            .Validate(options => Uri.TryCreate(options.PublicBaseUrl, UriKind.Absolute, out var uri)
-                                 && uri.Scheme == Uri.UriSchemeHttps,
-                "JuryVotingPasswordReset:PublicBaseUrl mutlak bir HTTPS adresi olmalıdır.")
-            .ValidateOnStart();
+            .Bind(configuration.GetSection(JuryVotingPasswordResetOptions.SectionName));
 
-        services.AddHttpClient<IJuryVotingMailSender, MicrosoftGraphJuryVotingMailSender>(client =>
+        services.AddSingleton<IJuryForgotPasswordRequestLimiter, JuryForgotPasswordRequestLimiter>();
+
+        var enabledValue = configuration[$"{JuryVotingPasswordResetOptions.SectionName}:Enabled"];
+        var isEnabled = bool.TryParse(enabledValue, out var enabled) && enabled;
+        if (!isEnabled)
         {
-            client.Timeout = TimeSpan.FromSeconds(15);
-        });
+            services.AddSingleton<IJuryVotingMailQueue, DisabledJuryVotingMailQueue>();
+            return services;
+        }
+
+        services.AddSingleton<IJuryVotingMailSender, MicrosoftGraphJuryVotingMailSender>();
         services.AddSingleton<JuryVotingMailQueue>();
         services.AddSingleton<IJuryVotingMailQueue>(provider => provider.GetRequiredService<JuryVotingMailQueue>());
-        services.AddHostedService<JuryVotingMailQueue>(provider => provider.GetRequiredService<JuryVotingMailQueue>());
-
-        services.AddRateLimiter(options =>
-        {
-            options.AddPolicy("jury-forgot-password", httpContext =>
-                RateLimitPartition.GetFixedWindowLimiter(
-                    httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-                    _ => new FixedWindowRateLimiterOptions
-                    {
-                        PermitLimit = 5,
-                        Window = TimeSpan.FromMinutes(5),
-                        QueueLimit = 0,
-                        AutoReplenishment = true
-                    }));
-        });
+        services.AddSingleton<IHostedService>(provider => provider.GetRequiredService<JuryVotingMailQueue>());
 
         return services;
     }

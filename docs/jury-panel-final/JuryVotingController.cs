@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Options;
 using YkbAfife.Business.Service.JuryVoting;
 using YkbAfife.Domain.Model.Data.JuryVoting;
 namespace YkbAfife.Controllers
@@ -14,10 +14,18 @@ namespace YkbAfife.Controllers
         const string JuryVotingUserFullNameSessionKey = "JuryVotingUserFullName";
         private readonly IJuryVotingCaptchaService _captchaService;
         private readonly IJuryVotingService _juryVotingService;
-        public JuryVotingController(IJuryVotingCaptchaService captchaService, IJuryVotingService juryVotingService)
+        private readonly IJuryForgotPasswordRequestLimiter _forgotPasswordRequestLimiter;
+        private readonly JuryVotingPasswordResetOptions _passwordResetOptions;
+        public JuryVotingController(
+            IJuryVotingCaptchaService captchaService,
+            IJuryVotingService juryVotingService,
+            IJuryForgotPasswordRequestLimiter forgotPasswordRequestLimiter,
+            IOptions<JuryVotingPasswordResetOptions> passwordResetOptions)
         {
             _captchaService = captchaService;
             _juryVotingService = juryVotingService;
+            _forgotPasswordRequestLimiter = forgotPasswordRequestLimiter;
+            _passwordResetOptions = passwordResetOptions.Value;
         }
         [HttpGet("oylama")]
         public IActionResult Index()
@@ -32,6 +40,7 @@ namespace YkbAfife.Controllers
                 return RedirectToAction(nameof(Home));
             }
             ViewData["Login"] = "true";
+            ViewData["PasswordResetEnabled"] = _passwordResetOptions.Enabled;
             return View(new JuryLoginViewModel
             {
                 Password = ""
@@ -42,6 +51,7 @@ namespace YkbAfife.Controllers
         public async Task<IActionResult> Login(JuryLoginViewModel model)
         {
             ViewData["Login"] = "true";
+            ViewData["PasswordResetEnabled"] = _passwordResetOptions.Enabled;
             if (string.IsNullOrWhiteSpace(model.CaptchaToken) || !_captchaService.VerifyToken(model.CaptchaToken))
             {
                 ModelState.AddModelError(nameof(model.CaptchaToken), "Lütfen robot doğrulamasını tamamlayın.");
@@ -267,6 +277,11 @@ namespace YkbAfife.Controllers
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult ForgotPassword(bool requested = false)
         {
+            if (!_passwordResetOptions.Enabled)
+            {
+                return NotFound();
+            }
+
             ViewData["Login"] = "true";
             ViewData["ForgotPasswordRequested"] = requested;
             return View(new JuryForgotPasswordViewModel());
@@ -274,11 +289,24 @@ namespace YkbAfife.Controllers
 
         [HttpPost("oylama/sifremi-unuttum")]
         [ValidateAntiForgeryToken]
-        [EnableRateLimiting("jury-forgot-password")]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public async Task<IActionResult> ForgotPassword(JuryForgotPasswordViewModel model)
         {
+            if (!_passwordResetOptions.Enabled)
+            {
+                return NotFound();
+            }
+
             ViewData["Login"] = "true";
+            var remoteIpAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+            if (!_forgotPasswordRequestLimiter.TryAcquire(remoteIpAddress))
+            {
+                Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                ModelState.AddModelError(string.Empty,
+                    "Çok fazla şifre sıfırlama isteği gönderdiniz. Lütfen daha sonra tekrar deneyin.");
+                return View(model);
+            }
+
             if (!ModelState.IsValid)
             {
                 return View(model);
@@ -292,6 +320,11 @@ namespace YkbAfife.Controllers
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public async Task<IActionResult> ResetPassword(string token)
         {
+            if (!_passwordResetOptions.Enabled)
+            {
+                return NotFound();
+            }
+
             ViewData["Login"] = "true";
             Response.Headers["Referrer-Policy"] = "no-referrer";
             Response.Headers["X-Robots-Tag"] = "noindex, nofollow";
@@ -309,6 +342,11 @@ namespace YkbAfife.Controllers
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public async Task<IActionResult> ResetPassword(JuryResetPasswordViewModel model)
         {
+            if (!_passwordResetOptions.Enabled)
+            {
+                return NotFound();
+            }
+
             ViewData["Login"] = "true";
             Response.Headers["Referrer-Policy"] = "no-referrer";
             Response.Headers["X-Robots-Tag"] = "noindex, nofollow";
@@ -324,7 +362,7 @@ namespace YkbAfife.Controllers
             }
 
             var result = await _juryVotingService.ResetPasswordAsync(model.Token, model.NewPassword);
-            if (result == JuryVotingResetPasswordResult.Success)
+            if (result == YkbAfife.Business.Service.JuryVoting.JuryVotingResetPasswordResult.Success)
             {
                 TempData["ResetPasswordSuccess"] = "Şifreniz başarıyla güncellendi.";
                 return RedirectToAction(nameof(Login));

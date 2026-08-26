@@ -31,9 +31,3 @@ public sealed class JuryResetPasswordViewModel
     [Compare(nameof(NewPassword), ErrorMessage = "Şifreler eşleşmiyor.")]
     public string ConfirmPassword { get; set; } = string.Empty;
 }
-
-public enum JuryVotingResetPasswordResult
-{
-    Success,
-    InvalidOrExpiredToken
-}
