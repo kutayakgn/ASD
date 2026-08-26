@@ -55,7 +55,7 @@ FROM sys.tables AS tableInfo
 INNER JOIN sys.schemas AS schemaInfo ON schemaInfo.schema_id = tableInfo.schema_id
 WHERE tableInfo.is_ms_shipped = 0
   AND tableInfo.temporal_type = 0
-  AND NOT (schemaInfo.name = N'dbo' AND tableInfo.name IN (N'AdminLogs', N'JuryLogs', N'UsersLog', N'__EFMigrationsHistory'))
+  AND NOT (schemaInfo.name = N'dbo' AND tableInfo.name IN (N'AdminLogs', N'JuryLogs', N'UsersLog', N'JuryPasswordResetTokens', N'__EFMigrationsHistory'))
 ORDER BY schemaInfo.name, tableInfo.name;
 
 OPEN table_cursor;

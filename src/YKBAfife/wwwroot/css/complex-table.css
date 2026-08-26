@@ -157,6 +157,7 @@ p {
 .modal-body .jury-voting-table-wrapper {
     overflow-x: auto;
     padding: 0px;
+    min-height: 450px;
 }
 
 .jury-voting-table-wrapper {
@@ -209,9 +210,7 @@ tr {
         white-space: nowrap;
     }
 
-    .jury-voting-table tbody {
-        border-bottom: 1px solid #e3dfd3;
-    }
+
 
 .modal-body .jury-voting-table td {
     padding: 12px 24px;
@@ -401,8 +400,8 @@ tr {
 }
 
     .excel-export-button img {
-        width: 12px;
-        height: 12px;
+        width: 14px;
+        height: 14px;
         margin: 0;
         padding: 0;
     }
@@ -752,7 +751,7 @@ tr {
 
 .ticket-fee-modal-body hr {
     margin: 16px 0;
-    background: #BDBDBD;
+    background: #e3dfd3;
     height: 1px;
     opacity: 1;
 }
@@ -922,15 +921,19 @@ tr {
     display: flex;
     width: 100%;
     min-height: 44px;
-    padding: 10px 12px;
+    padding: 10px;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 8px;
     color: #171717;
     background: #fff;
     border: 1px solid #777;
-    font: inherit;
     text-align: left;
+    font-family: Outfit;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 20px;
 }
 
     .complex-table-select-trigger:focus-visible {
@@ -953,30 +956,30 @@ tr {
         transition: transform .2s ease;
     }
 
-.complex-table-select-filter-control.is-open {
-    z-index: 50;
-}
-
-    .complex-table-select-filter-control.is-open .complex-table-select-trigger > img {
-        transform: rotate(180deg);
+    .complex-table-select-filter-control.is-open {
+        z-index: 50;
     }
 
-.complex-table-select-menu {
-    position: absolute;
-    z-index: 55;
-    top: calc(100% + 6px);
-    right: 0;
-    left: 0;
-    max-height: min(320px, 45vh);
-    overflow-y: auto;
-    background: #fff;
-    border: 1px solid #777;
-    box-shadow: 0 12px 28px rgba(23, 23, 23, .14);
-}
+        .complex-table-select-filter-control.is-open .complex-table-select-trigger > img {
+            transform: rotate(180deg);
+        }
 
-    .complex-table-select-menu[hidden] {
-        display: none !important;
+    .complex-table-select-menu {
+        position: absolute;
+        z-index: 55;
+        top: calc(100% + 6px);
+        right: 0;
+        left: 0;
+        max-height: min(320px, 45vh);
+        overflow-y: auto;
+        background: #fff;
+        border: 1px solid #777;
+        box-shadow: 0 12px 28px rgba(23, 23, 23, .14);
     }
+
+        .complex-table-select-menu[hidden] {
+            display: none !important;
+        }
 
 .complex-table-select-option {
     display: block;
@@ -986,37 +989,40 @@ tr {
     color: #171717;
     background: #fff;
     border: 0;
-    font: inherit;
-    text-align: left;
+    font-family: Outfit;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 20px;
+    text-align:left;
 }
 
-    .complex-table-select-option:last-child {
-        border-bottom: 0;
+        .complex-table-select-option:last-child {
+            border-bottom: 0;
+        }
+
+        .complex-table-select-option:hover {
+            background: #e9e5da;
+            outline: none;
+        }
+
+        .complex-table-select-option:focus-visible, .complex-table-select-option[aria-selected="true"] {
+            font-weight: 600;
+            outline: none;
+        }
+
+    .play-candidates-table-select-filter {
+        width: min(420px, 100%);
+    }
+    /* Aday sayısı az olduğunda kategori menüsünün tablo sınırında kesilmesini önler. */
+    #play-candidates-table {
+        overflow: visible;
+        padding-bottom: var(--candidate-dropdown-bottom-space, 0);
     }
 
-    .complex-table-select-option:hover {
-        background: #e9e5da;
-        outline: none;
-    }
-
-    .complex-table-select-option:focus-visible, .complex-table-select-option[aria-selected="true"] {
-        font-weight: 600;
-        outline: none;
-    }
-
-.play-candidates-table-select-filter {
-    width: min(420px, 100%);
-}
-
-/* Aday sayısı az olduğunda kategori menüsünün tablo sınırında kesilmesini önler. */
-#play-candidates-table {
-    overflow: visible;
-    padding-bottom: var(--candidate-dropdown-bottom-space, 0);
-}
-
-#play-candidates-table .complex-table-heading,
-#play-candidates-table .complex-table-heading-tools,
-#play-candidates-table .play-candidates-table-select-filter {
-    position: relative;
-    z-index: 60;
-}
+        #play-candidates-table .complex-table-heading,
+        #play-candidates-table .complex-table-heading-tools,
+        #play-candidates-table .play-candidates-table-select-filter {
+            position: relative;
+            z-index: 60;
+        }

@@ -15,7 +15,7 @@ public static class RankingExcelExportFactory
         };
         var displayNameHeader = report.CategoryHasRoleAndPhoto ? "Adı Soyadı" : "Tiyatro Adı";
         var categoryName = report.Categories.First(category => category.CategoryCode == report.CategoryCode).CategoryName;
-        var includeVariance = report.RankingType != RankingTypes.Trimmed;
+        var includeVariance = report.RankingType == RankingTypes.Confidence;
         var columns = new List<ExcelExportColumn>
         {
             Column("Sıra", 10, ExcelExportAlignment.Center), Column("Kategori", 38),

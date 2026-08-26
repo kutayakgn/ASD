@@ -19,5 +19,6 @@ public sealed class PlayDetailsViewModel
     public string? UpdatedByName { get; init; }
     public string Slug { get; init; } = string.Empty;
     public string ReturnUrl { get; init; } = "/oyunlar";
+    public string ReturnLabel { get; init; } = "Oyunlara Dön";
     public ComplexTableViewModel? CandidatesTable { get; init; }
 }

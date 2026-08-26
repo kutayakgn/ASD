@@ -18,7 +18,6 @@ public sealed class AddCandidateCategoryOptionViewModel
     public int CategoryCode { get; init; }
     public string CategoryName { get; init; } = string.Empty;
     public bool MultiCandidate { get; init; }
-    public bool HasRoleAndPhoto { get; init; }
 }
 
 public sealed class AddCandidateReplacementOptionViewModel

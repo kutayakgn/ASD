@@ -7,7 +7,7 @@ public interface IJuryVotingService : IService
 {
     Task<(Guid UserId, string FullName)?> AuthenticateUserAsync(string userName, string password);
     Task<JuryVotingChangePasswordResult> ChangePasswordAsync(Guid authenticatedUserId, string oldPassword, string newPassword);
-    Task SendForgotPasswordLinkAsync(string email, string resetPasswordBaseUrl);
+    Task SendForgotPasswordLinkAsync(string email);
     Task<bool> IsResetTokenValidAsync(string token);
     Task<JuryVotingResetPasswordResult> ResetPasswordAsync(string token, string newPassword);
     Task<JuryVotingHomeViewModel> BuildHomeViewModelAsync(Guid authenticatedUserId, string gameListButtonLink, string mostWatchedButtonLink, string leastWatchedButtonLink);

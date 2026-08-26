@@ -133,7 +133,9 @@
                                             aria-haspopup="listbox"
                                             aria-expanded="false"
                                             data-complex-table-select-trigger>
-                                        <span id="@(filterId)-value" data-complex-table-select-label>@selectedFilterOption.Text</span>
+                                        <span id="@(filterId)-value"
+                                              title="@selectedFilterOption.Text"
+                                              data-complex-table-select-label>@selectedFilterOption.Text</span>
                                         <img src="~/icons/angle-down.svg" alt="" aria-hidden="true" />
                                     </button>
                                     <div class="complex-table-select-menu"
@@ -148,6 +150,7 @@
                                                     class="complex-table-select-option"
                                                     role="option"
                                                     aria-selected="@(option.Value == filter.Value ? "true" : "false")"
+                                                    title="@option.Text"
                                                     data-complex-table-select-option
                                                     data-value="@option.Value">@option.Text</button>
                                         }
@@ -295,6 +298,7 @@
                                     var cell = index < row.Cells.Count ? row.Cells[index] : null;
                                     var columnCssClass = activeTab.Columns[index].CssClass;
                                     var isExplicitRowHoverColumn = columnCssClass is
+                                        "admin-status-column" or
                                         "applications-status-column" or
                                         "play-toggle-column" or
                                         "candidate-status-column";

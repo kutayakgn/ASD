@@ -73,7 +73,7 @@
                                     data-value="@category.CategoryCode"
                                     data-label="@category.CategoryName"
                                     data-multi-candidate="@category.MultiCandidate.ToString().ToLowerInvariant()"
-                                    data-has-role-photo="@category.HasRoleAndPhoto.ToString().ToLowerInvariant()">@category.CategoryName</button>
+                                    data-supports-role-photo="@YKBAfife.Helpers.CandidateCategoryPolicy.SupportsRoleAndPhoto(category.CategoryCode).ToString().ToLowerInvariant()">@category.CategoryName</button>
                         }
                     </div>
                 </div>
@@ -107,6 +107,15 @@
                         }
                     </div>
                 </div>
+            </div>
+
+            <div class="add-candidate-field" data-candidate-role-field hidden>
+                <label asp-for="Input.Role">Rol Adı</label>
+                <input asp-for="Input.Role"
+                       autocomplete="off"
+                       maxlength="200"
+                       placeholder="Rol Adı Yazın"
+                       data-candidate-role />
             </div>
 
             <div class="add-candidate-field">
@@ -158,11 +167,6 @@
                 <label><input type="radio" asp-for="Input.IsActive" value="true" required /><span>Aktif</span></label>
                 <label><input type="radio" asp-for="Input.IsActive" value="false" required /><span>Aktif değil</span></label>
             </fieldset>
-
-            <div class="add-candidate-field" data-candidate-role-field hidden>
-                <label asp-for="Input.Role">Rol Adı</label>
-                <input asp-for="Input.Role" autocomplete="off" maxlength="200" data-candidate-role />
-            </div>
         </div>
 
         <div class="add-candidate-actions"><button type="submit" class="add-candidate-submit">Kaydet</button></div>

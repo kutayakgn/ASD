@@ -11,12 +11,12 @@ public static class PlayComplexTableFactory
 {
     private static readonly IReadOnlyList<ComplexTableColumnViewModel> Columns =
     [
-        new() { Title = "Oyun Adı", Key = PlaySortColumns.PlayName, ColWidth = 30 },
-        new() { Title = "Tiyatro Adı", Key = PlaySortColumns.TheaterName, ColWidth = 18 },
-        new() { Title = "Eklenme Yöntemi", Key = PlaySortColumns.RecordType, ColWidth = 14 },
-        new() { Title = "Eklenme Tarihi", Key = PlaySortColumns.CreatedAt, ColWidth = 18 },
-        new() { Title = "Jüri Oylama Listesi", Key = PlaySortColumns.JuryVotingStatus, ColWidth = 10, IsSortable = false, CssClass = "play-toggle-column" },
-        new() { Title = "Künye Giriş Sistemi", Key = PlaySortColumns.KunyeGirisStatus, ColWidth = 10, IsSortable = false, CssClass = "play-toggle-column" }
+        new() { Title = "Oyun Adı", Key = PlaySortColumns.PlayName, ColWidth = 28 },
+        new() { Title = "Tiyatro Adı", Key = PlaySortColumns.TheaterName, ColWidth = 17 },
+        new() { Title = "Eklenme Yöntemi", Key = PlaySortColumns.RecordType, ColWidth = 13 },
+        new() { Title = "Eklenme Tarihi", Key = PlaySortColumns.CreatedAt, ColWidth = 16 },
+        new() { Title = "Jüri Oylama Listesi", Key = PlaySortColumns.JuryVotingStatus, ColWidth = 13, IsSortable = false, CssClass = "play-toggle-column" },
+        new() { Title = "Künye Giriş Sistemi", Key = PlaySortColumns.KunyeGirisStatus, ColWidth = 13, IsSortable = false, CssClass = "play-toggle-column" }
     ];
 
     public static ComplexTableViewModel Create(PlayTableViewModel report)

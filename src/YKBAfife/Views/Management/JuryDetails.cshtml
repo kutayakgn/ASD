@@ -25,7 +25,7 @@
                   asp-route-id="@Model.Id"
                   method="post"
                   data-generic-confirm
-                  data-confirm-message="Jüriyi silmek istediğinize emin misiniz?"
+                  data-confirm-message="Güncel Jüri listesine kayıtlı bir jüriyi silmek istediğinize emin misiniz?"
                   data-confirm-text="Evet"
                   data-cancel-text="İptal">
                 @Html.AntiForgeryToken()
@@ -105,7 +105,7 @@
                 </dd>
             </div>
             <div class="play-detail-field">
-                <dt>Jüri Başkanlığı</dt>
+                <dt>Jüri Tipi</dt>
                 <dd>@(Model.IsJuryPresident ? "Jüri Başkanı" : "Jüri")</dd>
             </div>
         </dl>

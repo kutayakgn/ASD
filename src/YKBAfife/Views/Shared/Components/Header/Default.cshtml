@@ -57,7 +57,7 @@
 			}
 		</div>
 		<div class="container-fluid admin-nav-container@(Model.ShowNavigation ? string.Empty : " navigation-hidden")">
-			<a class="navbar-brand admin-logo" asp-controller="Home" asp-action="Index" aria-label="Afife Anasayfa">
+			<a class="navbar-brand admin-logo" asp-controller="Home" asp-action="Index" aria-label="Afife Ana Sayfa">
 				<img src="~/icons/afife-icon.svg" alt="Afife" />
 			</a>
 			@if (Model.ShowNavigation)
@@ -74,7 +74,7 @@
 						<button type="button" class="admin-mobile-nav-close" aria-label="Menüyü kapat" data-mobile-nav-dismiss>×</button>
 					</div>
 					<ul class="navbar-nav ms-auto align-items-xl-center admin-menu">
-						<li class="nav-item"><a class="nav-link@(string.Equals(currentController, "Home", StringComparison.OrdinalIgnoreCase) && string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase) ? " active" : string.Empty)" asp-controller="Home" asp-action="Index">Anasayfa</a></li>
+						<li class="nav-item"><a class="nav-link@(string.Equals(currentController, "Home", StringComparison.OrdinalIgnoreCase) && string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase) ? " active" : string.Empty)" asp-controller="Home" asp-action="Index">Ana Sayfa</a></li>
 						<li class="nav-item"><a class="nav-link@(ActiveClass("Juries", "AddJury", "JuryDetails", "EditJury"))" asp-controller="Management" asp-action="Juries">Jüriler</a></li>
 						<li class="nav-item"><a class="nav-link@(ActiveClass("Plays", "PlayDetails", "AddPlay", "EditPlay", "CandidateDetails", "EditCandidate"))" asp-controller="Management" asp-action="Plays">Oyunlar</a></li>
 						<li class="nav-item"><a class="nav-link@(ActiveClass("Rankings"))" asp-controller="Management" asp-action="Rankings">Sıralamalar</a></li>
@@ -85,8 +85,8 @@
 							</button>
 							<ul class="dropdown-menu dropdown-menu-end admin-dropdown-menu">
 								<li><a class="dropdown-item@(isAdminManagementPage ? " active" : string.Empty)" asp-controller="AdminManagement" asp-action="Index">Admin Yönetimi</a></li>
-								<li><a class="dropdown-item@(ActiveClass("Applications", "ApplicationDetails", "EditApplication"))" asp-controller="Management" asp-action="Applications">Başvurular</a></li>
 								<li><a class="dropdown-item@(ActiveClass("ArchiveComparison"))" asp-controller="Management" asp-action="ArchiveComparison">Arşiv Karşılaştırma</a></li>
+								<li><a class="dropdown-item@(ActiveClass("Applications", "ApplicationDetails", "EditApplication"))" asp-controller="Management" asp-action="Applications">Başvurular</a></li>
 								<li><a class="dropdown-item@(ActiveClass("TicketSales"))" asp-controller="Management" asp-action="TicketSales">Bilet Satışları</a></li>
 								<li><a class="dropdown-item@(ActiveClass("Blacklists"))" asp-controller="Management" asp-action="Blacklists">Blacklists</a></li>
 								<li><a class="dropdown-item@(ActiveClass("VotingHistory"))" asp-controller="Management" asp-action="VotingHistory">Oylama Geçmişi</a></li>

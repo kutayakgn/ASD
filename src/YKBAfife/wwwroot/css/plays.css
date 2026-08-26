@@ -76,7 +76,7 @@
     .play-filter-close span::before,
     .play-filter-close span::after {
         position: absolute;
-        top: 17px;
+        top: 13px;
         left: 9px;
         width: 18px;
         height: 1.5px;
@@ -210,10 +210,8 @@
 }
 
 
-#plays-table .jury-voting-table col.play-toggle-column,
 #plays-table .jury-voting-table th.play-toggle-column,
 #plays-table .jury-voting-table td.play-toggle-column {
-    width: 160px !important;
     padding: 10px 16px;
 }
 

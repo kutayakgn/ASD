@@ -107,6 +107,11 @@ body.auth-page {
     padding-right: 44px;
 }
 
+.auth-password input::-ms-clear,
+.auth-password input::-ms-reveal {
+    display: none;
+}
+
 .auth-password-toggle {
     position: absolute;
     top: 0;
@@ -120,6 +125,10 @@ body.auth-page {
     background: transparent;
     border: 0;
     cursor: pointer;
+}
+
+.auth-password-toggle[hidden] {
+    display: none;
 }
 
 .auth-password-toggle img {
@@ -146,9 +155,12 @@ body.auth-page {
 
 .validation-summary ul {
     margin: 0;
-    padding: 10px 12px 10px 28px;
-    background: #fff4f4;
-    border-left: 3px solid var(--auth-error);
+    padding: 0;
+    list-style: none;
+}
+
+.validation-summary:not(:empty) + .auth-submit {
+    margin-top: -10px;
 }
 
 .auth-submit {

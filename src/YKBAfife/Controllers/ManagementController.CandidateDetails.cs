@@ -19,10 +19,12 @@ public sealed partial class ManagementController
             {
                 Candidate = candidate,
                 Play = play,
-                category.CategoryName,
-                category.HasRoleAndPhoto
+                category.CategoryName
             }).SingleOrDefaultAsync(cancellationToken);
         if (data is null) return NotFound();
+
+        var supportsRoleAndPhoto =
+            CandidateCategoryPolicy.SupportsRoleAndPhoto(data.Candidate.AwardCategoryCode);
 
         var auditUserIds = new[] { data.Candidate.CreatedBy, data.Candidate.UpdatedBy }
             .Where(userId => userId.HasValue)
@@ -36,7 +38,7 @@ public sealed partial class ManagementController
                 user => (user.FirstName + " " + user.LastName).Trim(),
                 cancellationToken);
 
-        var hasPhoto = data.Candidate.PhotoImageId.HasValue && await context.Images.AsNoTracking()
+        var hasPhoto = supportsRoleAndPhoto && data.Candidate.PhotoImageId.HasValue && await context.Images.AsNoTracking()
             .AnyAsync(image => image.Id == data.Candidate.PhotoImageId.Value && image.IsPublished, cancellationToken);
 
         return View(nameof(CandidateDetails), new CandidateDetailsViewModel
@@ -60,7 +62,7 @@ public sealed partial class ManagementController
                 auditUsers.TryGetValue(data.Candidate.UpdatedBy.Value, out var updater)
                     ? updater
                     : null,
-            HasRoleAndPhoto = data.HasRoleAndPhoto,
+            HasRoleAndPhoto = supportsRoleAndPhoto,
             HasPhoto = hasPhoto
         });
     }

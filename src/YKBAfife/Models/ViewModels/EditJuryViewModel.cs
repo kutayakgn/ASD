@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Http;
+using YKBAfife.Helpers;
 
 namespace YKBAfife.Models.ViewModels;
 
@@ -8,7 +9,9 @@ public sealed class EditJuryViewModel
     public Guid Id { get; set; }
 
     [Required(ErrorMessage = "Kullanıcı adı zorunludur.")]
-    [StringLength(100, MinimumLength = 3, ErrorMessage = "Kullanıcı adı 3-100 karakter arasında olmalıdır.")]
+    [StringLength(UsernamePolicy.MaximumLength, MinimumLength = UsernamePolicy.MinimumLength,
+        ErrorMessage = UsernamePolicy.LengthErrorMessage)]
+    [RegularExpression(UsernamePolicy.Pattern, ErrorMessage = UsernamePolicy.FormatErrorMessage)]
     [Display(Name = "Kullanıcı Adı")]
     public string Username { get; set; } = string.Empty;
 
@@ -18,7 +21,10 @@ public sealed class EditJuryViewModel
     [Display(Name = "E-posta")]
     public string Email { get; set; } = string.Empty;
 
-    [StringLength(100, MinimumLength = 8, ErrorMessage = "Yeni şifre en az 8 karakter olmalıdır.")]
+    [Required(ErrorMessage = "Şifre zorunludur.")]
+    [StringLength(PasswordPolicy.MaximumLength, MinimumLength = PasswordPolicy.MinimumLength,
+        ErrorMessage = PasswordPolicy.ErrorMessage)]
+    [RegularExpression(PasswordPolicy.Pattern, ErrorMessage = PasswordPolicy.ErrorMessage)]
     [DataType(DataType.Password)]
     [Display(Name = "Şifre")]
     public string? Password { get; set; }
@@ -30,8 +36,9 @@ public sealed class EditJuryViewModel
     public string FullName { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "Telefon numarası zorunludur.")]
-    [RegularExpression(@"^\d{10,11}$", ErrorMessage = "Telefon numarası 10 veya 11 rakamdan oluşmalıdır.")]
-    [StringLength(11, MinimumLength = 10, ErrorMessage = "Telefon numarası 10 veya 11 rakamdan oluşmalıdır.")]
+    [RegularExpression(PhonePolicy.Pattern, ErrorMessage = PhonePolicy.ErrorMessage)]
+    [StringLength(PhonePolicy.MaximumLength, MinimumLength = PhonePolicy.MinimumLength,
+        ErrorMessage = PhonePolicy.ErrorMessage)]
     [Display(Name = "Telefon")]
     public string Phone { get; set; } = string.Empty;
 

@@ -6,7 +6,7 @@
 <section class="play-details-page add-jury-page edit-candidate-page">
     <a asp-action="CandidateDetails" asp-route-id="@Model.Id" class="play-details-back">
         <img src="~/icons/arrow-left.svg" alt="" aria-hidden="true" />
-        <span>Aday Detayı' na Dön</span>
+        <span>Aday Detay' a Dön</span>
     </a>
 
     <header class="play-details-toolbar">
@@ -22,9 +22,12 @@
           data-edit-candidate-form>
         @Html.AntiForgeryToken()
         <input asp-for="Id" type="hidden" />
-        <input asp-for="RemovePhoto" type="hidden" data-jury-remove-photo />
-        <input asp-for="ConfirmRoleGroupUpdate" type="hidden" data-confirm-role-group-update />
-        <input asp-for="OriginalRole" type="hidden" />
+        @if (Model.HasRoleAndPhoto)
+        {
+            <input asp-for="RemovePhoto" type="hidden" data-jury-remove-photo />
+            <input asp-for="ConfirmRoleGroupUpdate" type="hidden" data-confirm-role-group-update />
+            <input asp-for="OriginalRole" type="hidden" />
+        }
         <div asp-validation-summary="ModelOnly" class="add-jury-validation-summary" role="alert"></div>
 
         <div class="add-jury-grid">
@@ -116,8 +119,11 @@
         </div>
     }
 
-    <script type="application/json" data-edit-candidate-other-roles>@Html.Raw(JsonSerializer.Serialize(Model.OtherRoleNames))</script>
-    <script type="application/json" data-edit-candidate-related-candidates>@Html.Raw(JsonSerializer.Serialize(Model.RelatedCandidates))</script>
+    @if (Model.HasRoleAndPhoto)
+    {
+        <script type="application/json" data-edit-candidate-other-roles>@Html.Raw(JsonSerializer.Serialize(Model.OtherRoleNames))</script>
+        <script type="application/json" data-edit-candidate-related-candidates>@Html.Raw(JsonSerializer.Serialize(Model.RelatedCandidates))</script>
+    }
 </section>
 
 @section Scripts {

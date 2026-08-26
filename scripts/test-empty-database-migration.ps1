@@ -31,7 +31,7 @@ try {
 IF NOT EXISTS
 (
     SELECT 1 FROM dbo.__EFMigrationsHistory
-    WHERE MigrationId = N'20260819113000_V1_2_6_RepairFormSourceSlotContract'
+    WHERE MigrationId = N'20260819150000_V1_2_7_EnforceUsernameAndSynchronizePlaySlug'
 )
     THROW 53110, N'Latest migration was not recorded on the empty database.', 1;
 
@@ -56,6 +56,79 @@ IF NOT EXISTS
       AND is_unique = 1
 )
     THROW 53114, N'Candidate uniqueness contract is missing on the empty database.', 1;
+
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.check_constraints
+    WHERE parent_object_id = OBJECT_ID(N'dbo.Users')
+      AND name = N'CK_Users_Username_InstagramFormat'
+      AND is_disabled = 0
+      AND is_not_trusted = 0
+)
+    THROW 53115, N'Username format constraint is missing, disabled or untrusted.', 1;
+
+IF OBJECT_ID(N'dbo.ufn_CreatePlaySlug', N'FN') IS NULL
+   OR OBJECT_ID(N'dbo.TR_Plays_SynchronizeSlug', N'TR') IS NULL
+    THROW 53116, N'Play slug synchronization objects are missing.', 1;
+
+DECLARE @TurkishPlayName nvarchar(255) =
+    NCHAR(199) + NCHAR(305) + N'l' + N'g' + NCHAR(305) + N'n ' +
+    NCHAR(350) + NCHAR(246) + N'len!';
+
+IF dbo.ufn_CreatePlaySlug(@TurkishPlayName) <> 'cilgin-solen'
+    THROW 53117, N'Play slug normalization returned an unexpected value.', 1;
+
+BEGIN TRY
+    INSERT INTO dbo.Users
+    (
+        Id, FirstName, LastName, Phone, Username, PasswordHash, Email,
+        CreatedAt, CreatedBy, UpdatedAt, UpdatedBy, IsPublished,
+        RoleCode, GroupCode, PhotoImageId, IsActive, IsJuryPresident
+    )
+    VALUES
+    (
+        NEWID(), N'Test', N'User', NULL, N'invalid username', N'not-a-real-hash',
+        N'username-rule-test@example.invalid', SYSDATETIME(), NULL, NULL, NULL,
+        1, 1, NULL, NULL, 1, 0
+    );
+
+    THROW 53118, N'Invalid username was accepted.', 1;
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 53118
+        THROW;
+    IF ERROR_NUMBER() <> 547
+        THROW;
+END CATCH;
+
+BEGIN TRANSACTION;
+DECLARE @FirstPlayId uniqueidentifier = NEWID();
+DECLARE @SecondPlayId uniqueidentifier = NEWID();
+
+INSERT INTO dbo.Plays
+(
+    Id, PlayName, StatusCode, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy,
+    IsPublished, Slug, TheaterName, Phone, ContactPersonName,
+    ContactPersonPhone, Address, Email, JuriOylamaStatus, KunyeGirisStatus,
+    RecordType, SourceFormId, IsActive
+)
+VALUES
+(@FirstPlayId, N'İlk Oyun', 6, SYSDATETIME(), NULL, NULL, NULL, 1,
+ 'ilk-oyun', N'Test Tiyatrosu', NULL, NULL, NULL, NULL, NULL, 0, 0, 1, NULL, 1),
+(@SecondPlayId, N'İkinci Oyun', 6, SYSDATETIME(), NULL, NULL, NULL, 1,
+ 'ikinci-oyun', N'Test Tiyatrosu', NULL, NULL, NULL, NULL, NULL, 0, 0, 1, NULL, 1);
+
+UPDATE dbo.Plays SET PlayName = @TurkishPlayName WHERE Id = @FirstPlayId;
+UPDATE dbo.Plays SET PlayName = @TurkishPlayName WHERE Id = @SecondPlayId;
+
+IF (SELECT Slug FROM dbo.Plays WHERE Id = @FirstPlayId) <> 'cilgin-solen'
+    THROW 53119, N'PlayName update did not synchronize the slug.', 1;
+
+IF (SELECT Slug FROM dbo.Plays WHERE Id = @SecondPlayId) <> 'cilgin-solen-2'
+    THROW 53120, N'Colliding play slug did not receive a deterministic suffix.', 1;
+
+ROLLBACK TRANSACTION;
 "@
     sqlcmd -I -S $server -d $databaseName -b -Q $verification
     if ($LASTEXITCODE -ne 0) { throw 'Empty database verification failed.' }
