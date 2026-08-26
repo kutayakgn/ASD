@@ -13,6 +13,18 @@ public interface IJuryVotingMailQueue
         string resetLink);
 }
 
+public sealed class DisabledJuryVotingMailQueue : IJuryVotingMailQueue
+{
+    public bool TryEnqueuePasswordReset(
+        Guid tokenId,
+        string recipientEmail,
+        string recipientName,
+        string resetLink)
+    {
+        return false;
+    }
+}
+
 public sealed class JuryVotingMailQueue : BackgroundService, IJuryVotingMailQueue
 {
     private readonly Channel<PasswordResetMailItem> _channel = Channel.CreateBounded<PasswordResetMailItem>(

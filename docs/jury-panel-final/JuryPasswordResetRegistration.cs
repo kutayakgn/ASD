@@ -13,11 +13,20 @@ public static class JuryPasswordResetRegistration
         services.AddOptions<JuryVotingPasswordResetOptions>()
             .Bind(configuration.GetSection(JuryVotingPasswordResetOptions.SectionName));
 
+        services.AddSingleton<IJuryForgotPasswordRequestLimiter, JuryForgotPasswordRequestLimiter>();
+
+        var enabledValue = configuration[$"{JuryVotingPasswordResetOptions.SectionName}:Enabled"];
+        var isEnabled = bool.TryParse(enabledValue, out var enabled) && enabled;
+        if (!isEnabled)
+        {
+            services.AddSingleton<IJuryVotingMailQueue, DisabledJuryVotingMailQueue>();
+            return services;
+        }
+
         services.AddSingleton<IJuryVotingMailSender, MicrosoftGraphJuryVotingMailSender>();
         services.AddSingleton<JuryVotingMailQueue>();
         services.AddSingleton<IJuryVotingMailQueue>(provider => provider.GetRequiredService<JuryVotingMailQueue>());
         services.AddSingleton<IHostedService>(provider => provider.GetRequiredService<JuryVotingMailQueue>());
-        services.AddSingleton<IJuryForgotPasswordRequestLimiter, JuryForgotPasswordRequestLimiter>();
 
         return services;
     }

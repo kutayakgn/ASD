@@ -6,6 +6,8 @@ public sealed class JuryVotingPasswordResetOptions
 {
     public const string SectionName = "JuryVotingPasswordReset";
 
+    public bool Enabled { get; set; }
+
     [Required, Url]
     public string PublicBaseUrl { get; set; } = string.Empty;
 
@@ -20,6 +22,11 @@ public sealed class JuryVotingPasswordResetOptions
 
     public void EnsureValid()
     {
+        if (!Enabled)
+        {
+            return;
+        }
+
         if (!Uri.TryCreate(PublicBaseUrl, UriKind.Absolute, out var uri)
             || uri.Scheme != Uri.UriSchemeHttps)
         {

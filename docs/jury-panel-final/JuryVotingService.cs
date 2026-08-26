@@ -75,7 +75,7 @@ namespace YkbAfife.Business.Service.JuryVoting
         }
         public async Task SendForgotPasswordLinkAsync(string email)
         {
-            if (string.IsNullOrWhiteSpace(email))
+            if (!_resetOptions.Enabled || string.IsNullOrWhiteSpace(email))
             {
                 return;
             }
@@ -145,7 +145,7 @@ namespace YkbAfife.Business.Service.JuryVoting
 
         public async Task<bool> IsResetTokenValidAsync(string token)
         {
-            if (!IsTokenShapeValid(token))
+            if (!_resetOptions.Enabled || !IsTokenShapeValid(token))
             {
                 return false;
             }
@@ -168,7 +168,9 @@ namespace YkbAfife.Business.Service.JuryVoting
 
         public async Task<JuryVotingResetPasswordResult> ResetPasswordAsync(string token, string newPassword)
         {
-            if (!IsTokenShapeValid(token) || string.IsNullOrWhiteSpace(newPassword))
+            if (!_resetOptions.Enabled
+                || !IsTokenShapeValid(token)
+                || string.IsNullOrWhiteSpace(newPassword))
             {
                 return JuryVotingResetPasswordResult.InvalidOrExpiredToken;
             }
