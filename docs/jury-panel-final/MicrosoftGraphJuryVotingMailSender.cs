@@ -7,15 +7,17 @@ namespace YkbAfife.Business.Service.JuryVoting;
 
 public sealed class MicrosoftGraphJuryVotingMailSender : IJuryVotingMailSender
 {
-    private readonly HttpClient _httpClient;
+    private static readonly HttpClient SharedHttpClient = new()
+    {
+        Timeout = TimeSpan.FromSeconds(15)
+    };
     private readonly JuryVotingPasswordResetOptions _options;
 
     public MicrosoftGraphJuryVotingMailSender(
-        HttpClient httpClient,
         IOptions<JuryVotingPasswordResetOptions> options)
     {
-        _httpClient = httpClient;
         _options = options.Value;
+        _options.EnsureValid();
     }
 
     public async Task SendPasswordResetAsync(
@@ -48,7 +50,7 @@ public sealed class MicrosoftGraphJuryVotingMailSender : IJuryVotingMailSender
             saveToSentItems = false
         });
 
-        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        using var response = await SharedHttpClient.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
     }
 
@@ -68,7 +70,7 @@ public sealed class MicrosoftGraphJuryVotingMailSender : IJuryVotingMailSender
             })
         };
 
-        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        using var response = await SharedHttpClient.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);

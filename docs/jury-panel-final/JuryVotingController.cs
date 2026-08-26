@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 using YkbAfife.Business.Service.JuryVoting;
 using YkbAfife.Domain.Model.Data.JuryVoting;
 namespace YkbAfife.Controllers
@@ -14,10 +13,15 @@ namespace YkbAfife.Controllers
         const string JuryVotingUserFullNameSessionKey = "JuryVotingUserFullName";
         private readonly IJuryVotingCaptchaService _captchaService;
         private readonly IJuryVotingService _juryVotingService;
-        public JuryVotingController(IJuryVotingCaptchaService captchaService, IJuryVotingService juryVotingService)
+        private readonly IJuryForgotPasswordRequestLimiter _forgotPasswordRequestLimiter;
+        public JuryVotingController(
+            IJuryVotingCaptchaService captchaService,
+            IJuryVotingService juryVotingService,
+            IJuryForgotPasswordRequestLimiter forgotPasswordRequestLimiter)
         {
             _captchaService = captchaService;
             _juryVotingService = juryVotingService;
+            _forgotPasswordRequestLimiter = forgotPasswordRequestLimiter;
         }
         [HttpGet("oylama")]
         public IActionResult Index()
@@ -274,11 +278,19 @@ namespace YkbAfife.Controllers
 
         [HttpPost("oylama/sifremi-unuttum")]
         [ValidateAntiForgeryToken]
-        [EnableRateLimiting("jury-forgot-password")]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public async Task<IActionResult> ForgotPassword(JuryForgotPasswordViewModel model)
         {
             ViewData["Login"] = "true";
+            var remoteIpAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+            if (!_forgotPasswordRequestLimiter.TryAcquire(remoteIpAddress))
+            {
+                Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                ModelState.AddModelError(string.Empty,
+                    "Çok fazla şifre sıfırlama isteği gönderdiniz. Lütfen daha sonra tekrar deneyin.");
+                return View(model);
+            }
+
             if (!ModelState.IsValid)
             {
                 return View(model);
@@ -324,7 +336,7 @@ namespace YkbAfife.Controllers
             }
 
             var result = await _juryVotingService.ResetPasswordAsync(model.Token, model.NewPassword);
-            if (result == JuryVotingResetPasswordResult.Success)
+            if (result == YkbAfife.Business.Service.JuryVoting.JuryVotingResetPasswordResult.Success)
             {
                 TempData["ResetPasswordSuccess"] = "Şifreniz başarıyla güncellendi.";
                 return RedirectToAction(nameof(Login));
