@@ -311,6 +311,7 @@ public sealed partial class ManagementController(
         if (await context.Users.AsNoTracking().AnyAsync(
                 user => user.Id != id &&
                         user.IsPublished &&
+                        user.RoleCode == 2 &&
                         user.Username == model.Username,
                 cancellationToken))
         {
@@ -493,7 +494,9 @@ public sealed partial class ManagementController(
         }
 
         if (await context.Users.AsNoTracking().AnyAsync(
-                user => user.IsPublished && user.Username == model.Username,
+                user => user.IsPublished &&
+                        user.RoleCode == 2 &&
+                        user.Username == model.Username,
                 cancellationToken))
         {
             ModelState.AddModelError(nameof(model.Username), "Bu kullanıcı adı zaten kullanılıyor.");
