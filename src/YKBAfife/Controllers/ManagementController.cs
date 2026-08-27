@@ -309,14 +309,20 @@ public sealed partial class ManagementController(
         }
 
         if (await context.Users.AsNoTracking().AnyAsync(
-                user => user.Id != id && user.Username == model.Username,
+                user => user.Id != id &&
+                        user.IsPublished &&
+                        user.RoleCode == 2 &&
+                        user.Username == model.Username,
                 cancellationToken))
         {
             ModelState.AddModelError(nameof(model.Username), "Bu kullanıcı adı zaten kullanılıyor.");
         }
 
         if (await context.Users.AsNoTracking().AnyAsync(
-                user => user.Id != id && user.RoleCode == 2 && user.Email == model.Email,
+                user => user.Id != id &&
+                        user.IsPublished &&
+                        user.RoleCode == 2 &&
+                        user.Email == model.Email,
                 cancellationToken))
         {
             ModelState.AddModelError(nameof(model.Email), "Bu e-posta adresi zaten kullanılıyor.");
@@ -488,14 +494,18 @@ public sealed partial class ManagementController(
         }
 
         if (await context.Users.AsNoTracking().AnyAsync(
-                user => user.Username == model.Username,
+                user => user.IsPublished &&
+                        user.RoleCode == 2 &&
+                        user.Username == model.Username,
                 cancellationToken))
         {
             ModelState.AddModelError(nameof(model.Username), "Bu kullanıcı adı zaten kullanılıyor.");
         }
 
         if (await context.Users.AsNoTracking().AnyAsync(
-                user => user.RoleCode == 2 && user.Email == model.Email,
+                user => user.IsPublished &&
+                        user.RoleCode == 2 &&
+                        user.Email == model.Email,
                 cancellationToken))
         {
             ModelState.AddModelError(nameof(model.Email), "Bu e-posta adresi zaten kullanılıyor.");

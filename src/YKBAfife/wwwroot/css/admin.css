@@ -967,12 +967,14 @@ img[src*="/icons/"] {
         -webkit-mask-size: contain;
     }
 
-    .add-jury-photo-action[data-jury-photo-view]::before {
+    .add-jury-photo-action[data-jury-photo-view]::before,
+    .add-jury-photo-action[data-candidate-photo-view]::before {
         mask-image: url("/icons/eye.svg");
         -webkit-mask-image: url("/icons/eye.svg");
     }
 
-    .add-jury-photo-action[data-jury-photo-replace]::before {
+    .add-jury-photo-action[data-jury-photo-replace]::before,
+    .add-jury-photo-action[data-candidate-photo-replace]::before {
         mask-image: url("/icons/upload.svg");
         -webkit-mask-image: url("/icons/upload.svg");
     }

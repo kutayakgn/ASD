@@ -95,14 +95,18 @@ public sealed class AdminManagementController(
         }
 
         if (await context.Users.AsNoTracking().AnyAsync(
-                user => user.RoleCode == 1 && user.Username == model.Username,
+                user => user.IsPublished &&
+                        user.RoleCode == 1 &&
+                        user.Username == model.Username,
                 cancellationToken))
         {
             return RedirectWithFailure(model, "Bu kullanıcı adı başka bir admin tarafından kullanılıyor.");
         }
 
         if (await context.Users.AsNoTracking().AnyAsync(
-                user => user.RoleCode == 1 && user.Email == model.Email,
+                user => user.IsPublished &&
+                        user.RoleCode == 1 &&
+                        user.Email == model.Email,
                 cancellationToken))
         {
             return RedirectWithFailure(model, "Bu e-posta adresi başka bir admin tarafından kullanılıyor.");
@@ -230,13 +234,19 @@ public sealed class AdminManagementController(
         }
 
         if (await context.Users.AsNoTracking().AnyAsync(
-                user => user.Id != id && user.RoleCode == 1 && user.Username == model.Username,
+                user => user.Id != id &&
+                        user.IsPublished &&
+                        user.RoleCode == 1 &&
+                        user.Username == model.Username,
                 cancellationToken))
         {
             return RedirectEditWithFailure(id, "Bu kullanıcı adı başka bir admin tarafından kullanılıyor.");
         }
         if (await context.Users.AsNoTracking().AnyAsync(
-                user => user.Id != id && user.RoleCode == 1 && user.Email == model.Email,
+                user => user.Id != id &&
+                        user.IsPublished &&
+                        user.RoleCode == 1 &&
+                        user.Email == model.Email,
                 cancellationToken))
         {
             return RedirectEditWithFailure(id, "Bu e-posta adresi başka bir admin tarafından kullanılıyor.");

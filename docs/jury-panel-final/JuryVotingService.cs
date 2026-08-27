@@ -20,6 +20,21 @@ namespace YkbAfife.Business.Service.JuryVoting
     {
         private const int ResetTokenByteLength = 32;
         private const int MaximumResetTokenLength = 200;
+        // Koordinasyon sekmesi yalnızca bu sabit listeden beslenir; veritabanı sorgulanmaz.
+        private static readonly IReadOnlyList<UserContactQueryRow> CoordinationContacts =
+            new List<UserContactQueryRow>
+            {
+                // Gerçek kişi bilgilerini aşağıdaki örnek biçiminde ekleyin:
+                // new UserContactQueryRow
+                // {
+                //     FirstName = "Ad",
+                //     LastName = "Soyad",
+                //     Phone = "+90 5xx xxx xx xx",
+                //     Email = "ornek@afife.org",
+                //     IsJuryPresident = false,
+                //     GroupName = "-"
+                // }
+            };
         private readonly AfifeContext _context;
         private readonly JuryVotingPasswordResetOptions _resetOptions;
         private readonly IJuryVotingMailQueue _mailQueue;
@@ -1928,7 +1943,7 @@ VALUES
             return tab switch
             {
                 "jury" => await BuildUserContactTableModelAsync(tabs, activeTab, search, sortBy, sortDirection, page, roleCode: 2, pageSize, actionName),
-                "coordination" => await BuildUserContactTableModelAsync(tabs, activeTab, search, sortBy, sortDirection, page, roleCode: 1, pageSize, actionName),
+                "coordination" => BuildCoordinationContactTableModel(tabs, activeTab, search, sortBy, sortDirection, page, pageSize, actionName),
                 _ => await BuildTheaterContactTableModelAsync(tabs, activeTab, search, sortBy, sortDirection, page, pageSize, actionName)
             };
         }
@@ -2089,6 +2104,82 @@ VALUES
                     TotalCount = tabItem.Key == activeTab.Key ? totalCount : 0,
                     Columns = GetContactColumns(tabItem.Key),
                     Data = tabItem.Key == activeTab.Key ? rows.Select(row => BuildUserContactRow(row, includeGroupName)).ToList() : []
+                }).ToList()
+            };
+        }
+        private static JuryVotingComplexTableViewModel BuildCoordinationContactTableModel(
+            IReadOnlyList<JuryVotingComplexTableTabViewModel> tabs,
+            JuryVotingComplexTableTabViewModel activeTab,
+            string search,
+            string sortBy,
+            string sortDirection,
+            int page,
+            int pageSize,
+            string actionName)
+        {
+            var trimmedSearch = search?.Trim() ?? string.Empty;
+            sortBy = sortBy switch
+            {
+                "Phone" => "Phone",
+                "Email" => "Email",
+                _ => "FullName"
+            };
+
+            IEnumerable<UserContactQueryRow> query = CoordinationContacts;
+            if (!string.IsNullOrWhiteSpace(trimmedSearch))
+            {
+                query = query.Where(row =>
+                    string.Join(" ", row.FirstName, row.LastName)
+                        .IndexOf(trimmedSearch, StringComparison.CurrentCultureIgnoreCase) >= 0);
+            }
+
+            query = (sortBy, sortDirection) switch
+            {
+                ("Phone", "desc") => query.OrderByDescending(row => row.Phone)
+                    .ThenBy(row => row.FirstName).ThenBy(row => row.LastName),
+                ("Phone", _) => query.OrderBy(row => row.Phone)
+                    .ThenBy(row => row.FirstName).ThenBy(row => row.LastName),
+                ("Email", "desc") => query.OrderByDescending(row => row.Email)
+                    .ThenBy(row => row.FirstName).ThenBy(row => row.LastName),
+                ("Email", _) => query.OrderBy(row => row.Email)
+                    .ThenBy(row => row.FirstName).ThenBy(row => row.LastName),
+                ("FullName", "desc") => query.OrderByDescending(row => row.FirstName)
+                    .ThenByDescending(row => row.LastName),
+                _ => query.OrderBy(row => row.FirstName).ThenBy(row => row.LastName)
+            };
+
+            var allRows = query.ToList();
+            var totalCount = allRows.Count;
+            var totalPages = totalCount == 0
+                ? 1
+                : (int)Math.Ceiling(totalCount / (double)pageSize);
+            page = Math.Min(Math.Max(page, 1), totalPages);
+            var rows = allRows
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            return new JuryVotingComplexTableViewModel
+            {
+                ActionName = actionName,
+                CurrentTabKey = activeTab.Key,
+                Tabs = tabs.Select(tabItem => new JuryVotingComplexTableTabViewModel
+                {
+                    Title = tabItem.Title,
+                    Key = tabItem.Key,
+                    Search = tabItem.Key == activeTab.Key ? search : string.Empty,
+                    SearchColumn = tabItem.SearchColumn,
+                    SortBy = tabItem.Key == activeTab.Key
+                        ? sortBy
+                        : GetDefaultContactSortBy(tabItem.Key),
+                    SortDirection = tabItem.Key == activeTab.Key ? sortDirection : "asc",
+                    CurrentPage = tabItem.Key == activeTab.Key ? page : 1,
+                    PageSize = pageSize,
+                    TotalCount = tabItem.Key == activeTab.Key ? totalCount : 0,
+                    Columns = GetContactColumns(tabItem.Key),
+                    Data = tabItem.Key == activeTab.Key
+                        ? rows.Select(row => BuildUserContactRow(row, includeGroupName: false)).ToList()
+                        : []
                 }).ToList()
             };
         }
