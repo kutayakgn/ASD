@@ -1,100 +1,86 @@
-DATABASE MIGRATION VERSIONING
+YKBAFIFE MIGRATION YÖNETİMİ
+===========================
 
-Supported starting points
--------------------------
-The managed baseline supports all three deployment paths below:
-
-1. A brand-new/empty SQL Server database.
-2. A partial legacy UAT/Live database whose tables and columns may be old or
-   missing and whose EF migration history may be empty.
-3. A current Test/company database that already contains some or all managed
-   migrations.
-
-The legacy recovery order is centralized in
-Data/Migrations/MigrationSqlResources.ExecuteLegacyBaselineUpgrade. Do not copy
-or reorder this sequence inside individual migrations. It prepares legacy Form,
-creates missing tables, upgrades existing legacy objects, loads reference data,
-creates missing constraints/indexes, and finally enforces candidate uniqueness.
-
-Published history
+Kanonik kaynaklar
 -----------------
-EF migration identifiers recorded in a shared/company database are immutable.
-Never rename, remove, reorder, or squash a migration after it has reached that
-database. The migrations before V1_0_0_FormCandidateLifecycleCheckpoint remain
-as the permanent legacy deployment chain.
+- Entity sınıfları: Models/Entities/<Entity>.cs
+- İlişkiler: Data/Schema/Relationships.cs
+- Kolon tipleri ve defaultlar: Data/Schema/ColumnsAndDefaults.cs
+- Indexler: Data/Schema/Indexes.cs
+- Check constraintler: Data/Schema/CheckConstraints.cs
+- Alternate keyler: Data/Schema/ReferenceKeys.cs
+- Fonksiyonlar: Migrations/DatabaseObjects/10-Functions
+- Stored procedureler: Migrations/DatabaseObjects/20-StoredProcedures
+- Triggerlar: Migrations/DatabaseObjects/30-Triggers
+- Audit trigger üretimi: Migrations/DatabaseObjects/40-Audit
+- Referans data: Migrations/DatabaseObjects/50-ReferenceData
 
-V1_2_0 has two historical migration files. This is an already published legacy
-exception. Keep both immutable; scripts/new-versioned-migration.ps1 prevents a
-version from being reused from now on.
+InitialSchema.sql yalnızca boş ve eski/eksik veritabanlarını ilk yönetilen
+baseline'a yaklaştırmak içindir. Normal geliştirmede tablo/kolon/index değişikliği
+EF modeli üzerinden yapılır; InitialSchema.sql elle her release'te değiştirilmez.
 
-Versioned checkpoints
----------------------
-New release migrations use this name after EF's sortable timestamp:
+Migration ekleme
+----------------
+Entity ve/veya DatabaseObjects altındaki SQL dosyalarını güncelledikten sonra:
 
-    V<major>_<minor>_<patch>_<Purpose>
+    powershell -ExecutionPolicy Bypass -File scripts/migration.ps1 add JuryRuleUpdated
 
-Examples:
+Komut otomatik olarak aşağıdaki isim biçimini kullanır:
 
-    V1_0_0_FormCandidateLifecycleCheckpoint
-    V1_1_0_AddSeasonArchive
-    V1_1_1_RepairSeasonArchiveBackfill
+    JuryRuleUpdated_v_yyyyMMddHHmmss
 
-Use one checkpoint migration per deployable release instead of creating a
-migration for every small edit. Create it with:
+EF model farkını migration'a yazar. Ayrıca o andaki bütün fonksiyon, procedure,
+trigger ve referans-data tanımlarını Migrations/Versions/<migration>/Up.sql içine
+immutable olarak kopyalar. Bir önceki sürüm Down.sql olarak saklanır. Bu nedenle
+sonradan kanonik SQL dosyaları değişse bile eski migration aynı içeriği çalıştırır.
 
-    powershell -ExecutionPolicy Bypass -File scripts/new-versioned-migration.ps1 `
-      -Version 1.1.0 -Purpose AddSeasonArchive
+Diğer komutlar
+--------------
+    scripts/migration.ps1 list
+    scripts/migration.ps1 update
+    scripts/migration.ps1 update <MigrationIdVeyaAdi>
+    scripts/migration.ps1 script
+    scripts/migration.ps1 validate
 
-The helper refuses a reused version and validates the complete migration model
-after creation. If validation fails, fix the new unpublished migration before
-committing it; never modify a migration already applied to a shared database.
+Uygulanmamış son migration'ı kaldırmak:
 
-Safe schema-change recipes
---------------------------
-Adding a table:
-- Add the entity and configuration first, then create one versioned checkpoint.
-- Add nullable/defaulted columns before required constraints.
-- Create indexes after the table and its backfill are valid.
+    scripts/migration.ps1 remove
 
-Adding a required column or relationship:
-- Release the new column as nullable or with a deterministic default.
-- Backfill existing rows and verify there are no invalid/null values.
-- Add the foreign key/index after the referenced rows exist. Prefer NO ACTION
-  unless cascade deletion is an explicit, reviewed business rule.
-- Tighten nullability only in a separately reviewed compatibility checkpoint.
+Local DB'ye uygulanmış son migration'ı kaldırmak için güvenli sıra:
 
-Removing a table, column, or relationship:
-- Stop writing it and make application reads compatible first.
-- Deprecate it for at least one release. Do not physically drop it in a normal
-  migration; the project's SQL generator and validation script reject physical
-  data-loss operations.
-- If physical archival/purge is ever required, perform it as a separately
-  approved operational change with a verified backup, not an automatic startup
-  migration.
+1. scripts/migration.ps1 list ile önceki MigrationId'yi bul.
+2. Migration kodu hâlâ projedeyken:
+       scripts/migration.ps1 update <OncekiMigrationId>
+3. Ardından:
+       scripts/migration.ps1 remove
 
-Procedures, functions, views, and triggers must remain idempotent with CREATE OR
-ALTER and must be applied after their table/column prerequisites.
+Paylaşılan Test/UAT/Live DB'de uygulanmış migration kaynak koddan önce silinemez.
+Silinirse uygulama başlangıcı DB'nin koddan ileride olduğunu görür ve deploy'u
+bilinçli olarak durdurur. Paylaşılan ortamda davranışı geri almak için yeni bir
+ileri-düzeltme migration'ı oluştur (ör. RestorePreviousJuryRule). Bu, Down kodu
+olmayan bir deploy'un veri kaybettiren otomatik downgrade yapmasını engeller.
 
-Safe return to an earlier application version
----------------------------------------------
-Database rollback never drops columns, tables, indexes, or rows.
+Veri koruma
+-----------
+- DROP COLUMN ve DROP TABLE fiziksel silme olarak üretilmez. Nesne zaman damgalı
+  __Archived_ adıyla korunur.
+- DELETE DATA, TRUNCATE TABLE ve ham DROP COLUMN/TABLE SQL'i engellenir.
+- Nullable -> required, tip daraltma ve veri tipini riskli değiştirme otomatik
+  olarak reddedilir. Expand/backfill/contract şeklinde ayrı migration gerekir.
+- Soft-delete IsPublished davranışı korunur.
+- Legacy kurala uymayan kullanıcı adları normalize edilmeden önce Users tablosunda
+  LegacyUsername alanına arşivlenir; geçerli güncel DB'de bu kolon oluşturulmaz.
 
-1. If the prior application is compatible with the additive schema, deploy its
-   binaries and leave the database at the newer checkpoint.
-2. If database behavior must also change, create a new patch checkpoint such as
-   V1_1_1_RestoreV1_0_0Behavior. Restore behavior with CREATE OR ALTER resources
-   and additive, data-preserving SQL.
-3. Never run database update <old migration> against company data. Compatibility
-   Down methods intentionally retain additive schema and are not physical rollback.
+Deploy
+------
+Uygulama başlangıç servisi SQL application lock alır, yalnızca bekleyen ileri
+migration'ları sırayla uygular ve sonra model/tablo/kolon/index/constraint/
+procedure/function/trigger doğrulaması yapar.
 
-Deployment gate
----------------
-Before every deployment run:
+Her deploy öncesi tam kapı:
 
     powershell -ExecutionPolicy Bypass -File scripts/test-migration-deployment.ps1
 
-This command validates destructive-operation guards and the EF snapshot, creates
-the idempotent SQL artifact, migrates a completely empty database, upgrades an
-oldest/partial-preprod fixture, upgrades a current/company fixture, validates
-application startup, and verifies the Release publish output. Retain
-artifacts/migrations/YKBAfife-idempotent.sql with the application release.
+Bu test; boş DB, en eski eksik UAT şeması, 27.08 güncel şema, şirket verisi ve
+eski migration geçmişi senaryolarını geçici LocalDB üzerinde çalıştırır; son olarak
+Release publish çıktısını doğrular.

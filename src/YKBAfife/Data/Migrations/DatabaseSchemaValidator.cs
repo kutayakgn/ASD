@@ -111,7 +111,7 @@ internal static partial class DatabaseSchemaValidator
             }
         }
 
-        var programmableSql = MigrationSqlResources.Read("Programmability.sql");
+        var programmableSql = MigrationSqlResources.ReadCanonicalDatabaseObjects();
         foreach (Match match in ProcedureRegex().Matches(programmableSql))
         {
             if (!catalog.Procedures.Contains(match.Groups["name"].Value))
@@ -122,9 +122,14 @@ internal static partial class DatabaseSchemaValidator
         var expectedTriggers = TriggerRegex().Matches(programmableSql)
             .Select(match => match.Groups["name"].Value)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var auditSql = MigrationSqlResources.Read("AuditTriggers.sql");
-        expectedTriggers.UnionWith(TriggerRegex().Matches(auditSql)
-            .Select(match => match.Groups["name"].Value));
+
+        foreach (Match match in FunctionRegex().Matches(programmableSql))
+        {
+            if (!catalog.Functions.Contains(match.Groups["name"].Value))
+            {
+                missing.Add($"function dbo.{match.Groups["name"].Value}");
+            }
+        }
 
         foreach (var table in catalog.Tables.Where(x =>
                      !x.EndsWith(".AdminLogs", StringComparison.OrdinalIgnoreCase) &&
@@ -284,6 +289,9 @@ internal static partial class DatabaseSchemaValidator
             UNION ALL
             SELECT N'P', p.name FROM sys.procedures p
             UNION ALL
+            SELECT N'U', o.name FROM sys.objects o
+            WHERE o.type IN (N'FN', N'IF', N'TF')
+            UNION ALL
             SELECT N'R', tr.name FROM sys.triggers tr WHERE tr.parent_class = 1
             UNION ALL
             SELECT N'F', fk.name FROM sys.foreign_keys fk
@@ -360,6 +368,7 @@ internal static partial class DatabaseSchemaValidator
                 "N" => result.NonUniqueIndexes,
                 "K" => result.Constraints,
                 "P" => result.Procedures,
+                "U" => result.Functions,
                 "R" => result.Triggers,
                 "F" => result.CascadingForeignKeys,
                 "Q" => result.PrimaryKeyTables,
@@ -380,6 +389,7 @@ internal static partial class DatabaseSchemaValidator
         public HashSet<string> NonUniqueIndexes { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> Constraints { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> Procedures { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public HashSet<string> Functions { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> Triggers { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> CascadingForeignKeys { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> PrimaryKeyTables { get; } = new(StringComparer.OrdinalIgnoreCase);
@@ -398,6 +408,10 @@ internal static partial class DatabaseSchemaValidator
     [GeneratedRegex(@"CREATE\s+OR\s+ALTER\s+PROCEDURE\s+(?:\[?dbo\]?\.)?\[?(?<name>[A-Za-z0-9_]+)\]?",
         RegexOptions.IgnoreCase)]
     private static partial Regex ProcedureRegex();
+
+    [GeneratedRegex(@"CREATE\s+OR\s+ALTER\s+FUNCTION\s+(?:\[?dbo\]?\.)?\[?(?<name>[A-Za-z0-9_]+)\]?",
+        RegexOptions.IgnoreCase)]
+    private static partial Regex FunctionRegex();
 
     [GeneratedRegex(@"CREATE\s+OR\s+ALTER\s+TRIGGER\s+(?:\[?dbo\]?\.)?\[?(?<name>[A-Za-z0-9_]+)\]?",
         RegexOptions.IgnoreCase)]

@@ -26,13 +26,26 @@ try {
 
     $env:ConnectionStrings__AfifeConnectionString = $connectionString
 
-    dotnet tool run dotnet-ef database update 20260812082231_ScopeUserEmailUniquenessByRole `
+    dotnet tool run dotnet-ef database update `
         --project $project --startup-project $project `
         --configuration $Configuration --no-build
-    if ($LASTEXITCODE -ne 0) { throw 'Pre-company migration setup failed.' }
+    if ($LASTEXITCODE -ne 0) { throw 'Canonical company fixture setup failed.' }
+
+    sqlcmd -I -S $server -d $databaseName -b -Q @"
+IF OBJECT_ID(N'dbo.CK_Users_Username_InstagramFormat', N'C') IS NOT NULL
+    ALTER TABLE dbo.Users DROP CONSTRAINT CK_Users_Username_InstagramFormat;
+"@
+    if ($LASTEXITCODE -ne 0) { throw 'Legacy company constraint setup failed.' }
 
     sqlcmd -I -S $server -d $databaseName -b -i $fixture
     if ($LASTEXITCODE -ne 0) { throw 'Company fixture creation failed.' }
+
+    sqlcmd -I -S $server -d $databaseName -b -Q @"
+DELETE FROM dbo.__EFMigrationsHistory;
+INSERT INTO dbo.__EFMigrationsHistory (MigrationId, ProductVersion)
+VALUES (N'20260812082231_ScopeUserEmailUniquenessByRole', N'8.0.29');
+"@
+    if ($LASTEXITCODE -ne 0) { throw 'Legacy company migration history setup failed.' }
 
     dotnet tool run dotnet-ef database update `
         --project $project --startup-project $project `

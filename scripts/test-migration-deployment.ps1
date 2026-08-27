@@ -8,6 +8,7 @@ $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $validationScript = Join-Path $PSScriptRoot 'validate-migrations.ps1'
 $emptyDatabaseScript = Join-Path $PSScriptRoot 'test-empty-database-migration.ps1'
 $oldestPreprodScript = Join-Path $PSScriptRoot 'test-oldest-preprod-migration.ps1'
+$currentSchemaScript = Join-Path $PSScriptRoot 'test-current-schema-adoption.ps1'
 $companyUpgradeScript = Join-Path $PSScriptRoot 'test-company-migration-upgrade.ps1'
 $project = Join-Path $repositoryRoot 'src/YKBAfife/YKBAfife.csproj'
 $publishPath = Join-Path $env:TEMP ('YKBAfifeMigrationDeploy_' + [Guid]::NewGuid().ToString('N'))
@@ -22,6 +23,9 @@ try {
 
     & $oldestPreprodScript -Configuration $Configuration
     if ($LASTEXITCODE -ne 0) { throw 'Oldest-preprod migration scenario failed.' }
+
+    & $currentSchemaScript -Configuration $Configuration
+    if ($LASTEXITCODE -ne 0) { throw 'Current 27.08 schema adoption scenario failed.' }
 
     & $companyUpgradeScript -Configuration $Configuration
     if ($LASTEXITCODE -ne 0) { throw 'Current company migration scenario failed.' }

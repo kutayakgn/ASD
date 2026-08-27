@@ -8,6 +8,66 @@ internal static partial class MigrationSqlResources
 {
     public const string ReviewedDataSafeSqlAnnotation = "Afife:ReviewedDataSafeSql";
 
+    public static void ExecuteProgrammability(MigrationBuilder migrationBuilder)
+    {
+        foreach (var sql in ReadCanonicalDatabaseObjectFiles())
+        {
+            ExecuteSql(migrationBuilder, sql);
+        }
+    }
+
+    public static string ReadCanonicalDatabaseObjects() =>
+        string.Join(
+            Environment.NewLine + "GO" + Environment.NewLine,
+            ReadCanonicalDatabaseObjectFiles());
+
+    private static IReadOnlyList<string> ReadCanonicalDatabaseObjectFiles()
+    {
+        var assembly = typeof(MigrationSqlResources).Assembly;
+        var resources = assembly.GetManifestResourceNames()
+            .Where(name => name.Contains(
+                ".Migrations.DatabaseObjects.",
+                StringComparison.OrdinalIgnoreCase))
+            .Where(name => !name.Contains(
+                ".50-ReferenceData.",
+                StringComparison.OrdinalIgnoreCase))
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (resources.Length == 0)
+        {
+            throw new InvalidOperationException(
+                "No embedded canonical database modules were found.");
+        }
+
+        return resources.Select(resource => ReadResource(assembly, resource)).ToArray();
+    }
+
+    public static void ExecuteVersionedDatabaseObjects(
+        MigrationBuilder migrationBuilder,
+        string migrationName,
+        string directionFile)
+    {
+        if (!Regex.IsMatch(migrationName, "^[A-Za-z0-9_]+$") ||
+            directionFile is not ("Up.sql" or "Down.sql"))
+        {
+            throw new ArgumentException("Invalid versioned database object resource name.");
+        }
+
+        ExecuteSql(migrationBuilder, Read($"{migrationName}.{directionFile}"));
+    }
+
+    public static void AdoptSquashedBaseline(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.Sql("""
+            IF OBJECT_ID(N'dbo.__EFMigrationsHistory', N'U') IS NOT NULL
+            BEGIN
+                DELETE FROM dbo.__EFMigrationsHistory;
+            END;
+            """)
+            .Annotation(ReviewedDataSafeSqlAnnotation, true);
+    }
+
     /// <summary>
     /// Brings an empty, partial legacy, or previously managed database to the
     /// canonical baseline in the only supported dependency order. The caller
@@ -18,7 +78,8 @@ internal static partial class MigrationSqlResources
         Execute(migrationBuilder, "PrepareLegacyForm.sql", onlyWhenBaselineExists: true);
         ExecuteMissingTables(migrationBuilder, "InitialSchema.sql");
         Execute(migrationBuilder, "LegacyUpgrade.sql", onlyWhenBaselineExists: true);
-        Execute(migrationBuilder, "ReferenceData.sql");
+        Execute(migrationBuilder, "PrepareLegacyUsers.sql", onlyWhenBaselineExists: true);
+        Execute(migrationBuilder, "CanonicalReferenceData.sql");
         ExecuteMissingSchemaObjects(migrationBuilder, "InitialSchema.sql");
         EnsureCandidateUniquenessContract(migrationBuilder);
     }
@@ -29,17 +90,20 @@ internal static partial class MigrationSqlResources
         bool skipWhenBaselineExists = false,
         bool onlyWhenBaselineExists = false)
     {
-        if (string.Equals(resourceFileName, "Programmability.sql", StringComparison.OrdinalIgnoreCase))
-        {
-            Execute(
-                migrationBuilder,
-                "ProgrammabilityPrerequisites.sql",
-                skipWhenBaselineExists,
-                onlyWhenBaselineExists);
-        }
-
         var sql = Read(resourceFileName);
+        ExecuteSql(
+            migrationBuilder,
+            sql,
+            skipWhenBaselineExists,
+            onlyWhenBaselineExists);
+    }
 
+    private static void ExecuteSql(
+        MigrationBuilder migrationBuilder,
+        string sql,
+        bool skipWhenBaselineExists = false,
+        bool onlyWhenBaselineExists = false)
+    {
         foreach (var batch in GoBatchRegex().Split(sql))
         {
             var command = batch.Trim();
@@ -260,11 +324,16 @@ internal static partial class MigrationSqlResources
     {
         var assembly = typeof(MigrationSqlResources).Assembly;
         var resourceName = assembly.GetManifestResourceNames()
-            .SingleOrDefault(name => name.EndsWith($".Migrations.Scripts.{resourceFileName}",
+            .SingleOrDefault(name => name.EndsWith($".{resourceFileName}",
                 StringComparison.OrdinalIgnoreCase))
             ?? throw new InvalidOperationException(
                 $"Embedded migration resource '{resourceFileName}' was not found.");
 
+        return ReadResource(assembly, resourceName);
+    }
+
+    private static string ReadResource(Assembly assembly, string resourceName)
+    {
         using var stream = assembly.GetManifestResourceStream(resourceName)
             ?? throw new InvalidOperationException(
                 $"Embedded migration resource '{resourceName}' could not be opened.");

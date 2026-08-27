@@ -56,7 +56,7 @@ IF EXISTS
 IF NOT EXISTS
 (
     SELECT 1 FROM dbo.__EFMigrationsHistory
-    WHERE MigrationId = N'20260819150000_V1_2_7_EnforceUsernameAndSynchronizePlaySlug'
+    WHERE MigrationId LIKE N'%[_]InitialBaseline[_]v[_]20260827'
 )
     THROW 53102, N'Latest migration was not recorded.', 1;
 

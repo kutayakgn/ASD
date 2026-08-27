@@ -31,7 +31,7 @@ try {
 IF NOT EXISTS
 (
     SELECT 1 FROM dbo.__EFMigrationsHistory
-    WHERE MigrationId = N'20260819150000_V1_2_7_EnforceUsernameAndSynchronizePlaySlug'
+    WHERE MigrationId LIKE N'%[_]InitialBaseline[_]v[_]20260827'
 )
     THROW 53110, N'Latest migration was not recorded on the empty database.', 1;
 
@@ -40,6 +40,7 @@ IF OBJECT_ID(N'dbo.Form', N'U') IS NULL
    OR OBJECT_ID(N'dbo.PlayAwardCategories', N'U') IS NULL
    OR OBJECT_ID(N'dbo.Images', N'U') IS NULL
    OR OBJECT_ID(N'dbo.AdminLogs', N'U') IS NULL
+   OR OBJECT_ID(N'dbo.JuryPasswordResetTokens', N'U') IS NULL
     THROW 53111, N'Canonical tables were not created on the empty database.', 1;
 
 IF (SELECT COUNT(*) FROM dbo.AwardCategories WHERE IsPublished = 1) <> 11
@@ -76,8 +77,13 @@ DECLARE @TurkishPlayName nvarchar(255) =
     NCHAR(199) + NCHAR(305) + N'l' + N'g' + NCHAR(305) + N'n ' +
     NCHAR(350) + NCHAR(246) + N'len!';
 
-IF dbo.ufn_CreatePlaySlug(@TurkishPlayName) <> 'cilgin-solen'
-    THROW 53117, N'Play slug normalization returned an unexpected value.', 1;
+DECLARE @ActualSlug varchar(255) = dbo.ufn_CreatePlaySlug(@TurkishPlayName);
+IF @ActualSlug <> 'cilgin-solen'
+BEGIN
+    DECLARE @SlugError nvarchar(2048) =
+        N'Play slug normalization returned [' + COALESCE(@ActualSlug, N'<NULL>') + N'].';
+    THROW 53117, @SlugError, 1;
+END;
 
 BEGIN TRY
     INSERT INTO dbo.Users
