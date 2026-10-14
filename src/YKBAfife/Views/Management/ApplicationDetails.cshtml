@@ -6,8 +6,8 @@
 
 <section class="play-details-page application-details-page" aria-labelledby="application-details-title">
     <a asp-action="Applications" class="play-details-back">
-        <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
-        <span>Başvurulara Dön</span>
+        <img src="~/icons/arrow-left.svg" alt="" aria-hidden="true" />
+        <span>Başvurular' a Dön</span>
     </a>
 
     <header class="play-details-toolbar">
@@ -18,7 +18,7 @@
                   method="post"
                   class="play-detail-action-form"
                   data-generic-confirm
-                  data-confirm-message="Başvuruyu silmek istediğinize emin misiniz?"
+                  data-confirm-message="Listeye kayıtlı bir başvuruyu silmek istediğinize emin misiniz?"
                   data-confirm-text="Evet"
                   data-cancel-text="İptal">
                 @Html.AntiForgeryToken()

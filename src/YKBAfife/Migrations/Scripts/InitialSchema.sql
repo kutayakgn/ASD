@@ -1497,9 +1497,9 @@ ALTER TABLE [dbo].[Plays]  WITH CHECK ADD  CONSTRAINT [CK_Plays_AdminRecord_Stat
 GO
 ALTER TABLE [dbo].[Plays] CHECK CONSTRAINT [CK_Plays_AdminRecord_StatusCode]
 GO
-ALTER TABLE [dbo].[Plays]  WITH CHECK ADD  CONSTRAINT [CK_Plays_AdminRecord_StatusesDisabled] CHECK  (([RecordType]=(0) OR [JuriOylamaStatus]=(0) AND [KunyeGirisStatus]=(0)))
+ALTER TABLE [dbo].[Plays]  WITH CHECK ADD  CONSTRAINT [CK_Plays_AdminRecord_KunyeStatusDisabled] CHECK  (([RecordType]=(0) OR [KunyeGirisStatus]=(0)))
 GO
-ALTER TABLE [dbo].[Plays] CHECK CONSTRAINT [CK_Plays_AdminRecord_StatusesDisabled]
+ALTER TABLE [dbo].[Plays] CHECK CONSTRAINT [CK_Plays_AdminRecord_KunyeStatusDisabled]
 GO
 ALTER TABLE [dbo].[Plays]  WITH CHECK ADD  CONSTRAINT [CK_Plays_KunyeMustRemainPublished] CHECK  (([RecordType]=(1) OR [IsPublished]=(1)))
 GO
@@ -1540,4 +1540,57 @@ GO
 ALTER TABLE [dbo].[Seasons]  WITH CHECK ADD  CONSTRAINT [CK_Seasons_VotingDateRange] CHECK  (([VotingStartDate]>=[SeasonStartDate] AND [VotingStartDate]<[VotingEndDate] AND [VotingEndDate]<=[SeasonEndDate]))
 GO
 ALTER TABLE [dbo].[Seasons] CHECK CONSTRAINT [CK_Seasons_VotingDateRange]
+GO
+
+CREATE TABLE [dbo].[JuryPasswordResetTokens](
+    [Id] [uniqueidentifier] NOT NULL,
+    [UserId] [uniqueidentifier] NOT NULL,
+    [TokenHash] [binary](32) NOT NULL,
+    [CreatedAtUtc] [datetime2](7) NOT NULL,
+    [ExpiresAtUtc] [datetime2](7) NOT NULL,
+    [UsedAtUtc] [datetime2](7) NULL,
+    [RowVersion] [timestamp] NOT NULL,
+    CONSTRAINT [PK_JuryPasswordResetTokens] PRIMARY KEY CLUSTERED ([Id] ASC)
+)
+GO
+ALTER TABLE [dbo].[JuryPasswordResetTokens]
+    ADD DEFAULT (newsequentialid()) FOR [Id]
+GO
+CREATE NONCLUSTERED INDEX [IX_JuryPasswordResetTokens_UserId_CreatedAtUtc]
+    ON [dbo].[JuryPasswordResetTokens] ([UserId] ASC, [CreatedAtUtc] DESC)
+GO
+CREATE UNIQUE NONCLUSTERED INDEX [UX_JuryPasswordResetTokens_TokenHash]
+    ON [dbo].[JuryPasswordResetTokens] ([TokenHash] ASC)
+GO
+ALTER TABLE [dbo].[JuryPasswordResetTokens] WITH CHECK
+    ADD CONSTRAINT [FK_JuryPasswordResetTokens_Users_UserId]
+    FOREIGN KEY([UserId]) REFERENCES [dbo].[Users] ([Id])
+GO
+ALTER TABLE [dbo].[JuryPasswordResetTokens]
+    CHECK CONSTRAINT [FK_JuryPasswordResetTokens_Users_UserId]
+GO
+ALTER TABLE [dbo].[JuryPasswordResetTokens] WITH CHECK
+    ADD CONSTRAINT [CK_JuryPasswordResetTokens_Expiry]
+    CHECK ([ExpiresAtUtc] > [CreatedAtUtc]
+       AND [ExpiresAtUtc] <= DATEADD(MINUTE, 5, [CreatedAtUtc]))
+GO
+ALTER TABLE [dbo].[JuryPasswordResetTokens]
+    CHECK CONSTRAINT [CK_JuryPasswordResetTokens_Expiry]
+GO
+ALTER TABLE [dbo].[JuryPasswordResetTokens] WITH CHECK
+    ADD CONSTRAINT [CK_JuryPasswordResetTokens_UsedAt]
+    CHECK ([UsedAtUtc] IS NULL OR [UsedAtUtc] >= [CreatedAtUtc])
+GO
+ALTER TABLE [dbo].[JuryPasswordResetTokens]
+    CHECK CONSTRAINT [CK_JuryPasswordResetTokens_UsedAt]
+GO
+ALTER TABLE [dbo].[Users] WITH CHECK
+    ADD CONSTRAINT [CK_Users_Username_InstagramFormat]
+    CHECK (
+        LEN([Username]) BETWEEN 3 AND 30
+        AND DATALENGTH([Username]) = LEN([Username]) * 2
+        AND [Username] COLLATE Latin1_General_100_BIN2 NOT LIKE '%[^A-Za-z0-9._]%')
+GO
+ALTER TABLE [dbo].[Users]
+    CHECK CONSTRAINT [CK_Users_Username_InstagramFormat]
 GO

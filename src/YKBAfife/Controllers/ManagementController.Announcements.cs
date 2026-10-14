@@ -259,15 +259,15 @@ public sealed partial class ManagementController
         CancellationToken cancellationToken)
     {
         if (file is null) return new(null, null, null, null);
-        const long maximumSize = 5 * 1024 * 1024;
-        if (file.Length == 0 || file.Length > maximumSize)
-            return new(null, null, null, $"{fieldName} 5 MB'dan küçük olmalıdır.");
+        if (file.Length == 0 || file.Length > ImageUploadPolicy.MaximumFileSizeBytes)
+            return new(null, null, null,
+                $"{fieldName}: {ImageUploadPolicy.MaximumFileSizeMessage}");
 
         await using var stream = new MemoryStream();
         await file.CopyToAsync(stream, cancellationToken);
         var data = stream.ToArray();
         var contentType = file.ContentType.Trim().ToLowerInvariant();
-        if (!IsSupportedPhoto(data, contentType))
+        if (!IsSupportedPhoto(data, contentType, Path.GetFileName(file.FileName)))
             return new(null, null, null, $"{fieldName} yalnızca JPG, PNG veya WEBP olabilir.");
 
         return new(data, contentType, Path.GetFileName(file.FileName), null);

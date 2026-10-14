@@ -25,6 +25,7 @@
 #applications-table th.applications-status-column,
 #applications-table td.applications-status-column {
     width: clamp(112px, 11.111vw, 160px) !important;
+    padding: 10px 16px;
 }
 
 @media (max-width: 760px) {
@@ -43,8 +44,8 @@
     color: #171717;
     font-family: Outfit;
     font-size: 22px;
-    font-weight: 700;
-    line-height: 30px;
+    font-weight: 600;
+    line-height: 28px;
 }
 
 .application-details-grid {

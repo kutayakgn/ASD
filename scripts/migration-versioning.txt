@@ -1,41 +1,86 @@
-DATABASE MIGRATION VERSIONING
+YKBAFIFE MIGRATION YÖNETİMİ
+===========================
 
-Published history
+Kanonik kaynaklar
 -----------------
-EF migration identifiers recorded in a shared/company database are immutable.
-Never rename, remove, reorder, or squash a migration after it has reached that
-database. The migrations before V1_0_0_FormCandidateLifecycleCheckpoint remain
-as the permanent legacy deployment chain.
+- Entity sınıfları: Models/Entities/<Entity>.cs
+- İlişkiler: Data/Schema/Relationships.cs
+- Kolon tipleri ve defaultlar: Data/Schema/ColumnsAndDefaults.cs
+- Indexler: Data/Schema/Indexes.cs
+- Check constraintler: Data/Schema/CheckConstraints.cs
+- Alternate keyler: Data/Schema/ReferenceKeys.cs
+- Fonksiyonlar: Migrations/DatabaseObjects/10-Functions
+- Stored procedureler: Migrations/DatabaseObjects/20-StoredProcedures
+- Triggerlar: Migrations/DatabaseObjects/30-Triggers
+- Audit trigger üretimi: Migrations/DatabaseObjects/40-Audit
+- Referans data: Migrations/DatabaseObjects/50-ReferenceData
 
-Versioned checkpoints
----------------------
-New release migrations use this name after EF's sortable timestamp:
+InitialSchema.sql yalnızca boş ve eski/eksik veritabanlarını ilk yönetilen
+baseline'a yaklaştırmak içindir. Normal geliştirmede tablo/kolon/index değişikliği
+EF modeli üzerinden yapılır; InitialSchema.sql elle her release'te değiştirilmez.
 
-    V<major>_<minor>_<patch>_<Purpose>
+Migration ekleme
+----------------
+Entity ve/veya DatabaseObjects altındaki SQL dosyalarını güncelledikten sonra:
 
-Examples:
+    powershell -ExecutionPolicy Bypass -File scripts/migration.ps1 add JuryRuleUpdated
 
-    V1_0_0_FormCandidateLifecycleCheckpoint
-    V1_1_0_AddSeasonArchive
-    V1_1_1_RepairSeasonArchiveBackfill
+Komut otomatik olarak aşağıdaki isim biçimini kullanır:
 
-Use one checkpoint migration per deployable release instead of creating a
-migration for every small edit. Create it with:
+    JuryRuleUpdated_v_yyyyMMddHHmmss
 
-    powershell -ExecutionPolicy Bypass -File scripts/new-versioned-migration.ps1 `
-      -Version 1.1.0 -Purpose AddSeasonArchive
+EF model farkını migration'a yazar. Ayrıca o andaki bütün fonksiyon, procedure,
+trigger ve referans-data tanımlarını Migrations/Versions/<migration>/Up.sql içine
+immutable olarak kopyalar. Bir önceki sürüm Down.sql olarak saklanır. Bu nedenle
+sonradan kanonik SQL dosyaları değişse bile eski migration aynı içeriği çalıştırır.
 
-Safe return to an earlier application version
----------------------------------------------
-Database rollback never drops columns, tables, indexes, or rows.
+Diğer komutlar
+--------------
+    scripts/migration.ps1 list
+    scripts/migration.ps1 update
+    scripts/migration.ps1 update <MigrationIdVeyaAdi>
+    scripts/migration.ps1 script
+    scripts/migration.ps1 validate
 
-1. If the prior application is compatible with the additive schema, deploy its
-   binaries and leave the database at the newer checkpoint.
-2. If database behavior must also change, create a new patch checkpoint such as
-   V1_1_1_RestoreV1_0_0Behavior. Restore behavior with CREATE OR ALTER resources
-   and additive, data-preserving SQL.
-3. Never run database update <old migration> against company data. Compatibility
-   Down methods intentionally retain additive schema and are not physical rollback.
+Uygulanmamış son migration'ı kaldırmak:
 
-Run scripts/validate-migrations.ps1 before every deployment and retain its
-idempotent SQL artifact with the application release.
+    scripts/migration.ps1 remove
+
+Local DB'ye uygulanmış son migration'ı kaldırmak için güvenli sıra:
+
+1. scripts/migration.ps1 list ile önceki MigrationId'yi bul.
+2. Migration kodu hâlâ projedeyken:
+       scripts/migration.ps1 update <OncekiMigrationId>
+3. Ardından:
+       scripts/migration.ps1 remove
+
+Paylaşılan Test/UAT/Live DB'de uygulanmış migration kaynak koddan önce silinemez.
+Silinirse uygulama başlangıcı DB'nin koddan ileride olduğunu görür ve deploy'u
+bilinçli olarak durdurur. Paylaşılan ortamda davranışı geri almak için yeni bir
+ileri-düzeltme migration'ı oluştur (ör. RestorePreviousJuryRule). Bu, Down kodu
+olmayan bir deploy'un veri kaybettiren otomatik downgrade yapmasını engeller.
+
+Veri koruma
+-----------
+- DROP COLUMN ve DROP TABLE fiziksel silme olarak üretilmez. Nesne zaman damgalı
+  __Archived_ adıyla korunur.
+- DELETE DATA, TRUNCATE TABLE ve ham DROP COLUMN/TABLE SQL'i engellenir.
+- Nullable -> required, tip daraltma ve veri tipini riskli değiştirme otomatik
+  olarak reddedilir. Expand/backfill/contract şeklinde ayrı migration gerekir.
+- Soft-delete IsPublished davranışı korunur.
+- Legacy kurala uymayan kullanıcı adları normalize edilmeden önce Users tablosunda
+  LegacyUsername alanına arşivlenir; geçerli güncel DB'de bu kolon oluşturulmaz.
+
+Deploy
+------
+Uygulama başlangıç servisi SQL application lock alır, yalnızca bekleyen ileri
+migration'ları sırayla uygular ve sonra model/tablo/kolon/index/constraint/
+procedure/function/trigger doğrulaması yapar.
+
+Her deploy öncesi tam kapı:
+
+    powershell -ExecutionPolicy Bypass -File scripts/test-migration-deployment.ps1
+
+Bu test; boş DB, en eski eksik UAT şeması, 27.08 güncel şema, şirket verisi ve
+eski migration geçmişi senaryolarını geçici LocalDB üzerinde çalıştırır; son olarak
+Release publish çıktısını doğrular.

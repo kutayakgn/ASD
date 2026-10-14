@@ -38,8 +38,7 @@ public sealed class AddCandidateViewComponent(AfifeContext context) : ViewCompon
             {
                 CategoryCode = category.CategoryCode,
                 CategoryName = category.CategoryName,
-                MultiCandidate = category.MultiCandidate,
-                HasRoleAndPhoto = category.HasRoleAndPhoto
+                MultiCandidate = category.MultiCandidate
             })
             .ToListAsync(cancellationToken);
 

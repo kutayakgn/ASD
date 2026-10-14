@@ -25,3 +25,12 @@ p {
     padding: 0px;
     margin: 0px;
 }
+
+input:not([type="file"]):focus,
+input:not([type="file"]):focus-visible,
+select:focus,
+select:focus-visible,
+textarea:focus,
+textarea:focus-visible {
+    border-color: #171717 !important;
+}

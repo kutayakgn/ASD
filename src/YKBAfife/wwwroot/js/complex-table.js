@@ -3,6 +3,35 @@
     const searchTimers = new Map();
     const searchDelayMs = 300;
     const legacyQueryKeys = ["tab", "search", "sortBy", "sortDirection", "page"];
+    const overflowTextSelector = [
+        ".complex-table-sort-label",
+        ".complex-table-cell-action > span",
+        ".complex-table-cell-content",
+        ".play-name-with-tag > span:first-child",
+        ".jury-voting-table th"
+    ].join(", ");
+
+    const updateOverflowTitle = (eventTarget) => {
+        const element = eventTarget.closest?.(overflowTextSelector);
+        if (!element) return;
+
+        const isOverflowing = element.scrollWidth > element.clientWidth;
+        if (isOverflowing) {
+            if (!element.hasAttribute("title")) {
+                const fullText = element.textContent.replace(/\s+/g, " ").trim();
+                if (fullText) {
+                    element.title = fullText;
+                    element.dataset.complexTableOverflowTitle = "true";
+                }
+            }
+            return;
+        }
+
+        if (element.dataset.complexTableOverflowTitle === "true") {
+            element.removeAttribute("title");
+            delete element.dataset.complexTableOverflowTitle;
+        }
+    };
 
     const removeLegacyQueryParameters = () => {
         const url = new URL(window.location.href);
@@ -14,6 +43,9 @@
     };
 
     removeLegacyQueryParameters();
+
+    document.addEventListener("mouseover", (event) => updateOverflowTitle(event.target));
+    document.addEventListener("focusin", (event) => updateOverflowTitle(event.target));
 
     const updateTable = async (section, overrides = {}, restoreSearchFocus = false) => {
         const endpoint = section.dataset.complexTableUrl;
@@ -225,6 +257,25 @@
     });
 })();
 (() => {
+    const candidateDropdownBottomGap = 40;
+
+    const clearCandidateDropdownSpace = (select) => {
+        select?.closest("#play-candidates-table")
+            ?.style.removeProperty("--candidate-dropdown-bottom-space");
+    };
+
+    const reserveCandidateDropdownSpace = (select, menu) => {
+        const section = select?.closest("#play-candidates-table");
+        if (!section || !menu) return;
+
+        section.style.setProperty("--candidate-dropdown-bottom-space", "0px");
+        const requiredSpace = Math.max(
+            0,
+            menu.getBoundingClientRect().bottom - section.getBoundingClientRect().bottom + candidateDropdownBottomGap
+        );
+        section.style.setProperty("--candidate-dropdown-bottom-space", `${Math.ceil(requiredSpace)}px`);
+    };
+
     const closeSelect = (select, returnFocus = false) => {
         if (!select) return;
         const trigger = select.querySelector("[data-complex-table-select-trigger]");
@@ -232,6 +283,7 @@
         select.classList.remove("is-open");
         trigger?.setAttribute("aria-expanded", "false");
         if (menu) menu.hidden = true;
+        clearCandidateDropdownSpace(select);
         if (returnFocus) trigger?.focus({ preventScroll: true });
     };
 
@@ -251,6 +303,7 @@
 
             input.value = option.dataset.value || "";
             label.textContent = option.textContent.trim();
+            label.title = option.textContent.trim();
             select.querySelectorAll("[data-complex-table-select-option]").forEach((item) => {
                 item.setAttribute("aria-selected", item === option ? "true" : "false");
             });
@@ -269,7 +322,12 @@
             select.classList.toggle("is-open", willOpen);
             trigger.setAttribute("aria-expanded", willOpen ? "true" : "false");
             menu.hidden = !willOpen;
-            if (willOpen) menu.querySelector('[aria-selected="true"]')?.focus({ preventScroll: true });
+            if (willOpen) {
+                reserveCandidateDropdownSpace(select, menu);
+                menu.querySelector('[aria-selected="true"]')?.focus({ preventScroll: true });
+            } else {
+                clearCandidateDropdownSpace(select);
+            }
             return;
         }
 
@@ -282,5 +340,11 @@
         if (event.key !== "Escape") return;
         const select = event.target.closest("[data-complex-table-select].is-open");
         if (select) closeSelect(select, true);
+    });
+
+    window.addEventListener("resize", () => {
+        const select = document.querySelector("#play-candidates-table [data-complex-table-select].is-open");
+        const menu = select?.querySelector("[data-complex-table-select-menu]");
+        if (select && menu) reserveCandidateDropdownSpace(select, menu);
     });
 })();

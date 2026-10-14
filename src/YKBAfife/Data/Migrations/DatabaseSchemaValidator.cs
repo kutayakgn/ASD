@@ -60,10 +60,41 @@ internal static partial class DatabaseSchemaValidator
         var schemaSql = MigrationSqlResources.Read("InitialSchema.sql");
         foreach (Match match in IndexRegex().Matches(schemaSql))
         {
-            if (!catalog.Indexes.Contains(match.Groups["name"].Value))
+            var indexName = match.Groups["name"].Value;
+            if (string.Equals(
+                    indexName,
+                    "UX_PlayAwardCategories_Current_Play_Category_Role",
+                    StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(
+                    indexName,
+                    "UX_PlayAwardCategories_FormSourceSlot",
+                    StringComparison.OrdinalIgnoreCase))
             {
-                missing.Add($"index {match.Groups["name"].Value}");
+                continue;
             }
+
+            if (!catalog.Indexes.Contains(indexName))
+            {
+                missing.Add($"index {indexName}");
+            }
+        }
+        if (!catalog.NonUniqueIndexes.Contains(
+                "IX_PlayAwardCategories_Current_Play_Category_Role"))
+        {
+            missing.Add("non-unique index IX_PlayAwardCategories_Current_Play_Category_Role");
+        }
+        if (catalog.Indexes.Contains("UX_PlayAwardCategories_Current_Play_Category_Role"))
+        {
+            missing.Add(
+                "obsolete unique index UX_PlayAwardCategories_Current_Play_Category_Role");
+        }
+        if (!catalog.NonUniqueIndexes.Contains("IX_PlayAwardCategories_FormSourceSlot"))
+        {
+            missing.Add("non-unique index IX_PlayAwardCategories_FormSourceSlot");
+        }
+        if (catalog.Indexes.Contains("UX_PlayAwardCategories_FormSourceSlot"))
+        {
+            missing.Add("obsolete unique index UX_PlayAwardCategories_FormSourceSlot");
         }
         foreach (Match match in ConstraintRegex().Matches(schemaSql))
         {
@@ -80,7 +111,7 @@ internal static partial class DatabaseSchemaValidator
             }
         }
 
-        var programmableSql = MigrationSqlResources.Read("Programmability.sql");
+        var programmableSql = MigrationSqlResources.ReadCanonicalDatabaseObjects();
         foreach (Match match in ProcedureRegex().Matches(programmableSql))
         {
             if (!catalog.Procedures.Contains(match.Groups["name"].Value))
@@ -91,14 +122,20 @@ internal static partial class DatabaseSchemaValidator
         var expectedTriggers = TriggerRegex().Matches(programmableSql)
             .Select(match => match.Groups["name"].Value)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var auditSql = MigrationSqlResources.Read("AuditTriggers.sql");
-        expectedTriggers.UnionWith(TriggerRegex().Matches(auditSql)
-            .Select(match => match.Groups["name"].Value));
+
+        foreach (Match match in FunctionRegex().Matches(programmableSql))
+        {
+            if (!catalog.Functions.Contains(match.Groups["name"].Value))
+            {
+                missing.Add($"function dbo.{match.Groups["name"].Value}");
+            }
+        }
 
         foreach (var table in catalog.Tables.Where(x =>
                      !x.EndsWith(".AdminLogs", StringComparison.OrdinalIgnoreCase) &&
                      !x.EndsWith(".JuryLogs", StringComparison.OrdinalIgnoreCase) &&
                      !x.EndsWith(".UsersLog", StringComparison.OrdinalIgnoreCase) &&
+                     !x.EndsWith(".JuryPasswordResetTokens", StringComparison.OrdinalIgnoreCase) &&
                      !x.EndsWith(".__EFMigrationsHistory", StringComparison.OrdinalIgnoreCase)))
         {
             var parts = table.Split('.', 2);
@@ -244,10 +281,16 @@ internal static partial class DatabaseSchemaValidator
             SELECT N'I', i.name FROM sys.indexes i
             WHERE i.name IS NOT NULL
             UNION ALL
+            SELECT N'N', i.name FROM sys.indexes i
+            WHERE i.name IS NOT NULL AND i.is_unique = 0
+            UNION ALL
             SELECT N'K', o.name FROM sys.objects o
             WHERE o.type IN (N'PK', N'UQ', N'F', N'C', N'D')
             UNION ALL
             SELECT N'P', p.name FROM sys.procedures p
+            UNION ALL
+            SELECT N'U', o.name FROM sys.objects o
+            WHERE o.type IN (N'FN', N'IF', N'TF')
             UNION ALL
             SELECT N'R', tr.name FROM sys.triggers tr WHERE tr.parent_class = 1
             UNION ALL
@@ -322,8 +365,10 @@ internal static partial class DatabaseSchemaValidator
                 "T" => result.Tables,
                 "C" => result.Columns,
                 "I" => result.Indexes,
+                "N" => result.NonUniqueIndexes,
                 "K" => result.Constraints,
                 "P" => result.Procedures,
+                "U" => result.Functions,
                 "R" => result.Triggers,
                 "F" => result.CascadingForeignKeys,
                 "Q" => result.PrimaryKeyTables,
@@ -341,8 +386,10 @@ internal static partial class DatabaseSchemaValidator
         public HashSet<string> Tables { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> Columns { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> Indexes { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public HashSet<string> NonUniqueIndexes { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> Constraints { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> Procedures { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public HashSet<string> Functions { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> Triggers { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> CascadingForeignKeys { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> PrimaryKeyTables { get; } = new(StringComparer.OrdinalIgnoreCase);
@@ -361,6 +408,10 @@ internal static partial class DatabaseSchemaValidator
     [GeneratedRegex(@"CREATE\s+OR\s+ALTER\s+PROCEDURE\s+(?:\[?dbo\]?\.)?\[?(?<name>[A-Za-z0-9_]+)\]?",
         RegexOptions.IgnoreCase)]
     private static partial Regex ProcedureRegex();
+
+    [GeneratedRegex(@"CREATE\s+OR\s+ALTER\s+FUNCTION\s+(?:\[?dbo\]?\.)?\[?(?<name>[A-Za-z0-9_]+)\]?",
+        RegexOptions.IgnoreCase)]
+    private static partial Regex FunctionRegex();
 
     [GeneratedRegex(@"CREATE\s+OR\s+ALTER\s+TRIGGER\s+(?:\[?dbo\]?\.)?\[?(?<name>[A-Za-z0-9_]+)\]?",
         RegexOptions.IgnoreCase)]

@@ -1,126 +1,126 @@
 @model YKBAfife.Models.ViewModels.PlayDetailsViewModel
 @{
-    ViewData["Title"] = Model.PlayName;
+	ViewData["Title"] = Model.PlayName;
 
-    string DisplayValue(string? value) => string.IsNullOrWhiteSpace(value) ? "-" : value;
-    string StatusValue(bool value) => Model.RecordType
-        ? "Aktif Değil (Düzenlenemez)"
-        : value ? "Aktif" : "Aktif Değil";
-    string AuditValue(string? userName, DateTime? date) => date.HasValue
-        ? $"{date.Value:dd.MM.yyyy} / {DisplayValue(userName)} "
-        : DisplayValue(userName);
+	string DisplayValue(string? value) => string.IsNullOrWhiteSpace(value) ? "-" : value;
+	string StatusValue(bool value) => Model.RecordType
+		? "Düzenlenemez"
+		: value ? "Aktif" : "Aktif Değil";
+	string AuditValue(string? userName, DateTime? date) => date.HasValue
+		? $"{date.Value:dd.MM.yyyy} / {DisplayValue(userName)} "
+		: DisplayValue(userName);
 }
 
 <section class="play-details-page">
-    <a href="@Model.ReturnUrl" class="play-details-back">
-        <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
-        <span>Oyunlar'a Dön</span>
-    </a>
+	<a href="@Model.ReturnUrl" class="play-details-back">
+		<img src="~/icons/arrow-left.svg" alt="" aria-hidden="true" />
+		<span>@Model.ReturnLabel</span>
+	</a>
 
-    <header class="play-details-toolbar">
-        <h1>Oyun Detay</h1>
-        <div class="play-details-actions">
-            @if (!Model.RecordType)
-            {
-                <form asp-action="ExportPlayVotes"
-                      asp-route-id="@Model.Id"
-                      method="post"
-                      class="play-detail-action-form"
-                      data-excel-export>
-                    @Html.AntiForgeryToken()
-                    <button type="submit" class="play-detail-action play-detail-action-secondary">Tüm Oyları Yazdır</button>
-                </form>
-                <a asp-controller="Management"
-                   asp-action="VotingHistory"
-                   asp-route-playId="@Model.Id"
-                   asp-route-fromPlayDetails="true"
-                   asp-route-returnUrl="@Model.ReturnUrl"
-                   class="play-detail-action play-detail-action-secondary">Oylamaları Gör</a>
-            }
-            @if (Model.RecordType)
-            {
-                <form asp-controller="Management"
-                      asp-action="DeletePlay"
-                      asp-route-id="@Model.Id"
-                      method="post"
-                      class="play-detail-action-form"
-                      data-generic-confirm
-                      data-confirm-message="Silmek istediğinize emin misiniz?"
-                      data-confirm-text="Evet"
-                      data-cancel-text="İptal">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
-                    <button type="submit" class="play-detail-action play-detail-action-danger">Oyunu Sil</button>
-                </form>
-            }
-            <a asp-controller="Management"
-               asp-action="EditPlay"
-               asp-route-slug="@Model.Slug"
-               asp-route-returnUrl="@Model.ReturnUrl"
-               class="play-detail-action play-detail-action-primary">Oyunu Düzenle</a>
-        </div>
-    </header>
+	<header class="play-details-toolbar">
+		<h1>Oyun Detay</h1>
+		<div class="play-details-actions">
+			@if (!Model.RecordType)
+			{
+				<form asp-action="ExportPlayVotes"
+					  asp-route-id="@Model.Id"
+					  method="post"
+					  class="play-detail-action-form"
+					  data-excel-export>
+					@Html.AntiForgeryToken()
+					<button type="submit" class="play-detail-action play-detail-action-secondary">Tüm Oyları Yazdır</button>
+				</form>
+				<a asp-controller="Management"
+				   asp-action="VotingHistory"
+				   asp-route-playId="@Model.Id"
+				   asp-route-fromPlayDetails="true"
+				   asp-route-returnUrl="@Model.ReturnUrl"
+				   class="play-detail-action play-detail-action-secondary">Oylamaları Gör</a>
+			}
+			@if (Model.RecordType)
+			{
+				<form asp-controller="Management"
+					  asp-action="DeletePlay"
+					  asp-route-id="@Model.Id"
+					  method="post"
+					  class="play-detail-action-form"
+					  data-generic-confirm
+					  data-confirm-message="Listeye kayıtlı bir oyunu silmek istediğinize emin misiniz?"
+					  data-confirm-text="Evet"
+					  data-cancel-text="İptal">
+					@Html.AntiForgeryToken()
+					<input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+					<button type="submit" class="play-detail-action bordered">Oyunu Sil</button>
+				</form>
+			}
+			<a asp-controller="Management"
+			   asp-action="EditPlay"
+			   asp-route-slug="@Model.Slug"
+			   asp-route-returnUrl="@Model.ReturnUrl"
+			   class="play-detail-action play-detail-action-primary">Oyunu Düzenle</a>
+		</div>
+	</header>
 
-    <dl class="play-details-content">
-        <div class="play-detail-field">
-            <dt>Oyun Detay</dt>
-            <dd>@DisplayValue(Model.PlayName)</dd>
-        </div>
-        <div class="play-detail-field">
-            <dt>Tiyatro Adı</dt>
-            <dd>@DisplayValue(Model.TheaterName)</dd>
-        </div>
-        <div class="play-detail-field">
-            <dt>Jüri Oylama Sitesi Statü</dt>
-            <dd>@StatusValue(Model.JuriOylamaStatus)</dd>
-        </div>
-        <div class="play-detail-field">
-            <dt>Künye Giriş Sistemi Statü</dt>
-            <dd>@StatusValue(Model.KunyeGirisStatus)</dd>
-        </div>
-        <div class="play-detail-field">
-            <dt>Jüri Grup Bilgisi</dt>
-            <dd>@DisplayValue(Model.JuryGroupInfo)</dd>
-        </div>
-        <div class="play-detail-field">
-            <dt>Oyun Statüsü</dt>
-            <dd class="play-status-value">
-                <span class="play-status-dot" style="background-color: @Model.PlayStatusColor" aria-hidden="true"></span>
-                <span>@DisplayValue(Model.PlayStatus)</span>
-            </dd>
-        </div>
-        <div class="play-detail-field">
-            <dt>Eklenme Yöntemi</dt>
-            <dd>@(Model.RecordType ? "Admin Giriş" : "Künye Giriş")</dd>
-        </div>
-        <div class="play-detail-field">
-            <dt>Ekleyen</dt>
-            <dd>@AuditValue(Model.CreatedByName, Model.CreatedAt)</dd>
-        </div>
-        <div class="play-detail-field">
-            <dt>Düzenleyen</dt>
-            <dd>@AuditValue(Model.UpdatedByName, Model.UpdatedAt)</dd>
-        </div>
-    </dl>
+	<dl class="play-details-content">
+		<div class="play-detail-field">
+			<dt>Oyun Adı</dt>
+			<dd>@DisplayValue(Model.PlayName)</dd>
+		</div>
+		<div class="play-detail-field">
+			<dt>Tiyatro Adı</dt>
+			<dd>@DisplayValue(Model.TheaterName)</dd>
+		</div>
+		<div class="play-detail-field">
+			<dt>Jüri Oylama Sitesi Statü</dt>
+			<dd>@StatusValue(Model.JuriOylamaStatus)</dd>
+		</div>
+		<div class="play-detail-field">
+			<dt>Künye Giriş Sistemi Statü</dt>
+			<dd>@StatusValue(Model.KunyeGirisStatus)</dd>
+		</div>
+		<div class="play-detail-field">
+			<dt>Jüri Grup Bilgisi</dt>
+			<dd>@DisplayValue(Model.JuryGroupInfo)</dd>
+		</div>
+		<div class="play-detail-field">
+			<dt>Oyun Statüsü</dt>
+			<dd class="play-status-value">
+				<span class="play-status-dot @(Model.PlayStatusColor == "#ffffff" ? "bordered" : "")" style="background-color: @Model.PlayStatusColor" aria-hidden="true"></span>
+				<span>@DisplayValue(Model.PlayStatus)</span>
+			</dd>
+		</div>
+		<div class="play-detail-field">
+			<dt>Eklenme Yöntemi</dt>
+			<dd>@(Model.RecordType ? "Admin Giriş" : "Künye Giriş")</dd>
+		</div>
+		<div class="play-detail-field">
+			<dt>Ekleyen</dt>
+			<dd>@AuditValue(Model.CreatedByName, Model.CreatedAt)</dd>
+		</div>
+		<div class="play-detail-field">
+			<dt>Düzenleyen</dt>
+			<dd>@AuditValue(Model.UpdatedByName, Model.UpdatedAt)</dd>
+		</div>
+	</dl>
 
-    @if (!Model.RecordType)
-    {
-        <div class="play-details-divider" role="separator"></div>
+	@if (!Model.RecordType)
+	{
+		<div class="play-details-divider" role="separator"></div>
 
-        <div id="aday-ekle">
-            @await Component.InvokeAsync("AddCandidate", new
-            {
-                playId = Model.Id,
-                formAction = Url.Action("AddCandidate", "Management", new { slug = Model.Slug })
-            })
-        </div>
+		<div id="aday-ekle">
+			@await Component.InvokeAsync("AddCandidate", new
+			{
+				playId = Model.Id,
+				formAction = Url.Action("AddCandidate", "Management", new { slug = Model.Slug })
+			})
+		</div>
 
-        @if (Model.CandidatesTable is not null)
-        {
-            <div class="play-details-divider" role="separator"></div>
-            <div id="adaylar">
-                @await Component.InvokeAsync("ComplexTable", new { model = Model.CandidatesTable })
-            </div>
-        }
-    }
+		@if (Model.CandidatesTable is not null)
+		{
+			<div class="play-details-divider" role="separator"></div>
+			<div id="adaylar">
+				@await Component.InvokeAsync("ComplexTable", new { model = Model.CandidatesTable })
+			</div>
+		}
+	}
 </section>

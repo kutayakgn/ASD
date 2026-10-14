@@ -25,7 +25,10 @@ public class PlayFormViewModel
 }
 
 
-public sealed class AddPlayViewModel : PlayFormViewModel { }
+public sealed class AddPlayViewModel : PlayFormViewModel
+{
+    public const int NameMaxLength = 60;
+}
 
 public sealed class EditPlayViewModel : PlayFormViewModel
 {

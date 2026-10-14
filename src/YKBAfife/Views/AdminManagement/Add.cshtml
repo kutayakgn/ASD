@@ -5,7 +5,7 @@
 
 <section class="play-details-page add-jury-page admin-form-page">
     <a asp-action="Index" class="play-details-back">
-        <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
+        <img src="~/icons/arrow-left.svg" alt="" aria-hidden="true" />
         <span>Admin Y&#246;netimine D&#246;n</span>
     </a>
 
@@ -26,24 +26,30 @@
         <div class="add-jury-grid">
             <div class="add-jury-field">
                 <label asp-for="Username"></label>
-                <input asp-for="Username" required minlength="3" maxlength="100"
-                       autocomplete="username" pattern="[A-Za-z0-9&#199;&#286;&#304;&#214;&#350;&#220;&#231;&#287;&#305;&#246;&#351;&#252;._-]+" data-fail-message="Kullan&#305;c&#305; ad&#305; bo&#351;luk veya ._- d&#305;&#351;&#305;nda noktalama i&#351;areti i&#231;eremez." />
+                <input asp-for="Username" required minlength="3" maxlength="30"
+                       placeholder="Kullan&#305;c&#305; Ad&#305; Yaz&#305;n"
+                       autocomplete="username" pattern="[A-Za-z0-9._]+"
+                       data-fail-message="Kullan&#305;c&#305; ad&#305; yaln&#305;zca &#304;ngilizce harf, rakam, nokta ve alt &#231;izgi i&#231;erebilir; bo&#351;luk i&#231;eremez." />
             </div>
             <div class="add-jury-field">
                 <label asp-for="Email"></label>
                 <input asp-for="Email" type="email" required maxlength="255"
+                       placeholder="E-posta Yaz&#305;n"
                        autocomplete="email" pattern="[A-Za-z0-9._%+\-]+@@[A-Za-z0-9.-]+\.[A-Za-z]{2,}" data-fail-message="E-posta adresi T&#252;rk&#231;e karakter i&#231;eremez ve ge&#231;erli formatta olmal&#305;d&#305;r." />
             </div>
             <div class="add-jury-field">
                 <label asp-for="FullName"></label>
                 <input asp-for="FullName" required minlength="3" maxlength="201"
+                       placeholder="Ad&#305; Soyad&#305; Yaz&#305;n"
                        pattern=".*\S+\s+\S+.*" autocomplete="name"
                        data-fail-message="Ad ve soyad bilgisini birlikte giriniz." />
             </div>
             <div class="add-jury-field">
                 <label asp-for="Password"></label>
-                <input asp-for="Password" type="text" required minlength="8" maxlength="100"
-                       autocomplete="new-password" data-fail-message="&#350;ifre en az 8 karakter olmal&#305;d&#305;r." />
+                <input asp-for="Password" type="password" required minlength="8" maxlength="100"
+                       placeholder="&#350;ifre Yaz&#305;n"
+                       autocomplete="new-password" pattern="@YKBAfife.Helpers.PasswordPolicy.Pattern"
+                       data-fail-message="@YKBAfife.Helpers.PasswordPolicy.ErrorMessage" />
             </div>
             <fieldset class="add-jury-status admin-status-field">
                 <legend>Stat&#252;</legend>

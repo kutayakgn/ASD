@@ -5,8 +5,8 @@
 
 <section class="play-details-page add-jury-page play-status-form-page" aria-labelledby="edit-play-status-title">
     <a asp-action="PlayStatusDetails" asp-route-id="@Model.Id" class="play-details-back">
-        <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
-        <span>Oyun Statüsü Detayına Dön</span>
+        <img src="~/icons/arrow-left.svg" alt="" aria-hidden="true" />
+        <span>Oyun Statüsü Detayı' na Dön</span>
     </a>
     <header class="play-details-toolbar"><h1 id="edit-play-status-title">Oyun Statüsünü Düzenle</h1></header>
     <form asp-action="EditPlayStatus" asp-route-id="@Model.Id" method="post" class="add-jury-form" novalidate data-play-status-form data-confirm-message="Oyun statüsü rengini güncellemek istediğinize emin misiniz?">

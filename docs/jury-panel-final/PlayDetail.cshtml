@@ -74,6 +74,12 @@
 
                     var hasExistingCategoryVote = categoryCard.SelectedJuryVoteId.HasValue;
 
+                    var candidateRoleSuffix =
+                        categoryCard.AwardCategoryCode is 1003 or 1004 or 1005 or 1006 &&
+                        !string.IsNullOrWhiteSpace(categoryCard.Role)
+                            ? $" ({categoryCard.Role})"
+                            : string.Empty;
+
                     var shouldShowCandidateSelectionInfo = categoryCard.Candidates.Count > 1
 && isCategoryEditable
 && !hasExistingCategoryVote;
@@ -123,7 +129,7 @@
 
                                                     ? "Aday bilgisi yok"
 
-                                                    : selectedCandidate.Candidate)
+                                                    : $"{selectedCandidate.Candidate}{candidateRoleSuffix}")
 
                                                 : "Oyuncu Seçin";
  
@@ -174,7 +180,7 @@
 
                                                             ? "Aday bilgisi yok"
 
-                                                            : candidate.Candidate)
+                                                            : $"{candidate.Candidate}{candidateRoleSuffix}")
 </option>
 
                                                 }
@@ -219,7 +225,7 @@
 
                                                             ? "Aday bilgisi yok"
 
-                                                            : candidate.Candidate)
+                                                            : $"{candidate.Candidate}{candidateRoleSuffix}")
 </button>
 
                                                 }
@@ -233,7 +239,7 @@
                                     {
 <div class="category-candidate">
 
-                                            @categoryCard.SelectedCandidate
+                                            @($"{categoryCard.SelectedCandidate}{candidateRoleSuffix}")
 </div>
 
                                     }
@@ -322,7 +328,7 @@
 
                     data-userid="@Model.UserId"
 
-                    disabled="@(!Model.CanSubmit)">
+                    disabled>
 
                 Oy Kullan
 </button>
@@ -341,8 +347,6 @@
 
         const showAwardCategories = @Model.ShowAwardCategories.ToString().ToLowerInvariant();
 
-        const isTicketFeeEditable = @Model.IsTicketFeeEditable.ToString().ToLowerInvariant();
- 
         document.addEventListener("DOMContentLoaded", () => {
 
             initializeCandidateSelections();
@@ -351,15 +355,11 @@
 
             initializeTicketValidation();
 
-            if (canSubmit) {
+            document
+                .querySelector(".vote-btn")
+                ?.addEventListener("click", saveVotes);
 
-                document
-
-                    .querySelector(".vote-btn")
-
-                    .addEventListener("click", saveVotes);
-
-            }
+            updateSubmitButtonState();
  
         });
  
@@ -420,6 +420,8 @@
                         ).innerText =
 
                             `${value}/10`;
+
+                        updateSubmitButtonState();
  
                     });
 
@@ -807,6 +809,8 @@
 
             }
 
+            updateSubmitButtonState();
+
         }
  
         function paintStars(card, score) {
@@ -857,11 +861,57 @@
                     .slice(0, 5);
 
                 validateTicketFee();
+                updateSubmitButtonState();
             });
 
             ticketInput.addEventListener("paste", () => {
-                window.setTimeout(validateTicketFee, 0);
+                window.setTimeout(() => {
+                    validateTicketFee();
+                    updateSubmitButtonState();
+                }, 0);
             });
+        }
+
+        function areAllRequiredFieldsComplete() {
+            if (!canSubmit) {
+                return false;
+            }
+
+            const ticketInput = document.getElementById("ticketFee");
+            const ticketComplete =
+                !!ticketInput &&
+                /^[1-9][0-9]{0,4}$/.test(ticketInput.value.trim());
+
+            if (!ticketComplete) {
+                return false;
+            }
+
+            if (!showAwardCategories) {
+                return true;
+            }
+
+            return Array.from(
+                document.querySelectorAll(".voting-card")
+            ).every(card => {
+                const playAwardCategoryId =
+                    card.dataset.playawardid || "";
+                const score = Number.parseInt(
+                    card.dataset.score || "0",
+                    10
+                );
+
+                return !!playAwardCategoryId &&
+                    score >= 1 &&
+                    score <= 10;
+            });
+        }
+
+        function updateSubmitButtonState() {
+            const button = document.querySelector(".vote-btn");
+
+            if (button) {
+                button.disabled = !areAllRequiredFieldsComplete();
+            }
         }
 
         function validateTicketFee() {
@@ -978,7 +1028,7 @@
         }
 
         async function saveVotes() {
-            if (!canSubmit || !validateTicketFee()) {
+            if (!areAllRequiredFieldsComplete() || !validateTicketFee()) {
                 return;
             }
 
@@ -1094,7 +1144,7 @@
                     "/icon/circle-exclamation-solid.svg"
                 );
             } finally {
-                button.disabled = !canSubmit;
+                updateSubmitButtonState();
             }
         }
 </script>

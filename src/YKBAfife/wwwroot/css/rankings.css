@@ -13,16 +13,45 @@
 
 #rankings-table .complex-table-heading-tools {
     width: min(100%, 820px);
+    min-width: 0;
 }
 
 #rankings-table .complex-table-select-filter {
     min-width: 0;
     flex: 1 1 220px;
-    max-width:300px;
+    max-width: 332px;
 }
 
 #rankings-table .complex-table-select-filter:last-child {
     flex: 0 0 150px;
+}
+
+#rankings-table .complex-table-select-filter-control,
+#rankings-table .complex-table-select-trigger,
+#rankings-table .complex-table-select-menu {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+}
+
+#rankings-table .complex-table-select-trigger {
+    overflow: hidden;
+}
+
+#rankings-table .complex-table-select-trigger > span {
+    display: block;
+    width: 0;
+    flex: 1 1 auto;
+}
+
+#rankings-table .complex-table-select-menu {
+    overflow-x: hidden;
+}
+
+#rankings-table .complex-table-select-option {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 #rankings-table .complex-table-summary {

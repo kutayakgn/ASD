@@ -1,0 +1,22 @@
+"MySettings": {
+  "FastSmsUrl": "https://fastsms-api-digital-tst.troubleshoot.cldnp.yapikredi.com.tr/",
+  "GoogleReCaptcha": {
+    "SecretKey": "",
+    "SiteKey": "RECAPTCHA_SITE_KEY",
+    "MinValue": 0.5,
+    "RateLimitSecond": 30,
+    "RateLimitCount": 5
+  }
+},
+"JuryVotingPasswordReset": {
+  "Enabled": false,
+  "PublicBaseUrl": "https://www.example.com/oylama/sifre-sifirla",
+  "TokenLifetimeMinutes": 5,
+  "MinimumRequestIntervalSeconds": 60,
+  "MicrosoftGraphMail": {
+    "TenantId": "MICROSOFT_ENTRA_TENANT_ID",
+    "ClientId": "MICROSOFT_ENTRA_APPLICATION_CLIENT_ID",
+    "ClientSecret": "",
+    "FromEmail": "afife-juri@your-company-domain.com"
+  }
+}

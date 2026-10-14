@@ -5,8 +5,8 @@
 
 <section class="play-details-page add-jury-page">
     <a asp-controller="Management" asp-action="JuryDetails" asp-route-id="@Model.Id" class="play-details-back">
-        <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
-        <span>Jüri Detayına Dön</span>
+        <img src="~/icons/arrow-left.svg" alt="" aria-hidden="true" />
+        <span>Jüri Detayı' na Dön</span>
     </a>
 
     <header class="play-details-toolbar">
@@ -31,7 +31,12 @@
         <div class="add-jury-grid">
             <div class="add-jury-field">
                 <label asp-for="Username"></label>
-                <input asp-for="Username" autocomplete="username" placeholder="Kullanıcı adı yazın" required />
+                <input asp-for="Username" autocomplete="username" placeholder="Kullanıcı adı yazın"
+                       required
+                       minlength="@YKBAfife.Helpers.UsernamePolicy.MinimumLength"
+                       maxlength="@YKBAfife.Helpers.UsernamePolicy.MaximumLength"
+                       pattern="@YKBAfife.Helpers.UsernamePolicy.Pattern"
+                       data-jury-username />
                 <span asp-validation-for="Username"></span>
             </div>
 
@@ -44,9 +49,13 @@
             <div class="add-jury-field">
                 <label asp-for="Password"></label>
                 <input asp-for="Password"
-                       type="text"
+                       type="password"
                        autocomplete="new-password"
-                       placeholder="Yeni şifre yazın (değiştirmeyecekseniz boş bırakın)" />
+                       required
+                       minlength="@YKBAfife.Helpers.PasswordPolicy.MinimumLength"
+                       maxlength="@YKBAfife.Helpers.PasswordPolicy.MaximumLength"
+                       pattern="@YKBAfife.Helpers.PasswordPolicy.Pattern"
+                       placeholder="Yeni şifre yazın" />
                 <span asp-validation-for="Password"></span>
             </div>
 
@@ -63,9 +72,9 @@
                        inputmode="numeric"
                        autocomplete="tel"
                        placeholder="Telefon numarası yazın"
-                       minlength="10"
-                       maxlength="11"
-                       pattern="[0-9]{10,11}"
+                       minlength="@YKBAfife.Helpers.PhonePolicy.MinimumLength"
+                       maxlength="@YKBAfife.Helpers.PhonePolicy.MaximumLength"
+                       pattern="@YKBAfife.Helpers.PhonePolicy.HtmlPattern"
                        data-jury-phone
                        required />
                 <span asp-validation-for="Phone"></span>
@@ -87,7 +96,7 @@
             </fieldset>
 
             <fieldset class="add-jury-status">
-                <legend>Jüri Başkanlığı</legend>
+                <legend>Jüri Tipi</legend>
                 <label class="add-jury-option">
                     <input asp-for="IsJuryPresident" type="checkbox" />
                     <span>Bu jüriyi Jüri Başkanı olarak belirle</span>

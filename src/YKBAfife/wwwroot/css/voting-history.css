@@ -24,10 +24,14 @@
     background: #fff;
     border: 1px solid #bdbdbd;
     text-align: left;
+    font-size: 14px;
+    font-family: Outfit;
 }
-.lazy-search-select-trigger:disabled {
-    color: #bdbdbd;
-}
+
+    .lazy-search-select-trigger:disabled {
+        color: #bdbdbd;
+    }
+
 
     .lazy-search-select-trigger.is-placeholder {
         color: rgba(23, 23, 23, .5);
@@ -43,9 +47,11 @@
         height: 14px;
         transition: transform .15s ease-in-out;
     }
+
     .lazy-search-select-trigger:disabled img {
         opacity: 0.6;
     }
+
 .lazy-search-select.is-open .lazy-search-select-trigger img {
     transform: rotate(180deg);
 }
@@ -130,6 +136,8 @@
     background: #fff;
     border: 0;
     text-align: left;
+    font-size: 14px;
+    font-family: Outfit;
 }
 
     .lazy-search-select-option:hover,
@@ -149,6 +157,7 @@
     width: fit-content;
     margin-bottom: 16px;
 }
+
 .voting-history-page {
     padding: 24px 16px 48px 16px;
     width: min(100%,1440px);

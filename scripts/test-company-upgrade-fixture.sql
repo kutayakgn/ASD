@@ -16,6 +16,14 @@ DECLARE @InactiveDirectorId uniqueidentifier = '55555555-5555-5555-5555-55555555
 DECLARE @JuryId uniqueidentifier = '66666666-6666-6666-6666-666666666666';
 DECLARE @RetiredCandidateId uniqueidentifier = '77777777-7777-7777-7777-777777777777';
 DECLARE @RetiredImageId uniqueidentifier = '88888888-8888-8888-8888-888888888888';
+DECLARE @DuplicateRoleCandidateOneId uniqueidentifier = '99999999-9999-9999-9999-999999999991';
+DECLARE @DuplicateRoleCandidateTwoId uniqueidentifier = '99999999-9999-9999-9999-999999999992';
+DECLARE @SharedRoleDifferentCandidateOneId uniqueidentifier = '99999999-9999-9999-9999-999999999993';
+DECLARE @SharedRoleDifferentCandidateTwoId uniqueidentifier = '99999999-9999-9999-9999-999999999994';
+DECLARE @LargeCandidatePhoto varbinary(max) =
+    0x89504E470D0A1A0A + CONVERT(varbinary(max), REPLICATE('A', 5000));
+DECLARE @LargeCandidateBase64 nvarchar(max) = CAST(N'' AS xml).value(
+    'xs:base64Binary(sql:variable("@LargeCandidatePhoto"))', 'nvarchar(max)');
 
 DISABLE TRIGGER dbo.TR_Form_NormalizeSeasonAndSynchronize ON dbo.Form;
 
@@ -34,8 +42,11 @@ VALUES
     N'Şirket Upgrade Test Oyunu', N'Şirket Upgrade Test Tiyatrosu',
     CONVERT(date, SYSDATETIME()), N'[]', N'Test Başvuran', N'Yetkili',
     N'5550000000', N'upgrade-test@example.com', N'Legacy Yönetmen',
-    N'Test İletişim', N'5550000000', NULL, NULL, NULL,
-    N'[{"Name":"Yardımcı Erkek Bir","Role":"Ortak Rol","ImageUrl":"","Base64":""},'
+    N'Test İletişim', N'5550000000', NULL,
+    N'[{"Name":"Erkek Aday Bir","Role":"Ortak Erkek Rol"},{"Name":"Erkek Aday İki","Role":"Ortak Erkek Rol"}]',
+    N'[{"Name":"deneme","Role":"Yardımcı Rol"},{"Name":"deneme","Role":"Yardımcı Rol"}]',
+    N'[{"Name":"Yardımcı Erkek Bir","Role":"Ortak Rol","ImageUrl":"buyuk-aday.png","Base64":"'
+      + @LargeCandidateBase64 + N'"},'
       + N'{"Name":"Yardımcı Erkek İki","Role":"Ortak Rol","ImageUrl":"","Base64":""}]',
     NULL, NULL, NULL, NULL, NULL, NULL, 1, 1
 );
@@ -58,6 +69,9 @@ VALUES
 
 ENABLE TRIGGER dbo.TR_Form_NormalizeSeasonAndSynchronize ON dbo.Form;
 
+EXEC sys.sp_set_session_context
+    @key = N'FormLifecycleSyncInProgress', @value = 1;
+
 INSERT INTO dbo.Plays
 (
     Id, PlayName, StatusCode, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy,
@@ -73,8 +87,41 @@ VALUES
     N'upgrade-test@example.com', 1, 1, 0, @FormId, 1
 );
 
-EXEC sys.sp_set_session_context
-    @key = N'FormLifecycleSyncInProgress', @value = 1;
+/* Reproduces company data where two legacy slots share RoleCode=3. Updating
+   both candidates to the same Form name used to fail V1.2.0 with index 2601. */
+INSERT INTO dbo.PlayAwardCategories
+(
+    Id, PlayId, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy,
+    IsPublished, IsActive, Candidate, AwardCategoryCode,
+    IsCurrent, Role, RoleCode, PhotoImageId, SourceFormCandidateOrder
+)
+VALUES
+(
+    @DuplicateRoleCandidateOneId, @PlayId, SYSDATETIME(), NULL, NULL, NULL,
+    1, 1, N'Eski Yardımcı Aday Bir', 1005, 1, N'Yardımcı Rol', 3, NULL, NULL
+),
+(
+    @DuplicateRoleCandidateTwoId, @PlayId, SYSDATETIME(), NULL, NULL, NULL,
+    1, 0, N'Eski Yardımcı Aday İki', 1005, 0, N'Yardımcı Rol', 3, NULL, NULL
+);
+
+/* Same play/category/RoleCode with different candidate names is valid. The
+   legacy unique current-role index used to reject the second current row. */
+INSERT INTO dbo.PlayAwardCategories
+(
+    Id, PlayId, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy,
+    IsPublished, IsActive, Candidate, AwardCategoryCode,
+    IsCurrent, Role, RoleCode, PhotoImageId, SourceFormCandidateOrder
+)
+VALUES
+(
+    @SharedRoleDifferentCandidateOneId, @PlayId, SYSDATETIME(), NULL, NULL, NULL,
+    1, 1, N'Eski Erkek Aday Bir', 1004, 1, N'Ortak Erkek Rol', 17, NULL, 1
+),
+(
+    @SharedRoleDifferentCandidateTwoId, @PlayId, SYSDATETIME(), NULL, NULL, NULL,
+    1, 0, N'Eski Erkek Aday İki', 1004, 0, N'Ortak Erkek Rol', 17, NULL, 1
+);
 
 INSERT INTO dbo.Plays
 (

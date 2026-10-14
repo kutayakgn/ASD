@@ -26,20 +26,33 @@ try {
 
     $env:ConnectionStrings__AfifeConnectionString = $connectionString
 
-    dotnet tool run dotnet-ef database update 20260812082231_ScopeUserEmailUniquenessByRole `
+    dotnet tool run dotnet-ef database update `
         --project $project --startup-project $project `
         --configuration $Configuration --no-build
-    if ($LASTEXITCODE -ne 0) { throw 'Pre-company migration setup failed.' }
+    if ($LASTEXITCODE -ne 0) { throw 'Canonical company fixture setup failed.' }
+
+    sqlcmd -I -S $server -d $databaseName -b -Q @"
+IF OBJECT_ID(N'dbo.CK_Users_Username_InstagramFormat', N'C') IS NOT NULL
+    ALTER TABLE dbo.Users DROP CONSTRAINT CK_Users_Username_InstagramFormat;
+"@
+    if ($LASTEXITCODE -ne 0) { throw 'Legacy company constraint setup failed.' }
 
     sqlcmd -I -S $server -d $databaseName -b -i $fixture
     if ($LASTEXITCODE -ne 0) { throw 'Company fixture creation failed.' }
+
+    sqlcmd -I -S $server -d $databaseName -b -Q @"
+DELETE FROM dbo.__EFMigrationsHistory;
+INSERT INTO dbo.__EFMigrationsHistory (MigrationId, ProductVersion)
+VALUES (N'20260812082231_ScopeUserEmailUniquenessByRole', N'8.0.29');
+"@
+    if ($LASTEXITCODE -ne 0) { throw 'Legacy company migration history setup failed.' }
 
     dotnet tool run dotnet-ef database update `
         --project $project --startup-project $project `
         --configuration $Configuration --no-build
     if ($LASTEXITCODE -ne 0) { throw 'Company-style upgrade failed.' }
 
-    $verification = @"
+$verification = @"
 IF EXISTS
 (
     SELECT 1 FROM sys.indexes
@@ -47,6 +60,128 @@ IF EXISTS
       AND name = N'UX_PlayAwardCategories_PlayId_IsCurrent_AwardCategoryCode'
 )
     THROW 52980, N'Obsolete company candidate index still exists.', 1;
+
+IF EXISTS
+(
+    SELECT 1 FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.PlayAwardCategories')
+      AND name = N'UX_PlayAwardCategories_Current_Play_Category_Role'
+)
+    THROW 53000, N'Invalid unique current-role candidate index still exists.', 1;
+
+IF NOT EXISTS
+(
+    SELECT 1 FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.PlayAwardCategories')
+      AND name = N'IX_PlayAwardCategories_Current_Play_Category_Role'
+      AND is_unique = 0
+)
+    THROW 53001, N'Non-unique current-role candidate lookup index is missing.', 1;
+
+IF EXISTS
+(
+    SELECT 1 FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.PlayAwardCategories')
+      AND name = N'UX_PlayAwardCategories_FormSourceSlot'
+)
+    THROW 53004, N'Invalid unique Form source-slot index still exists.', 1;
+
+IF NOT EXISTS
+(
+    SELECT 1 FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.PlayAwardCategories')
+      AND name = N'IX_PlayAwardCategories_FormSourceSlot'
+      AND is_unique = 0
+)
+    THROW 53005, N'Non-unique Form source-slot lookup index is missing.', 1;
+
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.indexes AS candidateIndex
+    WHERE candidateIndex.object_id = OBJECT_ID(N'dbo.PlayAwardCategories')
+      AND candidateIndex.name = N'UX_PlayAwardCategories_Play_Category_Role_Candidate'
+      AND candidateIndex.is_unique = 1
+      AND
+      (
+          SELECT COUNT(*)
+          FROM sys.index_columns AS indexColumn
+          WHERE indexColumn.object_id = candidateIndex.object_id
+            AND indexColumn.index_id = candidateIndex.index_id
+            AND indexColumn.key_ordinal > 0
+      ) = 4
+      AND EXISTS
+      (
+          SELECT 1 FROM sys.index_columns AS indexColumn
+          INNER JOIN sys.columns AS columnRecord
+              ON columnRecord.object_id = indexColumn.object_id
+             AND columnRecord.column_id = indexColumn.column_id
+          WHERE indexColumn.object_id = candidateIndex.object_id
+            AND indexColumn.index_id = candidateIndex.index_id
+            AND indexColumn.key_ordinal = 1 AND columnRecord.name = N'PlayId'
+      )
+      AND EXISTS
+      (
+          SELECT 1 FROM sys.index_columns AS indexColumn
+          INNER JOIN sys.columns AS columnRecord
+              ON columnRecord.object_id = indexColumn.object_id
+             AND columnRecord.column_id = indexColumn.column_id
+          WHERE indexColumn.object_id = candidateIndex.object_id
+            AND indexColumn.index_id = candidateIndex.index_id
+            AND indexColumn.key_ordinal = 2 AND columnRecord.name = N'AwardCategoryCode'
+      )
+      AND EXISTS
+      (
+          SELECT 1 FROM sys.index_columns AS indexColumn
+          INNER JOIN sys.columns AS columnRecord
+              ON columnRecord.object_id = indexColumn.object_id
+             AND columnRecord.column_id = indexColumn.column_id
+          WHERE indexColumn.object_id = candidateIndex.object_id
+            AND indexColumn.index_id = candidateIndex.index_id
+            AND indexColumn.key_ordinal = 3 AND columnRecord.name = N'RoleCode'
+      )
+      AND EXISTS
+      (
+          SELECT 1 FROM sys.index_columns AS indexColumn
+          INNER JOIN sys.columns AS columnRecord
+              ON columnRecord.object_id = indexColumn.object_id
+             AND columnRecord.column_id = indexColumn.column_id
+          WHERE indexColumn.object_id = candidateIndex.object_id
+            AND indexColumn.index_id = candidateIndex.index_id
+            AND indexColumn.key_ordinal = 4 AND columnRecord.name = N'Candidate'
+      )
+)
+    THROW 53003, N'Four-field candidate uniqueness index does not match the required contract.', 1;
+
+IF
+(
+    SELECT COUNT(*) FROM dbo.PlayAwardCategories
+    WHERE PlayId = '22222222-2222-2222-2222-222222222222'
+      AND AwardCategoryCode = 1004
+      AND RoleCode = 17
+      AND Id IN
+      (
+          '99999999-9999-9999-9999-999999999993',
+          '99999999-9999-9999-9999-999999999994'
+      )
+      AND IsPublished = 1 AND IsCurrent = 1
+) <> 2
+    THROW 53002, N'Different candidates sharing a RoleCode were not preserved.', 1;
+
+IF
+(
+    SELECT COUNT(DISTINCT SourceFormCandidateOrder)
+    FROM dbo.PlayAwardCategories
+    WHERE PlayId = '22222222-2222-2222-2222-222222222222'
+      AND AwardCategoryCode = 1004
+      AND Id IN
+      (
+          '99999999-9999-9999-9999-999999999993',
+          '99999999-9999-9999-9999-999999999994'
+      )
+      AND IsPublished = 1 AND IsCurrent = 1
+) <> 2
+    THROW 53006, N'Duplicate legacy Form source slots were not repaired uniquely.', 1;
 
 IF
 (
@@ -65,6 +200,26 @@ IF
       AND IsPublished = 1 AND IsCurrent = 1
 ) <> 2
     THROW 52982, N'Category 1006 candidates do not have unique RoleCodes.', 1;
+
+IF
+(
+    SELECT COUNT(*) FROM dbo.PlayAwardCategories
+    WHERE PlayId = '22222222-2222-2222-2222-222222222222'
+      AND AwardCategoryCode = 1005
+      AND Candidate = N'deneme'
+      AND IsPublished = 1 AND IsCurrent = 1
+) <> 2
+    THROW 52998, N'Duplicate legacy RoleCode repair did not preserve both Form slots.', 1;
+
+IF
+(
+    SELECT COUNT(DISTINCT RoleCode) FROM dbo.PlayAwardCategories
+    WHERE PlayId = '22222222-2222-2222-2222-222222222222'
+      AND AwardCategoryCode = 1005
+      AND Candidate = N'deneme'
+      AND IsPublished = 1 AND IsCurrent = 1
+) <> 2
+    THROW 52999, N'Duplicate legacy RoleCodes were not reassigned uniquely.', 1;
 
 IF EXISTS
 (
@@ -114,6 +269,150 @@ IF EXISTS
 
 IF EXISTS (SELECT 1 FROM dbo.Images WHERE Id = '88888888-8888-8888-8888-888888888888' AND IsPublished = 1)
     THROW 52989, N'Retired category 1012 orphan image is still published.', 1;
+
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM dbo.PlayAwardCategories AS candidate
+    INNER JOIN dbo.Images AS image ON image.Id = candidate.PhotoImageId
+    WHERE candidate.PlayId = '22222222-2222-2222-2222-222222222222'
+      AND candidate.AwardCategoryCode = 1006
+      AND candidate.SourceFormCandidateOrder = 1
+      AND candidate.IsPublished = 1
+      AND image.IsPublished = 1
+      AND image.ContentType = N'image/png'
+      AND DATALENGTH(image.ImageData) > 4000
+)
+    THROW 52990, N'Form Base64 photo above 4000 characters was not materialized.', 1;
+
+UPDATE dbo.Plays
+SET PlayName = N'PlayToForm Sync Name',
+    TheaterName = N'PlayToForm Sync Theater',
+    UpdatedAt = DATEADD(HOUR, 3, SYSUTCDATETIME())
+WHERE Id = '22222222-2222-2222-2222-222222222222';
+
+IF NOT EXISTS
+(
+    SELECT 1 FROM dbo.Form
+    WHERE Id = '11111111-1111-1111-1111-111111111111'
+      AND RepertoireName = N'PlayToForm Sync Name'
+      AND TheatreName = N'PlayToForm Sync Theater'
+)
+    THROW 52991, N'Play changes were not synchronized back to Form.', 1;
+
+UPDATE dbo.Form
+SET RepertoireName = N'FormToPlay Sync Name',
+    TheatreName = N'FormToPlay Sync Theater',
+    UpdatedDate = DATEADD(HOUR, 3, SYSUTCDATETIME())
+WHERE Id = '11111111-1111-1111-1111-111111111111';
+
+IF NOT EXISTS
+(
+    SELECT 1 FROM dbo.Plays
+    WHERE Id = '22222222-2222-2222-2222-222222222222'
+      AND PlayName = N'FormToPlay Sync Name'
+      AND TheaterName = N'FormToPlay Sync Theater'
+)
+    THROW 52992, N'Form changes were not synchronized to Play.', 1;
+
+DECLARE @AdminPhotoId uniqueidentifier = '99999999-9999-9999-9999-999999999999';
+INSERT INTO dbo.Images
+(
+    Id, FileName, ContentType, ImageData, CreatedAt, CreatedBy, IsPublished
+)
+VALUES
+(
+    @AdminPhotoId, N'admin-photo.png', N'image/png',
+    0x89504E470D0A1A0A4146494645,
+    DATEADD(HOUR, 3, SYSUTCDATETIME()),
+    '66666666-6666-6666-6666-666666666666', 1
+);
+
+DECLARE @EditedCandidateId uniqueidentifier =
+(
+    SELECT TOP (1) Id
+    FROM dbo.PlayAwardCategories
+    WHERE PlayId = '22222222-2222-2222-2222-222222222222'
+      AND AwardCategoryCode = 1006
+      AND SourceFormCandidateOrder = 1
+      AND IsPublished = 1
+      AND IsCurrent = 1
+);
+
+UPDATE dbo.PlayAwardCategories
+SET Candidate = N'CandidateToForm Sync Name',
+    PhotoImageId = @AdminPhotoId,
+    UpdatedAt = DATEADD(HOUR, 3, SYSUTCDATETIME())
+WHERE Id = @EditedCandidateId;
+
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM dbo.Form AS formRecord
+    CROSS APPLY OPENJSON(formRecord.SupportActor)
+    WITH
+    (
+        [Name] nvarchar(250) N'$.Name',
+        ImageUrl nvarchar(255) N'$.ImageUrl',
+        Base64 nvarchar(max) N'$.Base64'
+    ) AS candidate
+    WHERE formRecord.Id = '11111111-1111-1111-1111-111111111111'
+      AND candidate.[Name] = N'CandidateToForm Sync Name'
+      AND candidate.ImageUrl = N'admin-photo.png'
+      AND LEN(candidate.Base64) > 10
+)
+    THROW 52993, N'Candidate name/photo changes were not synchronized back to Form.', 1;
+
+IF NOT EXISTS
+(
+    SELECT 1 FROM dbo.AdminLogs
+    WHERE TableName = N'Plays'
+      AND OldValues IS NOT NULL AND NewValues IS NOT NULL
+      AND NewValues LIKE N'%PlayToForm Sync Name%'
+)
+    THROW 52994, N'Play old/new audit detail was not written.', 1;
+
+IF NOT EXISTS
+(
+    SELECT 1 FROM dbo.AdminLogs
+    WHERE TableName = N'Form'
+      AND OldValues IS NOT NULL AND NewValues IS NOT NULL
+      AND NewValues LIKE N'%FormToPlay Sync Name%'
+)
+    THROW 52995, N'Form old/new audit detail was not written.', 1;
+
+IF NOT EXISTS
+(
+    SELECT 1 FROM dbo.AdminLogs
+    WHERE TableName = N'PlayAwardCategories'
+      AND OldValues IS NOT NULL AND NewValues IS NOT NULL
+      AND NewValues LIKE N'%CandidateToForm Sync Name%'
+)
+    THROW 52996, N'Candidate old/new audit detail was not written.', 1;
+
+DECLARE @NonImageWasRejected bit = 0;
+BEGIN TRY
+    INSERT INTO dbo.Images
+    (
+        Id, FileName, ContentType, ImageData, CreatedAt, CreatedBy, IsPublished
+    )
+    VALUES
+    (
+        'AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA', N'zararli-dosya.png',
+        N'image/png', 0x3C7363726970743E,
+        DATEADD(HOUR, 3, SYSUTCDATETIME()),
+        '66666666-6666-6666-6666-666666666666', 1
+    );
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 52432
+        SET @NonImageWasRejected = 1;
+    ELSE
+        THROW;
+END CATCH;
+
+IF @NonImageWasRejected = 0
+    THROW 52997, N'Non-image bytes were accepted by dbo.Images.', 1;
 
 EXEC dbo.usp_RefreshRankings;
 "@

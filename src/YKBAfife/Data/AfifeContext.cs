@@ -11,6 +11,7 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
     public DbSet<UserLog> UserLogs => Set<UserLog>();
     public DbSet<AdminLog> AdminLogs => Set<AdminLog>();
     public DbSet<JuryLog> JuryLogs => Set<JuryLog>();
+    public DbSet<JuryPasswordResetToken> JuryPasswordResetTokens => Set<JuryPasswordResetToken>();
     public DbSet<Play> Plays => Set<Play>();
     public DbSet<Season> Seasons => Set<Season>();
     public DbSet<AdditionalVoting> AdditionalVotings => Set<AdditionalVoting>();
@@ -139,6 +140,35 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
             entity.HasOne(x => x.AdditionalVoting).WithMany().HasForeignKey(x => x.AdditionalVotingId)
                 .OnDelete(DeleteBehavior.NoAction);
         });
+        modelBuilder.Entity<JuryPasswordResetToken>(entity =>
+        {
+            entity.ToTable("JuryPasswordResetTokens", "dbo", table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_JuryPasswordResetTokens_Expiry",
+                    "[ExpiresAtUtc] > [CreatedAtUtc] AND [ExpiresAtUtc] <= DATEADD(MINUTE, 5, [CreatedAtUtc])");
+                table.HasCheckConstraint(
+                    "CK_JuryPasswordResetTokens_UsedAt",
+                    "[UsedAtUtc] IS NULL OR [UsedAtUtc] >= [CreatedAtUtc]");
+            });
+            entity.Property(x => x.Id).HasDefaultValueSql("newsequentialid()");
+            entity.Property(x => x.TokenHash).HasColumnType("binary(32)");
+            entity.Property(x => x.CreatedAtUtc).HasColumnType("datetime2(7)");
+            entity.Property(x => x.ExpiresAtUtc).HasColumnType("datetime2(7)");
+            entity.Property(x => x.UsedAtUtc).HasColumnType("datetime2(7)");
+            entity.Property(x => x.RowVersion).IsRowVersion();
+            entity.HasIndex(x => x.TokenHash)
+                .IsUnique()
+                .HasDatabaseName("UX_JuryPasswordResetTokens_TokenHash");
+            entity.HasIndex(x => new { x.UserId, x.CreatedAtUtc })
+                .IsDescending(false, true)
+                .HasDatabaseName("IX_JuryPasswordResetTokens_UserId_CreatedAtUtc");
+            entity.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_JuryPasswordResetTokens_Users_UserId");
+        });
         modelBuilder.Entity<Season>(entity =>
         {
             entity.ToTable("Seasons", "dbo");
@@ -237,12 +267,10 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
                 .IsUnique()
                 .HasFilter("[IsPublished] = 1");
             entity.HasIndex(x => new { x.PlayId, x.AwardCategoryCode, x.RoleCode, x.IsCurrent })
-                .IsUnique()
                 .HasFilter("[IsCurrent] = 1 AND [IsPublished] = 1");
             entity.HasIndex(x => new { x.PlayId, x.AwardCategoryCode, x.SourceFormCandidateOrder })
-                .IsUnique()
                 .HasFilter("[SourceFormCandidateOrder] IS NOT NULL AND [IsCurrent] = 1")
-                .HasDatabaseName("UX_PlayAwardCategories_FormSourceSlot");
+                .HasDatabaseName("IX_PlayAwardCategories_FormSourceSlot");
             entity.HasOne(x => x.PhotoImage)
                 .WithMany(x => x.CandidatePhotos)
                 .HasForeignKey(x => x.PhotoImageId)
@@ -375,6 +403,8 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
         AfifeRelationalModelConfiguration.Configure(modelBuilder);
         DisableSqlOutputClauseForAuditedTables(modelBuilder);
         ApplyPublishedQueryFilters(modelBuilder);
+        modelBuilder.Entity<JuryPasswordResetToken>()
+            .HasQueryFilter(token => token.User.IsPublished);
         modelBuilder.Entity<Form>()
             .HasQueryFilter(form => form.IsPublished);
         modelBuilder.Entity<Play>()

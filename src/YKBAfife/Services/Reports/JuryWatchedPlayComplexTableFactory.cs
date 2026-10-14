@@ -56,6 +56,7 @@ public static class JuryWatchedPlayComplexTableFactory
                     return new ComplexTableRowViewModel
                     {
                         Id = $"watched-play-{row.PlayId:N}",
+                        Link = detailsUrl,
                         NavigationUrl = detailsUrl,
                         NavigationAccessibleLabel = $"{row.PlayName} oyun detayına git",
                         Cells = [new ComplexTableCellViewModel { Content = row.PlayName }]

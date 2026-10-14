@@ -285,9 +285,19 @@ body {
     text-decoration: none;
 }
 
+    .play-details-back::before {
+        content: "";
+        width: 12px;
+        height: 12px;
+        flex: 0 0 12px;
+        background-color: currentColor;
+        mask: url("/icons/arrow-left.svg") center / contain no-repeat;
+        -webkit-mask: url("/icons/arrow-left.svg") center / contain no-repeat;
+        transition: background-color .15s ease-in-out;
+    }
+
     .play-details-back img {
-        width: 16px;
-        height: 16px;
+        display: none;
     }
 
     .play-details-back:hover,
@@ -295,6 +305,25 @@ body {
         color: #918150;
         outline: none;
     }
+
+/* Decorative SVG icons inside interactive controls follow the control hover state. */
+.admin-main :where(button, a[href]:not([aria-disabled="true"])) img[src*="/icons/"] {
+    transition: filter .15s ease-in-out;
+}
+
+.excel-export-button,
+.complex-table-header-action,
+.play-detail-action-primary,
+.add-candidate-submit,
+.add-jury-submit,
+.ticket-fee-save-button {
+    --interactive-icon-hover-filter: brightness(0) saturate(100%) invert(1);
+}
+
+.admin-main :where(button:not(:disabled), a[href]:not([aria-disabled="true"])):is(:hover, :focus-visible)
+img[src*="/icons/"] {
+    filter: var(--interactive-icon-hover-filter, brightness(0) saturate(100%) invert(52%) sepia(17%) saturate(897%) hue-rotate(8deg) brightness(93%) contrast(86%));
+}
 
 .play-details-toolbar {
     display: flex;
@@ -337,6 +366,10 @@ body {
     text-decoration: none;
     transition: color .15s ease-in-out, background-color .15s ease-in-out, border-color .15s ease-in-out;
 }
+
+    .play-detail-action.bordered {
+        background: #fff;
+    }
 
 .play-detail-action-secondary {
     color: #171717;
@@ -451,6 +484,10 @@ body {
     border-radius: 50%;
 }
 
+    .play-status-dot.bordered {
+        border: 1px solid #1717172e;
+    }
+
 .play-details-divider {
     height: 1px;
     margin: 24px 0 24px 0;
@@ -474,7 +511,7 @@ body {
     margin: 0;
     padding: 0;
     border: 0;
-    gap: 4px;
+    gap: 32px;
 }
 
 .add-candidate-mode-group {
@@ -510,10 +547,10 @@ body {
 }
 
     .add-candidate-field label, .add-candidate-status legend {
-        color: #777064;
-        font-size: 13px;
-        font-weight: 500;
-        line-height: 18px;
+        color: #171717;
+        font-size: 14px;
+        font-weight: 400;
+        line-height: 20px;
     }
 
     .add-candidate-field input, .add-candidate-field select {
@@ -535,7 +572,7 @@ body {
 .add-candidate-status {
     min-height: 70px;
     flex-wrap: wrap;
-    align-content: flex-start;
+    align-content: center;
 }
 
 .add-candidate-status {
@@ -657,7 +694,19 @@ body {
     border: 1px solid #bdbdbd;
     border-radius: 0;
     outline: none;
+    font-family: Outfit;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 20px;
 }
+
+    .add-jury-field input:not([type="file"]):focus,
+    .add-jury-field select:focus,
+    .add-jury-field input:not([type="file"]):focus-visible,
+    .add-jury-field select:focus-visible {
+        border-color: #171717;
+    }
 
     .add-jury-field input:not([type="file"]):disabled {
         color: #BDBDBD;
@@ -904,10 +953,35 @@ body {
         outline: none;
     }
 
-        .add-jury-photo-action:hover img,
-        .add-jury-photo-action:focus-visible img {
-            filter: none;
-        }
+    .add-jury-photo-action::before {
+        content: "";
+        width: 18px;
+        height: 18px;
+        flex: 0 0 18px;
+        background-color: currentColor;
+        mask-position: center;
+        mask-repeat: no-repeat;
+        mask-size: contain;
+        -webkit-mask-position: center;
+        -webkit-mask-repeat: no-repeat;
+        -webkit-mask-size: contain;
+    }
+
+    .add-jury-photo-action[data-jury-photo-view]::before,
+    .add-jury-photo-action[data-candidate-photo-view]::before {
+        mask-image: url("/icons/eye.svg");
+        -webkit-mask-image: url("/icons/eye.svg");
+    }
+
+    .add-jury-photo-action[data-jury-photo-replace]::before,
+    .add-jury-photo-action[data-candidate-photo-replace]::before {
+        mask-image: url("/icons/upload.svg");
+        -webkit-mask-image: url("/icons/upload.svg");
+    }
+
+    .add-jury-photo-action > img {
+        display: none;
+    }
 
 .add-jury-photo-modal {
     position: fixed;
@@ -980,7 +1054,10 @@ body.has-photo-preview {
     background: transparent;
     border: 0;
     cursor: pointer;
-    font: inherit;
+    font-size: 14px;
+    line-height: 20px;
+    font-family: Outfit;
+   
     text-align: left;
 }
 
@@ -995,7 +1072,6 @@ body.has-photo-preview {
         cursor: default;
         opacity: 1;
     }
-
 /* Keep the optional photo field aligned with the two-column form grid. */
 .add-jury-photo-field {
     grid-column: auto;
@@ -1120,7 +1196,7 @@ body.has-photo-preview {
 }
 
     .add-candidate-select.is-open {
-        z-index: 40;
+        z-index: 100;
     }
 
 .add-candidate-select-trigger {
@@ -1133,7 +1209,7 @@ body.has-photo-preview {
     gap: 12px;
     color: #171717;
     background: #fff;
-    border: 1px solid #777;
+    border: 1px solid #bdbdbd;
     font: inherit;
     text-align: left;
 }
@@ -1182,7 +1258,7 @@ body.has-photo-preview {
 
 .add-candidate-select-menu {
     position: absolute;
-    z-index: 45;
+    z-index: 105;
     top: calc(100% + 6px);
     right: 0;
     left: 0;
@@ -1232,7 +1308,6 @@ body.has-photo-preview {
         max-height: min(280px, 42vh);
     }
 }
-
 /* Candidate detail and edit */
 .candidate-details-layout {
     display: block;
@@ -1266,8 +1341,8 @@ body.has-photo-preview {
 }
 
 .candidate-delete-action {
-    color: #b31d1d;
-    border-color: #b31d1d;
+    color: #171717;
+    border-color: #171717;
 }
 
 .edit-candidate-page [data-valmsg-for] {

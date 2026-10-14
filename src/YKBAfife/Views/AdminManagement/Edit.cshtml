@@ -5,8 +5,8 @@
 
 <section class="play-details-page add-jury-page admin-form-page">
     <a asp-action="Details" asp-route-id="@Model.Id" class="play-details-back">
-        <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
-        <span>Admin Detaya D&#246;n</span>
+        <img src="~/icons/arrow-left.svg" alt="" aria-hidden="true" />
+        <span>Admin Detay' a Dön</span>
     </a>
 
     <header class="play-details-toolbar">
@@ -34,10 +34,10 @@
         <div class="add-jury-grid">
             <div class="add-jury-field">
                 <label asp-for="Username"></label>
-                <input asp-for="Username" required minlength="3" maxlength="100"
+                <input asp-for="Username" required minlength="3" maxlength="30"
                        autocomplete="username"
-                       pattern="[A-Za-z0-9&#199;&#286;&#304;&#214;&#350;&#220;&#231;&#287;&#305;&#246;&#351;&#252;._-]+"
-                       data-fail-message="Kullan&#305;c&#305; ad&#305; bo&#351;luk veya ._- d&#305;&#351;&#305;nda noktalama i&#351;areti i&#231;eremez." />
+                       pattern="[A-Za-z0-9._]+"
+                       data-fail-message="Kullan&#305;c&#305; ad&#305; yaln&#305;zca &#304;ngilizce harf, rakam, nokta ve alt &#231;izgi i&#231;erebilir; bo&#351;luk i&#231;eremez." />
             </div>
             <div class="add-jury-field">
                 <label asp-for="Email"></label>
@@ -54,9 +54,10 @@
             </div>
             <div class="add-jury-field">
                 <label asp-for="Password"></label>
-                <input asp-for="Password" type="text" minlength="8" maxlength="100"
+                <input asp-for="Password" type="password" minlength="8" maxlength="100"
+                       pattern="@YKBAfife.Helpers.PasswordPolicy.Pattern"
                        autocomplete="new-password" placeholder="De&#287;i&#351;tirmek istemiyorsan&#305;z bo&#351; b&#305;rak&#305;n"
-                       data-fail-message="Yeni &#351;ifre en az 8 karakter olmal&#305;d&#305;r." />
+                       data-fail-message="@YKBAfife.Helpers.PasswordPolicy.ErrorMessage" />
             </div>
             @if (Model.CanEditStatus)
 

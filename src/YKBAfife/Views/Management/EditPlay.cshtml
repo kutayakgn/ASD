@@ -7,8 +7,8 @@
        asp-route-slug="@Model.Slug"
        asp-route-returnUrl="@Model.ReturnUrl"
        class="play-details-back">
-        <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
-        <span>Oyun Detaya Dön</span>
+        <img src="~/icons/arrow-left.svg" alt="" aria-hidden="true" />
+        <span>Oyun Detay' a Dön</span>
     </a>
     <header class="play-details-toolbar"><h1 id="edit-play-title">Oyunu Düzenle</h1></header>
 
@@ -25,25 +25,6 @@
 
         <partial name="_PlayFormFields" model="Model" />
 
-        @if (!Model.RecordType)
-        {
-            <div class="edit-play-status-grid">
-                <fieldset class="add-candidate-status" data-jury-voting-status-fieldset>
-                    <legend>Jüri Oylama Sitesi Statü</legend>
-                    <label><input asp-for="JuriOylamaStatus" type="radio" value="true" data-jury-voting-active disabled="@(Model.StatusCode != 1 ? "disabled" : null)" /><span>Aktif</span></label>
-                    <label><input asp-for="JuriOylamaStatus" type="radio" value="false" /><span>Aktif Değil</span></label>
-                </fieldset>
-                <fieldset class="add-candidate-status">
-                    <legend>Künye Giriş Sistemi Statü</legend>
-                    <label><input asp-for="KunyeGirisStatus" type="radio" value="true" /><span>Aktif</span></label>
-                    <label><input asp-for="KunyeGirisStatus" type="radio" value="false" /><span>Aktif Değil</span></label>
-                </fieldset>
-            </div>
-        }
-        <div class="add-jury-field edit-play-record-type">
-            <label>Eklenme Yöntemi</label>
-            <input value="@Model.RecordTypeDisplay" disabled aria-disabled="true" />
-        </div>
         <div class="add-jury-actions">
             <a asp-action="PlayDetails"
                asp-route-slug="@Model.Slug"

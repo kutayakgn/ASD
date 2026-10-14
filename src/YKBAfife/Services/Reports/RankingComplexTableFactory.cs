@@ -90,7 +90,7 @@ public static class RankingComplexTableFactory
         };
         if (report.RankingType != RankingTypes.Trimmed)
         {
-            if (report.Tab != RankingTabs.CategoryArithmetic)
+            if (ShowsVariance(report))
             {
                 columns.Add(new ComplexTableColumnViewModel
                 {
@@ -119,9 +119,7 @@ public static class RankingComplexTableFactory
         RankingTableViewModel report,
         int columnIndex,
         decimal percentage) =>
-        report.Tab == RankingTabs.CategoryArithmetic ||
-        (report.RankingType == RankingTypes.Trimmed &&
-         report.Tab is RankingTabs.AllGames or RankingTabs.CategoryTrim)
+        report.RankingType != RankingTypes.Confidence
             ? ComplexTableColumnWidth.Pixels(SixColumnRankingWidths[columnIndex])
             : percentage;
 
@@ -139,8 +137,7 @@ public static class RankingComplexTableFactory
                 AccessibleLabel = $"{row.PlayName} oylarını görüntüle"
             }
         };
-        if (report.RankingType != RankingTypes.Trimmed &&
-            report.Tab != RankingTabs.CategoryArithmetic)
+        if (ShowsVariance(report))
         {
             cells.Add(new ComplexTableCellViewModel
             {
@@ -150,10 +147,31 @@ public static class RankingComplexTableFactory
         cells.Add(MetricCell(row.MetricValue, report.RankingType));
         return cells;
     }
+
+    private static bool ShowsVariance(RankingTableViewModel report) =>
+        report.RankingType == RankingTypes.Confidence;
+
     private static IReadOnlyList<ComplexTableSelectFilterViewModel> CreateFilters(
         RankingTableViewModel report)
     {
         var filters = new List<ComplexTableSelectFilterViewModel>();
+        if (report.Tab == RankingTabs.AllGames)
+        {
+            filters.Add(new ComplexTableSelectFilterViewModel
+            {
+                Name = "RankingType",
+                AccessibleLabel = "Sıralama tipi",
+                ShowLabel = false,
+                Value = report.RankingType,
+                Options =
+                [
+                    Option(RankingTypes.Trimmed, "Tüm Kategori Sıralama Trim"),
+                    Option(RankingTypes.Arithmetic, "Tüm Kategori Sıralama Aritmetik"),
+                    Option(RankingTypes.Confidence, "Tüm Güven Sıralaması")
+                ]
+            });
+        }
+
         filters.Add(new ComplexTableSelectFilterViewModel
         {
             Name = "CategoryCode",

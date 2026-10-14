@@ -131,6 +131,8 @@
         const roleInput = component.querySelector("[data-candidate-role]");
         const photoField = component.querySelector("[data-candidate-photo-field]");
         const photo = setupPhoto(component);
+        const candidateInput = form?.querySelector("[name='Input.Candidate']");
+        const statusInputs = [...(form?.querySelectorAll("input[name='Input.IsActive']") ?? [])];
 
         const selectedMode = () => component.querySelector("input[name='Input.Mode']:checked")?.value ?? "new";
         const selectedCategoryOption = () => categorySelect?.querySelector(
@@ -140,22 +142,24 @@
 
         const syncRole = () => {
             if (!roleField || !roleInput) return;
-            const hasRoleAndPhoto = selectedCategoryOption()?.dataset.hasRolePhoto === "true";
+            const supportsRoleAndPhoto = selectedCategoryOption()?.dataset.supportsRolePhoto === "true";
             const changeMode = selectedMode() === "change";
             const replacement = selectedReplacementOption();
-            roleField.hidden = !hasRoleAndPhoto || changeMode;
-            roleInput.disabled = !hasRoleAndPhoto || changeMode;
-            roleInput.required = hasRoleAndPhoto && !changeMode;
+            roleField.hidden = !supportsRoleAndPhoto || changeMode;
+            roleInput.disabled = !supportsRoleAndPhoto || changeMode;
+            roleInput.required = supportsRoleAndPhoto && !changeMode;
             roleInput.readOnly = false;
-            if (!hasRoleAndPhoto) roleInput.value = "";
+            if (!supportsRoleAndPhoto) roleInput.value = "";
             else if (changeMode) roleInput.value = replacement?.dataset.role || "";
         };
 
         const syncPhoto = () => {
             if (!photoField) return;
-            const hasRoleAndPhoto = selectedCategoryOption()?.dataset.hasRolePhoto === "true";
-            photoField.hidden = !hasRoleAndPhoto;
-            if (!hasRoleAndPhoto) photo.reset();
+            const supportsPhoto = selectedCategoryOption()?.dataset.supportsRolePhoto === "true";
+            const photoInput = component.querySelector("[data-candidate-photo-input]");
+            photoField.hidden = !supportsPhoto;
+            if (!supportsPhoto) photo.reset();
+            if (photoInput) photoInput.disabled = !supportsPhoto;
         };
 
         const syncReplacements = () => {
@@ -190,6 +194,15 @@
             syncPhoto();
         };
 
+        const resetModeFields = () => {
+            if (categorySelect) clearSelect(categorySelect);
+            if (replacementSelect) clearSelect(replacementSelect);
+            if (candidateInput) candidateInput.value = "";
+            if (roleInput) roleInput.value = "";
+            statusInputs.forEach((input) => { input.checked = false; });
+            photo.reset();
+        };
+
         component.querySelectorAll("[data-candidate-select]").forEach((select) => {
             select.querySelector("[data-candidate-select-trigger]")?.addEventListener("click", () => {
                 if (select.classList.contains("is-open")) closeSelect(select);
@@ -202,7 +215,8 @@
 
         component.querySelectorAll("input[name='Input.Mode']").forEach((input) => {
             input.addEventListener("change", () => {
-                if (input.checked && input.value === "new" && roleInput) roleInput.value = "";
+                if (!input.checked) return;
+                resetModeFields();
                 syncAll();
             });
         });
@@ -215,18 +229,19 @@
 
         form?.addEventListener("submit", (event) => {
             const errors = [];
-            const candidate = form.querySelector("[name='Input.Candidate']")?.value.trim() || "";
+            const candidate = candidateInput?.value.trim() || "";
             const status = form.querySelector("input[name='Input.IsActive']:checked");
             const photoInput = component.querySelector("[data-candidate-photo-input]");
-            const hasRoleAndPhoto = selectedCategoryOption()?.dataset.hasRolePhoto === "true";
+            const supportsRoleAndPhoto = selectedCategoryOption()?.dataset.supportsRolePhoto === "true";
             if (!form.querySelector("[name='Input.PlayId']")?.value) errors.push("Oyun seçimi zorunludur.");
             if (!categoryInput?.value) errors.push("Ödül kategorisi seçimi zorunludur.");
             if (selectedMode() === "change" && !replacementInput?.value) errors.push("Değişimi yapılacak aday/rol seçimi zorunludur.");
             if (candidate.length < 2) errors.push("Adı Soyadı alanı en az 2 karakter olmalıdır.");
             if (!status) errors.push("Statü seçimi zorunludur.");
-            if (hasRoleAndPhoto && selectedMode() === "new" && !roleInput?.value.trim()) errors.push("Rol Adı alanı zorunludur.");
+            if (supportsRoleAndPhoto && selectedMode() === "new" && !roleInput?.value.trim()) errors.push("Rol Adı alanı zorunludur.");
             const file = photoInput?.files?.[0];
-            if (file && file.size > 5 * 1024 * 1024) errors.push("Fotoğraf boyutu 5 MB'dan küçük olmalıdır.");
+            if (file && !supportsRoleAndPhoto) errors.push("Bu ödül kategorisine fotoğraf eklenemez.");
+            if (file && file.size > 150 * 1024 * 1024) errors.push("Görsel boyutu 150 MB'dan büyük olamaz.");
             if (file && !["image/jpeg", "image/png", "image/webp"].includes(file.type)) errors.push("Yalnızca JPEG, PNG veya WebP formatında fotoğraf yükleyebilirsiniz.");
             if (errors.length === 0) return;
             event.preventDefault();

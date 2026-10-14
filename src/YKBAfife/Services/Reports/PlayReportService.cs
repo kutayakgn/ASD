@@ -36,8 +36,7 @@ public sealed class PlayReportService(AfifeContext context) : IPlayReportService
         if (normalized.JuryVotingStatus.HasValue)
         {
             plays = plays.Where(play =>
-                (!play.RecordType && play.StatusCode == 1 && play.JuriOylamaStatus) ==
-                normalized.JuryVotingStatus.Value);
+                play.JuriOylamaStatus == normalized.JuryVotingStatus.Value);
         }
 
         if (normalized.KunyeGirisStatus.HasValue)
@@ -53,7 +52,7 @@ public sealed class PlayReportService(AfifeContext context) : IPlayReportService
 
         var totalCount = await plays.CountAsync(cancellationToken);
         var juryVotingEnabledCount = await plays.CountAsync(
-            play => !play.RecordType && play.StatusCode == 1 && play.JuriOylamaStatus,
+            play => play.JuriOylamaStatus,
             cancellationToken);
         var totalPages = Math.Max(1, (int)Math.Ceiling(totalCount / (double)PlayTableViewModel.PageSize));
         var currentPage = Math.Min(normalized.Page, totalPages);
@@ -69,7 +68,7 @@ public sealed class PlayReportService(AfifeContext context) : IPlayReportService
             IsNew = !play.RecordType &&
                     (!play.UpdatedAt.HasValue || play.UpdatedAt == play.CreatedAt),
             CreatedAt = play.CreatedAt,
-            JuriOylamaStatus = !play.RecordType && play.StatusCode == 1 && play.JuriOylamaStatus,
+            JuriOylamaStatus = play.JuriOylamaStatus,
             KunyeGirisStatus = !play.RecordType && play.KunyeGirisStatus,
             Slug = play.Slug
         });
@@ -108,10 +107,12 @@ public sealed class PlayReportService(AfifeContext context) : IPlayReportService
         string sortDirection)
     {
         var descending = sortDirection == "desc";
-        var prioritizedRows = rows
-            .OrderByDescending(row => row.HasSimilarPlay)
-            .ThenByDescending(row => row.IsNew)
-            .ThenByDescending(row => row.IsNew ? row.CreatedAt : null);
+        var prioritizedRows = rows.OrderBy(row =>
+            row.IsNew
+                ? 0
+                : row.HasSimilarPlay
+                    ? 1
+                    : 2);
 
         return sortBy switch
         {

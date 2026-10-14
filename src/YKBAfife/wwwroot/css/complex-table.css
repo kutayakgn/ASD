@@ -81,7 +81,7 @@ p {
     position: relative;
     justify-content: flex-end;
     width: min(100%, 452px);
-    max-width:452px;
+    max-width: 452px;
 }
 
 .jury-voting-table-search-input {
@@ -157,6 +157,7 @@ p {
 .modal-body .jury-voting-table-wrapper {
     overflow-x: auto;
     padding: 0px;
+    min-height: 450px;
 }
 
 .jury-voting-table-wrapper {
@@ -191,6 +192,8 @@ tr {
 }
 
     .jury-voting-table th {
+        max-width: 0;
+        overflow: hidden;
         padding: 10px 16px;
         color: #171717;
         background: #f4f2ed;
@@ -203,17 +206,19 @@ tr {
         font-weight: 600;
         line-height: 22px;
         text-align: left;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
-    .jury-voting-table tbody {
-        border-bottom: 1px solid #e3dfd3;
-    }
+
 
 .modal-body .jury-voting-table td {
     padding: 12px 24px;
 }
 
 .jury-voting-table td {
+    max-width: 0;
+    overflow: hidden;
     padding: 12px 16px;
     background: #fff;
     border: 1px solid #f4f2ed;
@@ -224,15 +229,21 @@ tr {
     font-weight: 400;
     line-height: 20px;
     text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-    .jury-voting-table th:hover, .jury-voting-table td:hover {
+    .jury-voting-table tbody tr.complex-table-linked-row:has(> td.complex-table-row-hover-cell:hover) > td.complex-table-row-hover-cell,
+    .jury-voting-table tbody tr.complex-table-linked-row:focus-visible > td.complex-table-row-hover-cell,
+    .jury-voting-table td.complex-table-action-cell:hover {
         cursor: pointer;
         background-color: #e0dcce;
     }
 
-.jury-voting-table tbody tr:hover {
-    background: #faf8f3;
+/* The dashboard watch tables retain their existing header hover behavior. */
+#play-watch-table .jury-voting-table th:hover {
+    cursor: pointer;
+    background-color: #e0dcce;
 }
 
 .jury-voting-table tbody tr:last-child td {
@@ -258,12 +269,20 @@ tr {
     text-decoration: none;
 }
 
+.complex-table-sort-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 
 
-.complex-table-empty {
+
+.complex-table-empty, .complex-table-empty:hover {
     padding: 16px !important;
     color: #171717 !important;
     text-align: center;
+    background: #ffff;
 }
 
 .complex-table-empty-state {
@@ -381,8 +400,8 @@ tr {
 }
 
     .excel-export-button img {
-        width: 12px;
-        height: 12px;
+        width: 14px;
+        height: 14px;
         margin: 0;
         padding: 0;
     }
@@ -424,6 +443,12 @@ tr {
 }
 
 .complex-table-cell-content {
+    display: block;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     width: 100%;
 }
 
@@ -455,6 +480,13 @@ tr {
     transition: color .15s ease-in-out, text-decoration-color .15s ease-in-out;
 }
 
+    .complex-table-cell-action > span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
 .complex-table-cell-navigation-icon {
     width: 24px;
     height: 24px;
@@ -463,8 +495,8 @@ tr {
 
 .complex-table-cell-action:hover,
 .complex-table-cell-action:focus-visible {
-    color: #918150;
-    text-decoration-color: currentColor;
+    color: #171717;
+    text-decoration-color: none;
     outline: none;
 }
 
@@ -565,11 +597,10 @@ tr {
 
 .complex-table-header-action {
     display: inline-flex;
-    min-height: 44px;
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;
-    padding: 10px 18px;
+    padding: 9px 16px;
     color: #fff;
     background: #171717;
     border: 1px solid #171717;
@@ -581,6 +612,12 @@ tr {
     text-decoration: none;
     transition: color .15s ease-in-out, background-color .15s ease-in-out, border-color .15s ease-in-out;
 }
+
+    .complex-table-header-action.bordered {
+        color: #171717;
+        background: #fff;
+        border: 1px solid #171717;
+    }
 
     .complex-table-header-action img {
         width: 16px;
@@ -714,7 +751,7 @@ tr {
 
 .ticket-fee-modal-body hr {
     margin: 16px 0;
-    background: #BDBDBD;
+    background: #e3dfd3;
     height: 1px;
     opacity: 1;
 }
@@ -822,7 +859,7 @@ tr {
 
 .jury-voting-table th.complex-table-delete-column,
 .jury-voting-table td.complex-table-delete-column {
-    padding: 6px;
+    padding: 0px;
     text-align: center;
 }
 
@@ -884,15 +921,19 @@ tr {
     display: flex;
     width: 100%;
     min-height: 44px;
-    padding: 10px 12px;
+    padding: 10px;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 8px;
     color: #171717;
     background: #fff;
     border: 1px solid #777;
-    font: inherit;
     text-align: left;
+    font-family: Outfit;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 20px;
 }
 
     .complex-table-select-trigger:focus-visible {
@@ -915,30 +956,30 @@ tr {
         transition: transform .2s ease;
     }
 
-.complex-table-select-filter-control.is-open {
-    z-index: 50;
-}
-
-    .complex-table-select-filter-control.is-open .complex-table-select-trigger > img {
-        transform: rotate(180deg);
+    .complex-table-select-filter-control.is-open {
+        z-index: 50;
     }
 
-.complex-table-select-menu {
-    position: absolute;
-    z-index: 55;
-    top: calc(100% + 6px);
-    right: 0;
-    left: 0;
-    max-height: min(320px, 45vh);
-    overflow-y: auto;
-    background: #fff;
-    border: 1px solid #777;
-    box-shadow: 0 12px 28px rgba(23, 23, 23, .14);
-}
+        .complex-table-select-filter-control.is-open .complex-table-select-trigger > img {
+            transform: rotate(180deg);
+        }
 
-    .complex-table-select-menu[hidden] {
-        display: none !important;
+    .complex-table-select-menu {
+        position: absolute;
+        z-index: 55;
+        top: calc(100% + 6px);
+        right: 0;
+        left: 0;
+        max-height: min(320px, 45vh);
+        overflow-y: auto;
+        background: #fff;
+        border: 1px solid #777;
+        box-shadow: 0 12px 28px rgba(23, 23, 23, .14);
     }
+
+        .complex-table-select-menu[hidden] {
+            display: none !important;
+        }
 
 .complex-table-select-option {
     display: block;
@@ -948,24 +989,40 @@ tr {
     color: #171717;
     background: #fff;
     border: 0;
-    font: inherit;
-    text-align: left;
+    font-family: Outfit;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 20px;
+    text-align:left;
 }
 
-    .complex-table-select-option:last-child {
-        border-bottom: 0;
+        .complex-table-select-option:last-child {
+            border-bottom: 0;
+        }
+
+        .complex-table-select-option:hover {
+            background: #e9e5da;
+            outline: none;
+        }
+
+        .complex-table-select-option:focus-visible, .complex-table-select-option[aria-selected="true"] {
+            font-weight: 600;
+            outline: none;
+        }
+
+    .play-candidates-table-select-filter {
+        width: min(420px, 100%);
+    }
+    /* Aday sayısı az olduğunda kategori menüsünün tablo sınırında kesilmesini önler. */
+    #play-candidates-table {
+        overflow: visible;
+        padding-bottom: var(--candidate-dropdown-bottom-space, 0);
     }
 
-    .complex-table-select-option:hover {
-        background: #e9e5da;
-        outline: none;
-    }
-
-    .complex-table-select-option:focus-visible, .complex-table-select-option[aria-selected="true"] {
-        font-weight: 600;
-        outline: none;
-    }
-
-.play-candidates-table-select-filter {
-    width: min(420px, 100%);
-}
+        #play-candidates-table .complex-table-heading,
+        #play-candidates-table .complex-table-heading-tools,
+        #play-candidates-table .play-candidates-table-select-filter {
+            position: relative;
+            z-index: 60;
+        }
