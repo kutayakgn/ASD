@@ -1,3 +1,4 @@
+using DocumentFormat.OpenXml.Math;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Features;
@@ -7,8 +8,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using YKBAfife.Data;
 using YKBAfife.Data.Migrations;
 using YKBAfife.Helpers;
-using YKBAfife.Services.Authentication;
 using YKBAfife.Services.Audit;
+using YKBAfife.Services.Authentication;
 using YKBAfife.Services.Exports;
 using YKBAfife.Services.Reports;
 using YKBAfife.Services.Security;
@@ -122,3 +123,12 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
+
+
+//# Entity/configuration/SQL değişikliklerini yaptıktan sonra:
+//powershell - ExecutionPolicy Bypass - File scripts / migration.ps1 add AddUserNote
+
+//# Üretilen Up/Down işlemlerini inceleyin, ardından:
+//powershell - ExecutionPolicy Bypass -File scripts/test-migration-deployment.ps1 -Configuration Release
+
+//# Kaynak kodu normal deploy edin; uygulama bekleyen migration'ları uygular.
