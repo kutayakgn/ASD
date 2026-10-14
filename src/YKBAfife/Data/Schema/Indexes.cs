@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using YKBAfife.Helpers;
 using YKBAfife.Models.Entities;
 
 namespace YKBAfife.Data;
@@ -23,6 +24,9 @@ internal static partial class AfifeRelationalModelConfiguration
             .HasDatabaseName("IX_AdminLogs_UserId_OccurredAt");
         modelBuilder.Entity<Announcement>().HasIndex(x => x.BackgroundImageId).HasDatabaseName("IX_Announcements_BackgroundImageId");
         modelBuilder.Entity<Announcement>().HasIndex(x => x.ImageId).HasDatabaseName("IX_Announcements_ImageId");
+        modelBuilder.Entity<Config>().HasIndex(x => x.ConfigName)
+            .IsUnique().HasFilter(JuryHomePageTableSettings.NameFilter)
+            .HasDatabaseName("UX_Configs_JuryHomePageTableName");
         modelBuilder.Entity<JuryAssignedPlay>().HasIndex(x => x.JuryId).HasDatabaseName("IX_JuryAssignedPlays_JuryId");
         modelBuilder.Entity<JuryAssignedPlay>().HasIndex(x => x.PlayId).HasDatabaseName("IX_JuryAssignedPlays_PlayId");
         modelBuilder.Entity<JuryGameTicketFee>().HasIndex(x => x.PlayId).HasDatabaseName("IX_JuryGameTicketFees_PlayId");
@@ -66,7 +70,7 @@ internal static partial class AfifeRelationalModelConfiguration
         modelBuilder.Entity<AdditionalVotingPlay>().HasIndex(x => new { x.AdditionalVotingId, x.PlayId })
             .HasDatabaseName("UX_AdditionalVotingPlays_Published");
         modelBuilder.Entity<AdditionalVotingUsage>().HasIndex(x => new { x.AdditionalVotingId, x.JuryId, x.PlayId })
-            .HasDatabaseName("UX_AdditionalVotingUsages_OneTime");
+            .IsUnique(false).HasDatabaseName("IX_AdditionalVotingUsages_Jury_Play");
         modelBuilder.Entity<AdditionalVotingUsage>().HasIndex(x => new { x.AdditionalVotingId, x.UsageType, x.JuryId })
             .HasDatabaseName("IX_AdditionalVotingUsages_Lookup").HasFilter("[IsPublished] = 1");
         modelBuilder.Entity<Blacklist>().HasIndex(x => new { x.JuryId, x.PlayId })

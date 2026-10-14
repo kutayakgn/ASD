@@ -199,7 +199,8 @@ namespace YkbAfife.Controllers
                 JuryVotingSaveVoteResult.PlayNotFound => NotFound(responseBody),
                 JuryVotingSaveVoteResult.UnexpectedError => StatusCode(StatusCodes.Status500InternalServerError, responseBody),
                 JuryVotingSaveVoteResult.ConcurrencyConflict or
-            JuryVotingSaveVoteResult.AdditionalVotingAlreadyUsed => Conflict(responseBody),
+            JuryVotingSaveVoteResult.AdditionalVotingAlreadyUsed or
+            JuryVotingSaveVoteResult.TicketFeeAlreadySaved => Conflict(responseBody),
                 JuryVotingSaveVoteResult.JuryNotEligible or
             JuryVotingSaveVoteResult.PlayNotEligible or
             JuryVotingSaveVoteResult.SourceFormNotEligible or

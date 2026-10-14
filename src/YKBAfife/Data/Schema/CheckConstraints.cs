@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using YKBAfife.Helpers;
 using YKBAfife.Models.Entities;
 
 namespace YKBAfife.Data;
@@ -7,6 +8,8 @@ internal static partial class AfifeRelationalModelConfiguration
 {
     private static void ConfigureChecks(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Config>().ToTable("Configs", "dbo", table =>
+            table.HasCheckConstraint("CK_Configs_JuryHomePageTableValue", JuryHomePageTableSettings.ValueCheck));
         modelBuilder.Entity<User>().ToTable("Users", "dbo", t =>
         {
             t.HasCheckConstraint(

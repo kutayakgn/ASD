@@ -10,6 +10,9 @@ $emptyDatabaseScript = Join-Path $PSScriptRoot 'test-empty-database-migration.ps
 $oldestPreprodScript = Join-Path $PSScriptRoot 'test-oldest-preprod-migration.ps1'
 $currentSchemaScript = Join-Path $PSScriptRoot 'test-current-schema-adoption.ps1'
 $companyUpgradeScript = Join-Path $PSScriptRoot 'test-company-migration-upgrade.ps1'
+$candidateRulesScript = Join-Path $PSScriptRoot 'test-candidate-category-rules.ps1'
+$additionalVotingRulesScript = Join-Path $PSScriptRoot 'test-additional-voting-rules.ps1'
+$juryHomePageSettingsScript = Join-Path $PSScriptRoot 'test-jury-homepage-settings.ps1'
 $project = Join-Path $repositoryRoot 'src/YKBAfife/YKBAfife.csproj'
 $publishPath = Join-Path $env:TEMP ('YKBAfifeMigrationDeploy_' + [Guid]::NewGuid().ToString('N'))
 
@@ -30,6 +33,15 @@ try {
     & $companyUpgradeScript -Configuration $Configuration
     if ($LASTEXITCODE -ne 0) { throw 'Current company migration scenario failed.' }
 
+    & $candidateRulesScript -Configuration $Configuration
+    if ($LASTEXITCODE -ne 0) { throw 'Candidate category rules regression scenario failed.' }
+
+    & $additionalVotingRulesScript -Configuration $Configuration
+    if ($LASTEXITCODE -ne 0) { throw 'Additional voting rules regression scenario failed.' }
+
+    & $juryHomePageSettingsScript -Configuration $Configuration
+    if ($LASTEXITCODE -ne 0) { throw 'Jury home-page settings regression scenario failed.' }
+
     dotnet publish $project --no-restore -c $Configuration -o $publishPath
     if ($LASTEXITCODE -ne 0) { throw 'Deployment publish validation failed.' }
     if (-not (Test-Path (Join-Path $publishPath 'YKBAfife.dll'))) {
@@ -43,7 +55,15 @@ try {
 }
 finally {
     if (Test-Path $publishPath) {
-        Remove-Item -LiteralPath $publishPath -Recurse -Force -ErrorAction SilentlyContinue
+        $resolvedPublishPath = [IO.Path]::GetFullPath($publishPath)
+        $resolvedTempPath = [IO.Path]::GetFullPath($env:TEMP).TrimEnd('\', '/')
+        if ([IO.Path]::GetDirectoryName($resolvedPublishPath) -eq $resolvedTempPath -and
+            [IO.Path]::GetFileName($resolvedPublishPath) -match '^YKBAfifeMigrationDeploy_[a-f0-9]{32}$') {
+            Remove-Item -LiteralPath $resolvedPublishPath -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        else {
+            Write-Warning 'Publish output cleanup skipped: the path is outside the validated temporary test directory.'
+        }
     }
     Pop-Location
 }

@@ -34,7 +34,7 @@ function Get-CanonicalDatabaseObjects {
     if (-not $files) { throw 'No canonical database object SQL files were found.' }
 
     return ($files | ForEach-Object {
-        (Get-Content -Raw -LiteralPath $_.FullName).Trim() +
+        (Get-Content -Raw -Encoding utf8 -LiteralPath $_.FullName).Trim() +
             [Environment]::NewLine + 'GO' + [Environment]::NewLine
     }) -join [Environment]::NewLine
 }
@@ -98,7 +98,7 @@ try {
             }
             $migrationFile = $migrationFiles[0]
 
-            $source = Get-Content -Raw -LiteralPath $migrationFile.FullName
+            $source = Get-Content -Raw -Encoding utf8 -LiteralPath $migrationFile.FullName
             $upCall = @"
             MigrationSqlResources.ExecuteVersionedDatabaseObjects(
                 migrationBuilder, "$migrationName", "Up.sql");

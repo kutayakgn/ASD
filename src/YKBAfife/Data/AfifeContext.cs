@@ -208,7 +208,7 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
             entity.ToTable("AdditionalVotingUsages", "dbo", table =>
                 table.HasCheckConstraint("CK_AdditionalVotingUsages_UsageType", "[UsageType] IN (0, 1)"));
             entity.HasIndex(x => new { x.AdditionalVotingId, x.JuryId, x.PlayId })
-                .IsUnique().HasFilter("[IsPublished] = 1");
+                .IsUnique(false).HasFilter("[IsPublished] = 1");
             entity.HasOne(x => x.Jury).WithMany().HasForeignKey(x => x.JuryId)
                 .OnDelete(DeleteBehavior.NoAction);
             entity.HasOne(x => x.Play).WithMany().HasForeignKey(x => x.PlayId)

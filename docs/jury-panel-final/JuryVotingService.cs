@@ -517,10 +517,13 @@ namespace YkbAfife.Business.Service.JuryVoting
                 play.Id);
             var ticketFee = await _context.JuryGameTicketFees
                 .AsNoTracking()
+                .IgnoreQueryFilters()
                 .Where(x =>
-                    x.IsPublished &&
                     x.UserId == authenticatedUserId &&
                     x.PlayId == play.Id)
+                .OrderByDescending(x => x.IsPublished)
+                .ThenBy(x => x.CreatedAt)
+                .ThenBy(x => x.Id)
                 .Select(x => new
                 {
                     TicketFeeId = (Guid?)x.Id,
@@ -640,9 +643,7 @@ namespace YkbAfife.Business.Service.JuryVoting
             var canEditExistingVotes =
                 canShowCandidates &&
                 additionalVotingId.HasValue;
-            var isTicketFeeEditable =
-                ticketFee is null ||
-                additionalVotingId.HasValue;
+            var isTicketFeeEditable = ticketFee is null;
             var message = string.Empty;
             if (!sourceFormIsEligible)
             {
@@ -864,15 +865,6 @@ namespace YkbAfife.Business.Service.JuryVoting
                         "Aynı aday kaydı birden fazla kez gönderilemez.",
                         submittedScores);
                 }
-                if (request.TicketFee is null ||
-                    request.TicketFee <= 0 ||
-                    request.TicketFee > 99999)
-                {
-                    return await FailAsync(
-                        JuryVotingSaveVoteResult.InvalidTicketFee,
-                        "Bilet ücreti 1-99999 arasında, en fazla 5 haneli integer olmalıdır.",
-                        new { request.TicketFee });
-                }
                 var categoryRows = await _context.PlayAwardCategories
                     .AsNoTracking()
                     .Where(x =>
@@ -1045,9 +1037,14 @@ namespace YkbAfife.Business.Service.JuryVoting
                     }
                 }
                 var feeEntity = await _context.JuryGameTicketFees
-                    .FirstOrDefaultAsync(x =>
+                    .IgnoreQueryFilters()
+                    .Where(x =>
                         x.UserId == authenticatedUserId &&
-                        x.PlayId == request.PlayId);
+                        x.PlayId == request.PlayId)
+                    .OrderByDescending(x => x.IsPublished)
+                    .ThenBy(x => x.CreatedAt)
+                    .ThenBy(x => x.Id)
+                    .FirstOrDefaultAsync();
                 if (request.TicketFeeId.HasValue &&
                     feeEntity?.Id != request.TicketFeeId.Value)
                 {
@@ -1060,7 +1057,7 @@ namespace YkbAfife.Business.Service.JuryVoting
                             CurrentTicketFeeId = feeEntity?.Id
                         });
                 }
-                if (feeEntity is { IsPublished: true } &&
+                if (feeEntity is not null &&
                     request.TicketFeeId != feeEntity.Id)
                 {
                     return await FailAsync(
@@ -1072,24 +1069,32 @@ namespace YkbAfife.Business.Service.JuryVoting
                             CurrentTicketFeeId = feeEntity.Id
                         });
                 }
-                oldTicketFee =
-                    feeEntity is { IsPublished: true }
-                        ? feeEntity.TicketFee
-                        : null;
-                var submittedTicketFee = (decimal)request.TicketFee.Value;
-                var ticketFeeChanged =
-                    oldTicketFee is null ||
-                    decimal.Truncate(oldTicketFee.Value) != submittedTicketFee;
-                if (oldTicketFee.HasValue && ticketFeeChanged)
+                oldTicketFee = feeEntity?.TicketFee;
+                // Eski istemciler decimal ücretin tam sayı gösterimini gönderebilir.
+                // Aynı gösterim kabul edilir; kayıtlı decimal tutar hiçbir zaman yeniden yazılmaz.
+                if (feeEntity is not null &&
+                    request.TicketFee.HasValue &&
+                    decimal.Truncate(feeEntity.TicketFee) != request.TicketFee.Value)
                 {
-                    requiresAdditionalVoting = true;
-                    hasExistingVoteUpdate = true;
+                    return await FailAsync(
+                        JuryVotingSaveVoteResult.TicketFeeAlreadySaved,
+                        "Bilet ücreti daha önce kaydedildiği için jüri tarafından değiştirilemez.",
+                        new { request.TicketFee, SavedTicketFee = feeEntity.TicketFee });
                 }
+                if (feeEntity is null &&
+                    (request.TicketFee is null || request.TicketFee is < 1 or > 99999))
+                {
+                    return await FailAsync(
+                        JuryVotingSaveVoteResult.InvalidTicketFee,
+                        "İlk kayıt için bilet ücreti 1-99999 arasında, en fazla 5 haneli integer olmalıdır.",
+                        new { request.TicketFee });
+                }
+                var ticketFeeChanged = feeEntity is null;
                 if (requiresAdditionalVoting && !additionalVotingId.HasValue)
                 {
                     return await FailAsync(
                         JuryVotingSaveVoteResult.AdditionalVotingNotAvailable,
-                        "Mevcut oy/bilet ücreti yalnızca kullanılabilir ek oylama hakkıyla güncellenebilir.",
+                        "Mevcut oy yalnızca tarih aralığı geçerli bir ek oylama hakkıyla güncellenebilir.",
                         new
                         {
                             VoteChangeCount = voteChanges.Count,
@@ -1147,22 +1152,20 @@ namespace YkbAfife.Business.Service.JuryVoting
                 }
                 if (ticketFeeChanged)
                 {
-                    if (feeEntity is null)
+                    var submittedTicketFee = (decimal)request.TicketFee!.Value;
+                    feeEntity = new JuryGameTicketFee
                     {
-                        feeEntity = new JuryGameTicketFee
-                        {
-                            Id = Guid.NewGuid(),
-                            UserId = authenticatedUserId,
-                            PlayId = request.PlayId,
-                            CreatedAt = now,
-                            CreatedBy = authenticatedUserId
-                        };
-                        _context.JuryGameTicketFees.Add(feeEntity);
-                    }
-                    feeEntity.TicketFee = submittedTicketFee;
-                    feeEntity.IsPublished = true;
-                    feeEntity.UpdatedAt = now;
-                    feeEntity.UpdatedBy = authenticatedUserId;
+                        Id = Guid.NewGuid(),
+                        UserId = authenticatedUserId,
+                        PlayId = request.PlayId,
+                        TicketFee = submittedTicketFee,
+                        CreatedAt = now,
+                        CreatedBy = authenticatedUserId,
+                        IsPublished = true,
+                        UpdatedAt = now,
+                        UpdatedBy = authenticatedUserId
+                    };
+                    _context.JuryGameTicketFees.Add(feeEntity);
                     newTicketFee = submittedTicketFee;
                 }
                 else
@@ -1174,20 +1177,6 @@ namespace YkbAfife.Business.Service.JuryVoting
                     requiresAdditionalVoting;
                 if (useAdditionalVoting)
                 {
-                    var usageAlreadyExists =
-                        await _context.AdditionalVotingUsages.AnyAsync(x =>
-                            x.IsPublished &&
-                            x.IsActive &&
-                            x.AdditionalVotingId ==
-                                additionalVotingId.Value &&
-                            x.JuryId == authenticatedUserId &&
-                            x.PlayId == request.PlayId);
-                    if (usageAlreadyExists)
-                    {
-                        return await FailAsync(
-                            JuryVotingSaveVoteResult.AdditionalVotingAlreadyUsed,
-                            "Ek oylama hakkı başka bir işlem tarafından kullanılmış.");
-                    }
                     additionalUsageType = hasExistingVoteUpdate
                         ? AdditionalVotingUsageType.VoteUpdate
                         : AdditionalVotingUsageType.FirstVote;
@@ -1217,9 +1206,7 @@ namespace YkbAfife.Business.Service.JuryVoting
                         : "AdditionalFirstVote"
                     : voteChanges.Count > 0
                         ? "VoteSave"
-                        : oldTicketFee.HasValue
-                            ? "TicketFeeUpdate"
-                            : "TicketFeeCreate";
+                        : "TicketFeeCreate";
                 stopwatch.Stop();
                 _context.JuryLogs.Add(new JuryLog
                 {
@@ -1295,6 +1282,21 @@ namespace YkbAfife.Business.Service.JuryVoting
                         exception.Message
                     });
             }
+            catch (Microsoft.Data.SqlClient.SqlException exception)
+                when (exception.Number is 1205 or 2601 or 2627)
+            {
+                // Serializable ilk kayıt yarışında deadlock sorgu aşamasında da
+                // oluşabilir; EF SaveChanges sarmalaması olmadan gelen hatayı
+                // beklenmeyen hata yerine kontrollü bir eşzamanlılık sonucu yap.
+                _logger.LogWarning(
+                    exception,
+                    "Jüri oy kaydı eşzamanlı DB işlemiyle çakıştı. CorrelationId={CorrelationId}",
+                    correlationId);
+                return await FailAsync(
+                    JuryVotingSaveVoteResult.ConcurrencyConflict,
+                    "Oy kaydı eşzamanlı başka bir işlemle çakıştı. Sayfayı yenileyip tekrar deneyiniz.",
+                    new { exception.Number, exception.Message });
+            }
             catch (Exception exception)
             {
                 _logger.LogError(
@@ -1340,13 +1342,6 @@ namespace YkbAfife.Business.Service.JuryVoting
                         play.IsActive &&
                         play.AdditionalVotingId == voting.Id &&
                         play.PlayId == playId))
-                .Where(voting =>
-                    !_context.AdditionalVotingUsages.Any(usage =>
-                        usage.IsPublished &&
-                        usage.IsActive &&
-                        usage.AdditionalVotingId == voting.Id &&
-                        usage.JuryId == juryId &&
-                        usage.PlayId == playId))
                 .OrderBy(voting => voting.EndDate)
                 .ThenBy(voting => voting.StartDate)
                 .Select(voting => (Guid?)voting.Id)

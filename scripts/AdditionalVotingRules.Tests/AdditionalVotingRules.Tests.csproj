@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/YKBAfife/YKBAfife.csproj" />
+    <Compile Include="../../docs/jury-panel-final/JuryVotingVoteContracts.cs" Link="ActualKit/JuryVotingVoteContracts.cs" />
+    <Compile Include="../../docs/jury-panel-final/JuryVotingPlayDetailViewModel.cs" Link="ActualKit/JuryVotingPlayDetailViewModel.cs" />
+    <Compile Include="$(IntermediateOutputPath)ActualJuryVotingService.g.cs" />
+  </ItemGroup>
+  <Target Name="ExtractActualVotingMethods" BeforeTargets="CoreCompile">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/ExtractVotingMethods.ps1&quot; -RepositoryRoot &quot;$(MSBuildProjectDirectory)/../..&quot; -OutputPath &quot;$(MSBuildProjectDirectory)/$(IntermediateOutputPath)ActualJuryVotingService.g.cs&quot;" />
+  </Target>
+</Project>

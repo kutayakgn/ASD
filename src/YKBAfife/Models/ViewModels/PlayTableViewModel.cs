@@ -13,8 +13,8 @@ public sealed class PlaysDashboardViewModel
 public sealed class PlayTableQuery
 {
     public string Search { get; set; } = string.Empty;
-    public string SortBy { get; set; } = PlaySortColumns.PlayName;
-    public string SortDirection { get; set; } = "asc";
+    public string SortBy { get; set; } = PlaySortColumns.CreatedAt;
+    public string SortDirection { get; set; } = "desc";
     public int Page { get; set; } = 1;
     public bool? JuryVotingStatus { get; set; }
     public bool? KunyeGirisStatus { get; set; }
@@ -24,8 +24,8 @@ public sealed class PlayTableQuery
 public sealed class PlayTableViewModel
 {
     public string Search { get; init; } = string.Empty;
-    public string SortBy { get; init; } = PlaySortColumns.PlayName;
-    public string SortDirection { get; init; } = "asc";
+    public string SortBy { get; init; } = PlaySortColumns.CreatedAt;
+    public string SortDirection { get; init; } = "desc";
     public int CurrentPage { get; init; } = 1;
     public int TotalCount { get; init; }
     public int JuryVotingEnabledCount { get; init; }

@@ -98,14 +98,18 @@ public static class CandidateComplexTableFactory
             [
                 LinkCell(row.CategoryName, detailsUrl),
                 LinkCell(row.Candidate, detailsUrl),
-                LinkCell(string.IsNullOrWhiteSpace(row.Role) ? "-" : row.Role, detailsUrl),
+                LinkCell(
+                    row.CategoryCode is >= CandidateCategoryPolicy.BestDirectorCategoryCode
+                        and <= CandidateCategoryPolicy.BestSupportingActorCategoryCode &&
+                    !string.IsNullOrWhiteSpace(row.Role) ? row.Role : "-",
+                    detailsUrl),
                 LinkCell(replacement, detailsUrl),
                 LinkCell(row.CreatedAt?.ToString("dd.MM.yyyy HH:mm", CultureInfo.CurrentCulture) ?? "-", detailsUrl),
                 new()
                 {
                     ToggleUrl = $"/adaylar/{row.Id:D}/status",
-                    ToggleChecked = isSystemManaged || row.IsActive,
-                    ToggleDisabled = isSystemManaged,
+                    ToggleChecked = row.IsActive,
+                    ToggleDisabled = false,
                     AccessibleLabel = $"{row.Candidate} statüsünü değiştir",
                     CssClass = "candidate-status-cell"
                 }

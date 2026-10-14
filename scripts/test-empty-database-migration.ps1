@@ -1,4 +1,4 @@
-param(
+﻿param(
     [ValidateSet('Debug', 'Release')]
     [string] $Configuration = 'Release'
 )
@@ -6,6 +6,13 @@ param(
 $ErrorActionPreference = 'Stop'
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $project = Join-Path $repositoryRoot 'src/YKBAfife/YKBAfife.csproj'
+$migrationRoot = Join-Path $repositoryRoot 'src/YKBAfife/Data/Migrations'
+$expectedMigrationIds = @(Get-ChildItem -LiteralPath $migrationRoot -File -Filter '*.cs' |
+    Where-Object { $_.Name -cmatch '^\d{14}_[A-Za-z0-9_]+\.cs$' } |
+    Sort-Object Name |
+    ForEach-Object { $_.BaseName })
+if ($expectedMigrationIds.Count -eq 0) { throw 'No source migrations were found.' }
+$expectedMigrationValues = ($expectedMigrationIds | ForEach-Object { "(N'$_')" }) -join ",`n"
 $databaseName = 'YkbAfifeEmptyTest_' + ([Guid]::NewGuid().ToString('N'))
 
 if ($databaseName -notmatch '^YkbAfifeEmptyTest_[a-f0-9]{32}$') {
@@ -28,12 +35,19 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Empty database migration failed.' }
 
     $verification = @"
-IF NOT EXISTS
-(
-    SELECT 1 FROM dbo.__EFMigrationsHistory
-    WHERE MigrationId LIKE N'%[_]InitialBaseline[_]v[_]20260827'
-)
-    THROW 53110, N'Latest migration was not recorded on the empty database.', 1;
+DECLARE @ExpectedMigrations TABLE (MigrationId nvarchar(150) PRIMARY KEY);
+INSERT INTO @ExpectedMigrations (MigrationId) VALUES
+$expectedMigrationValues;
+
+IF EXISTS (SELECT MigrationId FROM @ExpectedMigrations EXCEPT SELECT MigrationId FROM dbo.__EFMigrationsHistory)
+   OR EXISTS (SELECT MigrationId FROM dbo.__EFMigrationsHistory EXCEPT SELECT MigrationId FROM @ExpectedMigrations)
+BEGIN
+    SELECT N'Expected' AS MigrationSource, MigrationId FROM @ExpectedMigrations
+    UNION ALL
+    SELECT N'Applied' AS MigrationSource, MigrationId FROM dbo.__EFMigrationsHistory
+    ORDER BY MigrationSource, MigrationId;
+    THROW 53110, N'Empty database migration history does not match the source migration chain.', 1;
+END;
 
 IF OBJECT_ID(N'dbo.Form', N'U') IS NULL
    OR OBJECT_ID(N'dbo.Plays', N'U') IS NULL
@@ -45,6 +59,15 @@ IF OBJECT_ID(N'dbo.Form', N'U') IS NULL
 
 IF (SELECT COUNT(*) FROM dbo.AwardCategories WHERE IsPublished = 1) <> 11
     THROW 53112, N'Canonical award categories were not created on the empty database.', 1;
+
+IF NOT EXISTS
+(
+    SELECT 1 FROM dbo.AwardCategories
+    WHERE CategoryCode = 1011
+      AND CategoryName = N'Yılın En Başarılı Hareket Tasarımı (Kareografisi)'
+      AND IsPublished = 1
+)
+    THROW 53121, N'Category 1011 name does not match the current canonical definition.', 1;
 
 IF OBJECT_ID(N'dbo.usp_RefreshRankings', N'P') IS NULL
     THROW 53113, N'Programmability objects were not created on the empty database.', 1;

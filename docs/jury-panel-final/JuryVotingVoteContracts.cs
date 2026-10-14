@@ -6,8 +6,8 @@ public sealed class SaveVoteRequest
 {
     public Guid PlayId { get; set; }
 
-    // API yalnızca 1-99999 arası integer kabul eder. Veritabanı kolonu
-    // geriye dönük uyumluluk için decimal(10,2) kalmaya devam eder.
+    // İlk kayıt için 1-99999 arası integer zorunludur. Kayıtlı ücret kilitlidir;
+    // oy güncellemelerinde null gönderilir. DB decimal(10,2) olarak kalır.
     public int? TicketFee { get; set; }
 
     public Guid? TicketFeeId { get; set; }
@@ -57,10 +57,12 @@ public enum JuryVotingSaveVoteResult
     IncompleteVoteSet = 15,
     InconsistentExistingVotes = 16,
     AdditionalVotingNotAvailable = 17,
+    // Eski entegrasyonların enum numaraları korunur; hak artık kullanım ile tükenmez.
     AdditionalVotingAlreadyUsed = 18,
     NoChanges = 19,
     ConcurrencyConflict = 20,
-    UnexpectedError = 21
+    UnexpectedError = 21,
+    TicketFeeAlreadySaved = 22
 }
 
 public static class JuryVotingResultCodes

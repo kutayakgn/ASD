@@ -33,7 +33,7 @@ public sealed class AddCandidateViewComponent(AfifeContext context) : ViewCompon
             .Where(category => category.IsPublished &&
                                category.CategoryCode != CandidateCategoryPolicy.BestPlayCategoryCode &&
                                category.CategoryCode != CandidateCategoryPolicy.BestDirectorCategoryCode)
-            .OrderBy(category => category.CategoryName)
+            .OrderBy(category => category.CategoryCode)
             .Select(category => new AddCandidateCategoryOptionViewModel
             {
                 CategoryCode = category.CategoryCode,

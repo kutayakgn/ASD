@@ -279,7 +279,9 @@ BEGIN
        AND missing.AwardCategoryCode = source.AwardCategoryCode
        AND missing.SourceOrder = source.SourceOrder;
 
-    /* Form changes update only the mapped slot and never change RoleCode. */
+    /* Form changes update only the mapped slot. Existing published/current
+       candidates retain their manually selected status. A retired source slot
+       becoming current again starts active, just like a newly created slot. */
     ;WITH CurrentTargets AS
     (
         SELECT candidate.Id,
@@ -299,7 +301,10 @@ BEGIN
         Role = source.Role,
         RoleCode = source.RoleCode,
         IsPublished = 1,
-        IsActive = 1,
+        IsActive = CASE
+            WHEN candidate.IsPublished = 1 AND candidate.IsCurrent = 1
+                THEN candidate.IsActive
+            ELSE 1 END,
         IsCurrent = 1,
         UpdatedAt = @Now
     FROM dbo.PlayAwardCategories AS candidate

@@ -1,4 +1,4 @@
-param(
+﻿param(
     [ValidateSet('Debug', 'Release')]
     [string] $Configuration = 'Release'
 )
@@ -6,6 +6,13 @@ param(
 $ErrorActionPreference = 'Stop'
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $project = Join-Path $repositoryRoot 'src/YKBAfife/YKBAfife.csproj'
+$migrationRoot = Join-Path $repositoryRoot 'src/YKBAfife/Data/Migrations'
+$expectedMigrationIds = @(Get-ChildItem -LiteralPath $migrationRoot -File -Filter '*.cs' |
+    Where-Object { $_.Name -cmatch '^\d{14}_[A-Za-z0-9_]+\.cs$' } |
+    Sort-Object Name |
+    ForEach-Object { $_.BaseName })
+if ($expectedMigrationIds.Count -eq 0) { throw 'No source migrations were found.' }
+$expectedMigrationValues = ($expectedMigrationIds | ForEach-Object { "(N'$_')" }) -join ",`n"
 $schemaSource = Join-Path $PSScriptRoot '27.08.2026_guncel_db_schema_script.sql'
 $databaseName = 'YkbAfifeCurrentSchemaTest_' + ([Guid]::NewGuid().ToString('N'))
 $temporarySchema = Join-Path $env:TEMP ($databaseName + '.sql')
@@ -77,13 +84,28 @@ VALUES
     if ($LASTEXITCODE -ne 0) { throw 'Current schema baseline adoption failed.' }
 
     $verification = @"
-IF (SELECT COUNT(*) FROM dbo.__EFMigrationsHistory) <> 1
-   OR NOT EXISTS
-   (
-       SELECT 1 FROM dbo.__EFMigrationsHistory
-       WHERE MigrationId LIKE N'%[_]InitialBaseline[_]v[_]20260827'
-   )
-    THROW 53200, N'Squashed baseline history was not adopted cleanly.', 1;
+DECLARE @ExpectedMigrations TABLE (MigrationId nvarchar(150) PRIMARY KEY);
+INSERT INTO @ExpectedMigrations (MigrationId) VALUES
+$expectedMigrationValues;
+
+IF EXISTS (SELECT MigrationId FROM @ExpectedMigrations EXCEPT SELECT MigrationId FROM dbo.__EFMigrationsHistory)
+   OR EXISTS (SELECT MigrationId FROM dbo.__EFMigrationsHistory EXCEPT SELECT MigrationId FROM @ExpectedMigrations)
+BEGIN
+    SELECT N'Expected' AS MigrationSource, MigrationId FROM @ExpectedMigrations
+    UNION ALL
+    SELECT N'Applied' AS MigrationSource, MigrationId FROM dbo.__EFMigrationsHistory
+    ORDER BY MigrationSource, MigrationId;
+    THROW 53200, N'Current database migration history does not match the source migration chain.', 1;
+END;
+
+IF NOT EXISTS
+(
+    SELECT 1 FROM dbo.AwardCategories
+    WHERE CategoryCode = 1011
+      AND CategoryName = N'Yılın En Başarılı Hareket Tasarımı (Kareografisi)'
+      AND IsPublished = 1
+)
+    THROW 53204, N'Category 1011 name does not match the current canonical definition.', 1;
 
 IF NOT EXISTS
 (

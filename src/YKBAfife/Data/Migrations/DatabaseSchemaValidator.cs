@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using YKBAfife.Helpers;
 
 namespace YKBAfife.Data.Migrations;
 
@@ -61,6 +62,13 @@ internal static partial class DatabaseSchemaValidator
         foreach (Match match in IndexRegex().Matches(schemaSql))
         {
             var indexName = match.Groups["name"].Value;
+            // The immutable initial schema contains the historical one-use
+            // index. Forward migrations replace it with usage history lookup.
+            if (string.Equals(indexName, "UX_AdditionalVotingUsages_OneTime",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
             if (string.Equals(
                     indexName,
                     "UX_PlayAwardCategories_Current_Play_Category_Role",
@@ -77,6 +85,22 @@ internal static partial class DatabaseSchemaValidator
             {
                 missing.Add($"index {indexName}");
             }
+        }
+        if (!catalog.NonUniqueIndexes.Contains("IX_AdditionalVotingUsages_Jury_Play"))
+        {
+            missing.Add("non-unique index IX_AdditionalVotingUsages_Jury_Play");
+        }
+        if (catalog.Indexes.Contains("UX_AdditionalVotingUsages_OneTime"))
+        {
+            missing.Add("obsolete one-use index UX_AdditionalVotingUsages_OneTime");
+        }
+        if (!catalog.UniqueIndexes.Contains("UX_Configs_JuryHomePageTableName"))
+        {
+            missing.Add("unique index UX_Configs_JuryHomePageTableName");
+        }
+        if (!catalog.Constraints.Contains("CK_Configs_JuryHomePageTableValue"))
+        {
+            missing.Add("constraint CK_Configs_JuryHomePageTableValue");
         }
         if (!catalog.NonUniqueIndexes.Contains(
                 "IX_PlayAwardCategories_Current_Play_Category_Role"))
@@ -172,6 +196,7 @@ internal static partial class DatabaseSchemaValidator
         if (missing.Count == 0)
         {
             await ValidateReferenceDataAsync(connection, missing, cancellationToken);
+            await ValidateJuryHomePageTableSettingsAsync(connection, missing, cancellationToken);
         }
 
         if (missing.Count > 0)
@@ -179,6 +204,36 @@ internal static partial class DatabaseSchemaValidator
             throw new InvalidOperationException(
                 "Database schema drift detected. Missing or invalid objects: " +
                 string.Join(", ", missing.Order(StringComparer.OrdinalIgnoreCase)));
+        }
+    }
+
+    private static async Task ValidateJuryHomePageTableSettingsAsync(
+        SqlConnection connection,
+        ICollection<string> invalid,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        var parameters = JuryHomePageTableSettings.Definitions.Select((definition, index) =>
+        {
+            var name = $"@name{index}";
+            command.Parameters.Add(new SqlParameter(name, SqlDbType.NVarChar, 255) { Value = definition.Name });
+            return name;
+        });
+        command.CommandText = $"SELECT ConfigName, ConfigValue, IsPublished FROM dbo.Configs WHERE ConfigName IN ({string.Join(",", parameters)});";
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            var name = reader.GetString(0);
+            if (!JuryHomePageTableSettings.IsKnown(name) || !seen.Add(name) ||
+                !reader.GetBoolean(2) || reader.GetString(1) is not ("true" or "false"))
+            {
+                invalid.Add($"fixed jury home-page table setting {name}");
+            }
+        }
+        foreach (var definition in JuryHomePageTableSettings.Definitions.Where(definition => !seen.Contains(definition.Name)))
+        {
+            invalid.Add($"fixed jury home-page table setting {definition.Name}");
         }
     }
 
@@ -252,7 +307,7 @@ internal static partial class DatabaseSchemaValidator
             [("AwardCategory", 1008)] = new("Yılın En Başarılı Giysi Tasarımı", true, true, "1"),
             [("AwardCategory", 1009)] = new("Yılın En Başarılı Sahne Müziği", true, true, "1"),
             [("AwardCategory", 1010)] = new("Yılın En Başarılı Işık Tasarımı", true, true, "1"),
-            [("AwardCategory", 1011)] = new("Yılın En Başarılı Hareket Düzeni (Kareografisi)", true, true, "1"),
+            [("AwardCategory", 1011)] = new("Yılın En Başarılı Hareket Tasarımı (Kareografisi)", true, true, "1"),
             [("PlayStatus", 1)] = new("Oylama Aktif", true, null, "#27ae60"),
             [("PlayStatus", 2)] = new("Değerlendirmeyecek Oyun", true, null, "#d9322d"),
             [("PlayStatus", 3)] = new("Başvuru Yapmayacak Oyun", true, null, "#2CA9E8"),
@@ -283,6 +338,9 @@ internal static partial class DatabaseSchemaValidator
             UNION ALL
             SELECT N'N', i.name FROM sys.indexes i
             WHERE i.name IS NOT NULL AND i.is_unique = 0
+            UNION ALL
+            SELECT N'V', i.name FROM sys.indexes i
+            WHERE i.name IS NOT NULL AND i.is_unique = 1
             UNION ALL
             SELECT N'K', o.name FROM sys.objects o
             WHERE o.type IN (N'PK', N'UQ', N'F', N'C', N'D')
@@ -366,6 +424,7 @@ internal static partial class DatabaseSchemaValidator
                 "C" => result.Columns,
                 "I" => result.Indexes,
                 "N" => result.NonUniqueIndexes,
+                "V" => result.UniqueIndexes,
                 "K" => result.Constraints,
                 "P" => result.Procedures,
                 "U" => result.Functions,
@@ -387,6 +446,7 @@ internal static partial class DatabaseSchemaValidator
         public HashSet<string> Columns { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> Indexes { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> NonUniqueIndexes { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public HashSet<string> UniqueIndexes { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> Constraints { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> Procedures { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> Functions { get; } = new(StringComparer.OrdinalIgnoreCase);

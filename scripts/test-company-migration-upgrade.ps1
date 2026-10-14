@@ -1,4 +1,4 @@
-param(
+﻿param(
     [ValidateSet('Debug', 'Release')]
     [string] $Configuration = 'Release'
 )
@@ -6,6 +6,13 @@ param(
 $ErrorActionPreference = 'Stop'
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $project = Join-Path $repositoryRoot 'src/YKBAfife/YKBAfife.csproj'
+$migrationRoot = Join-Path $repositoryRoot 'src/YKBAfife/Data/Migrations'
+$expectedMigrationIds = @(Get-ChildItem -LiteralPath $migrationRoot -File -Filter '*.cs' |
+    Where-Object { $_.Name -cmatch '^\d{14}_[A-Za-z0-9_]+\.cs$' } |
+    Sort-Object Name |
+    ForEach-Object { $_.BaseName })
+if ($expectedMigrationIds.Count -eq 0) { throw 'No source migrations were found.' }
+$expectedMigrationValues = ($expectedMigrationIds | ForEach-Object { "(N'$_')" }) -join ",`n"
 $fixture = Join-Path $repositoryRoot 'scripts/test-company-upgrade-fixture.sql'
 $databaseName = 'YkbAfifeUpgradeTest_' + ([Guid]::NewGuid().ToString('N'))
 
@@ -53,6 +60,29 @@ VALUES (N'20260812082231_ScopeUserEmailUniquenessByRole', N'8.0.29');
     if ($LASTEXITCODE -ne 0) { throw 'Company-style upgrade failed.' }
 
 $verification = @"
+DECLARE @ExpectedMigrations TABLE (MigrationId nvarchar(150) PRIMARY KEY);
+INSERT INTO @ExpectedMigrations (MigrationId) VALUES
+$expectedMigrationValues;
+
+IF EXISTS (SELECT MigrationId FROM @ExpectedMigrations EXCEPT SELECT MigrationId FROM dbo.__EFMigrationsHistory)
+   OR EXISTS (SELECT MigrationId FROM dbo.__EFMigrationsHistory EXCEPT SELECT MigrationId FROM @ExpectedMigrations)
+BEGIN
+    SELECT N'Expected' AS MigrationSource, MigrationId FROM @ExpectedMigrations
+    UNION ALL
+    SELECT N'Applied' AS MigrationSource, MigrationId FROM dbo.__EFMigrationsHistory
+    ORDER BY MigrationSource, MigrationId;
+    THROW 53007, N'Company database migration history does not match the source migration chain.', 1;
+END;
+
+IF NOT EXISTS
+(
+    SELECT 1 FROM dbo.AwardCategories
+    WHERE CategoryCode = 1011
+      AND CategoryName = N'Yılın En Başarılı Hareket Tasarımı (Kareografisi)'
+      AND IsPublished = 1
+)
+    THROW 53008, N'Category 1011 name does not match the current canonical definition.', 1;
+
 IF EXISTS
 (
     SELECT 1 FROM sys.indexes

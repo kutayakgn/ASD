@@ -105,8 +105,8 @@ public sealed class CandidateReportService(AfifeContext context) : ICandidateRep
                 ? rows.OrderByDescending(row => row.IsActive).ThenBy(row => row.Candidate)
                 : rows.OrderBy(row => row.IsActive).ThenBy(row => row.Candidate),
             _ => descending
-                ? rows.OrderByDescending(row => row.CategoryName).ThenBy(row => row.Candidate)
-                : rows.OrderBy(row => row.CategoryName).ThenBy(row => row.Candidate)
+                ? rows.OrderByDescending(row => row.CategoryCode).ThenBy(row => row.Candidate).ThenBy(row => row.Id)
+                : rows.OrderBy(row => row.CategoryCode).ThenBy(row => row.Candidate).ThenBy(row => row.Id)
         };
     }
 
