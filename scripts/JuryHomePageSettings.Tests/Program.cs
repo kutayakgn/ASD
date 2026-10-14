@@ -66,6 +66,7 @@ sealed class RegressionChecks(string connection)
         await TestDatabaseGuardsAsync();
         await TestReplayAsync();
         await TestRollbackAndLegacyIdAsync();
+        await new SchemaKeyCompatibilityChecks(connection).RunAsync();
         Console.WriteLine($"PASS: {assertions} jury home page settings regression assertions using actual controller, factory and migrations.");
     }
 

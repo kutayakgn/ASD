@@ -64,10 +64,23 @@ internal static partial class DatabaseSchemaValidator
                 if (name is null) continue;
                 var key = $"{tableKey}.{name}";
                 if (!checkedObjects.Add(key)) continue;
-                if (!actual.Keys.TryGetValue(key, out var row) ||
-                    row.Primary != keyDefinition.IsPrimaryKey() ||
-                    !row.Columns.SequenceEqual(keyDefinition.Properties.Select(Column), StringComparer.OrdinalIgnoreCase))
-                    invalid.Add($"key {key}");
+                var columns = keyDefinition.Properties.Select(Column).ToArray();
+                var tableKeys = actual.Keys.Where(entry =>
+                    string.Equals(entry.Value.Table, tableKey, StringComparison.OrdinalIgnoreCase)).ToArray();
+                // Legacy databases may have SQL Server-generated or manually
+                // assigned constraint names. Names do not change the key rule;
+                // require an enabled PK/UQ on this table's exact ordered columns.
+                // A unique index must never substitute for a primary/alternate key.
+                if (!tableKeys.Any(entry =>
+                        entry.Value.Primary == keyDefinition.IsPrimaryKey() && !entry.Value.Disabled && entry.Value.Unique &&
+                        entry.Value.Columns.SequenceEqual(columns, StringComparer.OrdinalIgnoreCase)))
+                {
+                    var kind = keyDefinition.IsPrimaryKey() ? "PK" : "UQ";
+                    var found = tableKeys.Length == 0 ? "none" : string.Join("; ", tableKeys.Select(entry =>
+                        $"{entry.Key} {(entry.Value.Primary ? "PK" : "UQ")} ({string.Join(",", entry.Value.Columns)})" +
+                        (entry.Value.Disabled ? " disabled" : "") + (!entry.Value.Unique ? " nonunique" : "")));
+                    invalid.Add($"key {key} (expected {kind} ({string.Join(",", columns)}); found {found})");
+                }
             }
             foreach (var foreignKey in entity.GetForeignKeys())
             {
@@ -120,9 +133,11 @@ internal static partial class DatabaseSchemaValidator
             WHERE i.name IS NOT NULL AND i.is_primary_key = 0 AND i.is_unique_constraint = 0
             ORDER BY s.name, t.name, i.name, ic.is_included_column, ic.key_ordinal, ic.index_column_id;
 
-            SELECT s.name + N'.' + t.name + N'.' + k.name, k.type, c.name
+            SELECT s.name + N'.' + t.name + N'.' + k.name, k.type, c.name,
+                   s.name + N'.' + t.name, i.is_disabled, i.is_unique
             FROM sys.key_constraints k JOIN sys.tables t ON t.object_id = k.parent_object_id
             JOIN sys.schemas s ON s.schema_id = t.schema_id
+            JOIN sys.indexes i ON i.object_id = k.parent_object_id AND i.index_id = k.unique_index_id
             JOIN sys.index_columns ic ON ic.object_id = k.parent_object_id AND ic.index_id = k.unique_index_id
             JOIN sys.columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id
             WHERE ic.key_ordinal > 0 ORDER BY s.name, t.name, k.name, ic.key_ordinal;
@@ -159,7 +174,8 @@ internal static partial class DatabaseSchemaValidator
         while (await reader.ReadAsync(cancellationToken))
         {
             var key = reader.GetString(0);
-            if (!result.Keys.TryGetValue(key, out var row)) result.Keys[key] = row = new KeyRule(reader.GetString(1) == "PK");
+            if (!result.Keys.TryGetValue(key, out var row))
+                result.Keys[key] = row = new KeyRule(reader.GetString(3), reader.GetString(1) == "PK", reader.GetBoolean(4), reader.GetBoolean(5));
             row.Columns.Add(reader.GetString(2));
         }
         await reader.NextResultAsync(cancellationToken);
@@ -214,7 +230,10 @@ internal static partial class DatabaseSchemaValidator
         public List<bool> Descending { get; } = [];
         public HashSet<string> Included { get; } = new(StringComparer.OrdinalIgnoreCase);
     }
-    private sealed record KeyRule(bool Primary) { public List<string> Columns { get; } = []; }
+    private sealed record KeyRule(string Table, bool Primary, bool Disabled, bool Unique)
+    {
+        public List<string> Columns { get; } = [];
+    }
     private sealed record ForeignKeyRule(string PrincipalTable, bool Disabled, bool Untrusted, byte DeleteAction, byte UpdateAction)
     {
         public List<string> Columns { get; } = [];
