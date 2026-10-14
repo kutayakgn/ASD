@@ -43,6 +43,7 @@ builder.Services.AddScoped<IAdminActionAuditLogger, AdminActionAuditLogger>();
 builder.Services.AddDbContext<AfifeContext>((serviceProvider, options) =>
     options
         .UseSqlServer(connectionString)
+        .ReplaceService<IMigrationsSqlGenerator, NoDataLossSqlServerMigrationsSqlGenerator>()
         .AddInterceptors(serviceProvider.GetRequiredService<AdminAuditConnectionInterceptor>()));
 builder.Services.AddHostedService<DatabaseMigrationHostedService>();
 builder.Services.AddScoped<IUserActivityLogger, UserActivityLogger>();

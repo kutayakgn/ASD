@@ -58,82 +58,14 @@ internal static partial class DatabaseSchemaValidator
             }
         }
 
-        var schemaSql = MigrationSqlResources.Read("InitialSchema.sql");
-        foreach (Match match in IndexRegex().Matches(schemaSql))
+        await ValidateModelRulesAsync(context, connection, missing, cancellationToken);
+        foreach (var obsolete in new[]
         {
-            var indexName = match.Groups["name"].Value;
-            // The immutable initial schema contains the historical one-use
-            // index. Forward migrations replace it with usage history lookup.
-            if (string.Equals(indexName, "UX_AdditionalVotingUsages_OneTime",
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-            if (string.Equals(
-                    indexName,
-                    "UX_PlayAwardCategories_Current_Play_Category_Role",
-                    StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(
-                    indexName,
-                    "UX_PlayAwardCategories_FormSourceSlot",
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            if (!catalog.Indexes.Contains(indexName))
-            {
-                missing.Add($"index {indexName}");
-            }
-        }
-        if (!catalog.NonUniqueIndexes.Contains("IX_AdditionalVotingUsages_Jury_Play"))
-        {
-            missing.Add("non-unique index IX_AdditionalVotingUsages_Jury_Play");
-        }
-        if (catalog.Indexes.Contains("UX_AdditionalVotingUsages_OneTime"))
-        {
-            missing.Add("obsolete one-use index UX_AdditionalVotingUsages_OneTime");
-        }
-        if (!catalog.UniqueIndexes.Contains("UX_Configs_JuryHomePageTableName"))
-        {
-            missing.Add("unique index UX_Configs_JuryHomePageTableName");
-        }
-        if (!catalog.Constraints.Contains("CK_Configs_JuryHomePageTableValue"))
-        {
-            missing.Add("constraint CK_Configs_JuryHomePageTableValue");
-        }
-        if (!catalog.NonUniqueIndexes.Contains(
-                "IX_PlayAwardCategories_Current_Play_Category_Role"))
-        {
-            missing.Add("non-unique index IX_PlayAwardCategories_Current_Play_Category_Role");
-        }
-        if (catalog.Indexes.Contains("UX_PlayAwardCategories_Current_Play_Category_Role"))
-        {
-            missing.Add(
-                "obsolete unique index UX_PlayAwardCategories_Current_Play_Category_Role");
-        }
-        if (!catalog.NonUniqueIndexes.Contains("IX_PlayAwardCategories_FormSourceSlot"))
-        {
-            missing.Add("non-unique index IX_PlayAwardCategories_FormSourceSlot");
-        }
-        if (catalog.Indexes.Contains("UX_PlayAwardCategories_FormSourceSlot"))
-        {
-            missing.Add("obsolete unique index UX_PlayAwardCategories_FormSourceSlot");
-        }
-        foreach (Match match in ConstraintRegex().Matches(schemaSql))
-        {
-            var constraintName = match.Groups["name"].Value;
-            if (constraintName.StartsWith("PK_", StringComparison.OrdinalIgnoreCase) ||
-                constraintName.EndsWith("_IsPublished_SoftDelete", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            if (!catalog.Constraints.Contains(constraintName))
-            {
-                missing.Add($"constraint {constraintName}");
-            }
-        }
+            "UX_AdditionalVotingUsages_OneTime",
+            "UX_PlayAwardCategories_Current_Play_Category_Role",
+            "UX_PlayAwardCategories_FormSourceSlot"
+        })
+            if (catalog.Indexes.Contains(obsolete)) missing.Add($"obsolete restrictive index {obsolete}");
 
         var programmableSql = MigrationSqlResources.ReadCanonicalDatabaseObjects();
         foreach (Match match in ProcedureRegex().Matches(programmableSql))
@@ -156,6 +88,7 @@ internal static partial class DatabaseSchemaValidator
         }
 
         foreach (var table in catalog.Tables.Where(x =>
+                     !x.Split('.', 2)[1].StartsWith("__Archived_", StringComparison.OrdinalIgnoreCase) &&
                      !x.EndsWith(".AdminLogs", StringComparison.OrdinalIgnoreCase) &&
                      !x.EndsWith(".JuryLogs", StringComparison.OrdinalIgnoreCase) &&
                      !x.EndsWith(".UsersLog", StringComparison.OrdinalIgnoreCase) &&
@@ -187,7 +120,7 @@ internal static partial class DatabaseSchemaValidator
         }
 
         var unexpectedTriggers = catalog.Triggers.Except(
-            expectedTriggers, StringComparer.OrdinalIgnoreCase);
+            expectedTriggers.Concat(catalog.ArchivedTriggers), StringComparer.OrdinalIgnoreCase);
         foreach (var trigger in unexpectedTriggers)
         {
             missing.Add($"unexpected trigger {trigger}");
@@ -352,6 +285,10 @@ internal static partial class DatabaseSchemaValidator
             UNION ALL
             SELECT N'R', tr.name FROM sys.triggers tr WHERE tr.parent_class = 1
             UNION ALL
+            SELECT N'A', tr.name FROM sys.triggers tr
+            JOIN sys.tables t ON t.object_id = tr.parent_id
+            WHERE t.name LIKE N'\_\_Archived\_%' ESCAPE N'\'
+            UNION ALL
             SELECT N'F', fk.name FROM sys.foreign_keys fk
             WHERE fk.delete_referential_action <> 0
                OR fk.update_referential_action <> 0
@@ -429,6 +366,7 @@ internal static partial class DatabaseSchemaValidator
                 "P" => result.Procedures,
                 "U" => result.Functions,
                 "R" => result.Triggers,
+                "A" => result.ArchivedTriggers,
                 "F" => result.CascadingForeignKeys,
                 "Q" => result.PrimaryKeyTables,
                 "B" => result.IsPublishedDefaultOneTables,
@@ -451,19 +389,12 @@ internal static partial class DatabaseSchemaValidator
         public HashSet<string> Procedures { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> Functions { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> Triggers { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public HashSet<string> ArchivedTriggers { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> CascadingForeignKeys { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> PrimaryKeyTables { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> IsPublishedDefaultOneTables { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> ObsoleteCandidateIndexes { get; } = new(StringComparer.OrdinalIgnoreCase);
     }
-
-    [GeneratedRegex(@"CREATE\s+(?:UNIQUE\s+)?(?:NONCLUSTERED\s+)?INDEX\s+\[(?<name>[^]]+)\]",
-        RegexOptions.IgnoreCase)]
-    private static partial Regex IndexRegex();
-
-    [GeneratedRegex(@"CONSTRAINT\s+\[(?<name>[^]]+)\]",
-        RegexOptions.IgnoreCase)]
-    private static partial Regex ConstraintRegex();
 
     [GeneratedRegex(@"CREATE\s+OR\s+ALTER\s+PROCEDURE\s+(?:\[?dbo\]?\.)?\[?(?<name>[A-Za-z0-9_]+)\]?",
         RegexOptions.IgnoreCase)]

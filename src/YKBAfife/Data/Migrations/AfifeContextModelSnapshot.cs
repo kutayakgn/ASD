@@ -1142,13 +1142,17 @@ namespace YKBAfife.Data.Migrations
 
                     b.HasIndex("AdditionalVotingId");
 
-                    b.HasIndex("CorrelationId");
+                    b.HasIndex("CorrelationId")
+                        .HasDatabaseName("IX_JuryLogs_CorrelationId");
 
-                    b.HasIndex("JuryId", "OccurredAt");
+                    b.HasIndex("JuryId", "OccurredAt")
+                        .HasDatabaseName("IX_JuryLogs_JuryId_OccurredAt");
 
-                    b.HasIndex("PlayId", "OccurredAt");
+                    b.HasIndex("PlayId", "OccurredAt")
+                        .HasDatabaseName("IX_JuryLogs_PlayId_OccurredAt");
 
-                    b.HasIndex("OperationType", "IsSuccessful", "OccurredAt");
+                    b.HasIndex("OperationType", "IsSuccessful", "OccurredAt")
+                        .HasDatabaseName("IX_JuryLogs_OperationType_IsSuccessful_OccurredAt");
 
                     b.ToTable("JuryLogs", "dbo");
 

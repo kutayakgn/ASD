@@ -1,0 +1,9 @@
+-- Immutable SQL package: UnlimitedAdditionalVotingUpdates_v_20261014123931
+-- Generated with the EF migration. Edit canonical DatabaseObjects, not this history.
+-- SHA256 checks use UTF-8 payload text without a BOM; references preserve exact commands.
+-- <AFIFE:SHA256:UP=17C809DE0C05FA3D950265133B28558DCFBE8D654C8025FEB7A25E3323412446>
+-- <AFIFE:BATCHES:UP=69>
+-- <AFIFE:UP:REFERENCE=CandidateCategoryRulesUpdated_v_20261014120524:UP>
+-- <AFIFE:SHA256:DOWN=17C809DE0C05FA3D950265133B28558DCFBE8D654C8025FEB7A25E3323412446>
+-- <AFIFE:BATCHES:DOWN=69>
+-- <AFIFE:DOWN:REFERENCE=CandidateCategoryRulesUpdated_v_20261014120524:UP>

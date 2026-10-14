@@ -103,9 +103,9 @@ IF EXISTS
     $env:ASPNETCORE_URLS = 'http://127.0.0.1:0'
     $application = Start-Process dotnet `
         -ArgumentList @(
-            'run', '--project', $project, '--configuration', $Configuration,
-            '--no-build', '--no-launch-profile'
+            ('"{0}"' -f (Join-Path (Split-Path -Parent $project) "bin/$Configuration/net8.0/YKBAfife.dll"))
         ) `
+        -WorkingDirectory (Split-Path -Parent $project) `
         -WindowStyle Hidden `
         -RedirectStandardOutput $stdoutPath `
         -RedirectStandardError $stderrPath `

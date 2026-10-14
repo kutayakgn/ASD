@@ -1,4 +1,6 @@
 using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore.Migrations;
 
@@ -54,7 +56,8 @@ internal static partial class MigrationSqlResources
             throw new ArgumentException("Invalid versioned database object resource name.");
         }
 
-        ExecuteSql(migrationBuilder, Read($"{migrationName}.{directionFile}"));
+        ExecuteSql(migrationBuilder, ReadVersionSection(
+            migrationName, directionFile[..^4].ToUpperInvariant(), []));
     }
 
     public static void AdoptSquashedBaseline(MigrationBuilder migrationBuilder)
@@ -79,7 +82,9 @@ internal static partial class MigrationSqlResources
         ExecuteMissingTables(migrationBuilder, "InitialSchema.sql");
         Execute(migrationBuilder, "LegacyUpgrade.sql", onlyWhenBaselineExists: true);
         Execute(migrationBuilder, "PrepareLegacyUsers.sql", onlyWhenBaselineExists: true);
-        Execute(migrationBuilder, "CanonicalReferenceData.sql");
+        // Baseline bootstrap is frozen with the legacy adapters. Future reference
+        // changes are captured by their own migration, never by mutating this step.
+        Execute(migrationBuilder, "BaselineReferenceData.sql");
         ExecuteMissingSchemaObjects(migrationBuilder, "InitialSchema.sql");
         EnsureCandidateUniquenessContract(migrationBuilder);
     }
@@ -322,6 +327,16 @@ internal static partial class MigrationSqlResources
 
     public static string Read(string resourceFileName)
     {
+        // Keep historical migrations (including Seed call positions) unchanged
+        // while storing each version in one readable SQL package.
+        var versionMatch = VersionFileRegex().Match(resourceFileName);
+        if (versionMatch.Success)
+        {
+            return ReadVersionSection(
+                versionMatch.Groups["version"].Value,
+                versionMatch.Groups["section"].Value.ToUpperInvariant(), []);
+        }
+
         var assembly = typeof(MigrationSqlResources).Assembly;
         var resourceName = assembly.GetManifestResourceNames()
             .SingleOrDefault(name => name.EndsWith($".{resourceFileName}",
@@ -332,12 +347,65 @@ internal static partial class MigrationSqlResources
         return ReadResource(assembly, resourceName);
     }
 
+    private static string ReadVersionSection(
+        string version,
+        string section,
+        HashSet<string> visited)
+    {
+        if (!Regex.IsMatch(version, "^[A-Za-z0-9_]+$", RegexOptions.CultureInvariant) ||
+            section is not ("UP" or "DOWN" or "SEED"))
+        {
+            throw new ArgumentException("Invalid SQL package section.");
+        }
+        var key = $"{version}/{section}";
+        if (!visited.Add(key))
+        {
+            throw new InvalidOperationException($"Circular SQL package reference: {key}.");
+        }
+
+        var package = Read($"{version}.sql");
+        var options = RegexOptions.Multiline | RegexOptions.CultureInvariant;
+        var inline = Regex.Matches(package,
+            $@"^-- <AFIFE:{section}>\r?\n(?<sql>[\s\S]*?)\r?\n-- </AFIFE:{section}>\r?$", options);
+        var reference = Regex.Matches(package,
+            $@"^-- <AFIFE:{section}:REFERENCE=(?<version>[A-Za-z0-9_]+):(?<section>UP|DOWN|SEED)>\r?$", options);
+        if (inline.Count + reference.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"Expected exactly one {section} section in {version}.sql.");
+        }
+
+        var sql = inline.Count == 1
+            ? inline[0].Groups["sql"].Value
+            : ReadVersionSection(
+                reference[0].Groups["version"].Value,
+                reference[0].Groups["section"].Value,
+                visited);
+        var hash = Regex.Matches(package,
+            $@"^-- <AFIFE:SHA256:{section}=(?<hash>[A-F0-9]{{64}})>\r?$", options);
+        var actualHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(sql)));
+        if (hash.Count != 1 || hash[0].Groups["hash"].Value != actualHash)
+        {
+            throw new InvalidOperationException(
+                $"SQL payload hash mismatch for {key}. Historic migration SQL must not be edited.");
+        }
+        var batches = Regex.Matches(package,
+            $@"^-- <AFIFE:BATCHES:{section}=(?<count>[0-9]+)>\r?$", options);
+        if (batches.Count != 1 ||
+            !int.TryParse(batches[0].Groups["count"].Value, out var expectedCount) ||
+            GoBatchRegex().Split(sql).Count(batch => !string.IsNullOrWhiteSpace(batch)) != expectedCount)
+        {
+            throw new InvalidOperationException($"SQL command batch count mismatch for {key}.");
+        }
+        return sql;
+    }
+
     private static string ReadResource(Assembly assembly, string resourceName)
     {
         using var stream = assembly.GetManifestResourceStream(resourceName)
             ?? throw new InvalidOperationException(
                 $"Embedded migration resource '{resourceName}' could not be opened.");
-        using var reader = new StreamReader(stream);
+        using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
         return reader.ReadToEnd();
     }
     [GeneratedRegex(@"CREATE\s+TABLE\s+\[(?<schema>[^]]+)\]\.\[(?<table>[^]]+)\]",
@@ -363,4 +431,8 @@ internal static partial class MigrationSqlResources
     private static partial Regex CreateOrAlterModuleRegex();
     [GeneratedRegex(@"^\s*GO\s*(?:--.*)?$", RegexOptions.Multiline | RegexOptions.IgnoreCase)]
     private static partial Regex GoBatchRegex();
+
+    [GeneratedRegex(@"^(?<version>[A-Za-z0-9_]+)\.(?<section>Up|Down|Seed)\.sql$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex VersionFileRegex();
 }

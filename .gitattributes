@@ -3,6 +3,10 @@
 ###############################################################################
 * text=auto
 
+# Immutable migration package hashes cover exact payload bytes. Do not normalize
+# these files' line endings during checkout on another machine or CI platform.
+src/YKBAfife/Migrations/Versions/*.sql -text
+
 ###############################################################################
 # Set default behavior for command prompt diff.
 #

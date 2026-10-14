@@ -13,13 +13,22 @@ $companyUpgradeScript = Join-Path $PSScriptRoot 'test-company-migration-upgrade.
 $candidateRulesScript = Join-Path $PSScriptRoot 'test-candidate-category-rules.ps1'
 $additionalVotingRulesScript = Join-Path $PSScriptRoot 'test-additional-voting-rules.ps1'
 $juryHomePageSettingsScript = Join-Path $PSScriptRoot 'test-jury-homepage-settings.ps1'
+$dataRetentionScript = Join-Path $PSScriptRoot 'test-data-retention.ps1'
 $project = Join-Path $repositoryRoot 'src/YKBAfife/YKBAfife.csproj'
 $publishPath = Join-Path $env:TEMP ('YKBAfifeMigrationDeploy_' + [Guid]::NewGuid().ToString('N'))
 
 Push-Location $repositoryRoot
 try {
+    & (Join-Path $PSScriptRoot 'test-migration-sql-packages.ps1')
+
     & $validationScript -Configuration $Configuration
     if ($LASTEXITCODE -ne 0) { throw 'Static migration validation failed.' }
+
+    $modelParityProject = Join-Path $PSScriptRoot 'EntityModelParity.Tests/EntityModelParity.Tests.csproj'
+    dotnet build $modelParityProject --configuration $Configuration -p:UseAppHost=false
+    if ($LASTEXITCODE -ne 0) { throw 'Entity model parity build failed.' }
+    dotnet (Join-Path $PSScriptRoot "EntityModelParity.Tests/bin/$Configuration/net8.0/EntityModelParity.Tests.dll")
+    if ($LASTEXITCODE -ne 0) { throw 'Entity model parity checks failed.' }
 
     & $emptyDatabaseScript -Configuration $Configuration
     if ($LASTEXITCODE -ne 0) { throw 'Empty database migration scenario failed.' }
@@ -41,6 +50,9 @@ try {
 
     & $juryHomePageSettingsScript -Configuration $Configuration
     if ($LASTEXITCODE -ne 0) { throw 'Jury home-page settings regression scenario failed.' }
+
+    & $dataRetentionScript -Configuration $Configuration
+    if ($LASTEXITCODE -ne 0) { throw 'Migration data retention scenario failed.' }
 
     dotnet publish $project --no-restore -c $Configuration -o $publishPath
     if ($LASTEXITCODE -ne 0) { throw 'Deployment publish validation failed.' }
