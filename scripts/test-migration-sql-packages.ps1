@@ -12,6 +12,19 @@ function Assert-AfifeSqlRejected([scriptblock] $Operation, [string] $Message) {
     catch { $rejected = $true }
     Assert-AfifeSql $rejected $Message
 }
+function ConvertTo-AfifeTestTransport([string] $Content, [string] $Style) {
+    if ($Style -eq 'Original') { return $Content }
+    $lf = $Content.Replace("`r`n", "`n")
+    if ($Style -eq 'LF') { return $lf }
+    if ($Style -eq 'CRLF') { return $lf.Replace("`n", "`r`n") }
+    if ($Style -ne 'Mixed') { throw "Unknown transport style: $Style" }
+    $script:afifeTransportLine = 0
+    return [regex]::Replace($lf, "`n", {
+        $script:afifeTransportLine++
+        if ($script:afifeTransportLine % 2 -eq 0) { return "`r`n" }
+        return "`n"
+    })
+}
 
 $afifeSqlTempRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
 $afifeSqlTestName = 'AfifeMigrationSqlTests_' + [Guid]::NewGuid().ToString('N')
@@ -99,6 +112,102 @@ try {
     }
     Write-AfifeUtf8 (Join-Path $versionRoot 'Broken_v_20261014.sql') ($badPackage.Replace('SELECT 1;', 'SELECT 9;'))
     Assert-AfifeSqlRejected { Read-AfifeSqlSection $versionRoot 'Broken_v_20261014' 'UP' } 'Unexpected payload edits are rejected by the hash.'
+
+    # This payload deliberately starts with mixed EOL, like historic packages.
+    # An all-LF/all-CRLF fallback cannot recover its original raw hash safely.
+    $transportSql = "-- Transport fixture`r`nSELECT N'$([char]0x0130)stanbul j$([char]0x00FC)ri';`nGO`r`nSELECT 1;`nSELECT N'line one`r`nline two';`n"
+    $integrityVersion = 'Integrity_v_20261015'
+    $integrityPath = Join-Path $versionRoot "$integrityVersion.sql"
+    $integrityPackage = New-AfifeSqlPackage $integrityVersion @{
+        UP = @{ Sql = $transportSql; Reference = $null }
+        DOWN = @{ Sql = $transportSql; Reference = "${integrityVersion}:UP" }
+        SEED = @{ Sql = 'SELECT 3;'; Reference = $null }
+    }
+    $originalRawHash = Get-AfifeSqlHash $transportSql
+    $originalLfHash = Get-AfifeSqlLfHash $transportSql
+    Assert-AfifeSql ($integrityPackage.Contains("-- <AFIFE:SHA256-LF:UP=${originalRawHash}:${originalLfHash}>")) 'New packages pair the historic raw hash with a transport-independent LF hash.'
+    Assert-AfifeSql ($originalRawHash -cne $originalLfHash -and $originalRawHash -cne (Get-AfifeSqlHash ($transportSql.Replace("`r`n", "`n").Replace("`n", "`r`n")))) 'Mixed-EOL fixture cannot be verified by either uniform raw representation.'
+    foreach ($style in @('Original', 'LF', 'CRLF', 'Mixed')) {
+        foreach ($withBom in @($false, $true)) {
+            [IO.File]::WriteAllText($integrityPath,
+                (ConvertTo-AfifeTestTransport $integrityPackage $style), [Text.UTF8Encoding]::new($withBom))
+            foreach ($section in @('UP', 'DOWN')) {
+                $actual = Read-AfifeSqlSection $versionRoot $integrityVersion $section
+                Assert-AfifeSql ($actual.Replace("`r`n", "`n") -ceq $transportSql.Replace("`r`n", "`n")) "Inline/referenced mixed payload survives $style / BOM=$withBom transport: $section."
+            }
+            Assert-AfifeSql ((Read-AfifeSqlSection $versionRoot $integrityVersion 'SEED') -ceq 'SELECT 3;') "Seed survives $style / BOM=$withBom transport."
+        }
+    }
+
+    $badDigest = '0' * 64
+    $validMarker = "-- <AFIFE:SHA256-LF:UP=${originalRawHash}:${originalLfHash}>"
+    $invalidPackages = [ordered]@{
+        'changed SQL statement' = $integrityPackage.Replace('SELECT 1;', 'SELECT 2;')
+        'changed whitespace' = $integrityPackage.Replace('SELECT 1;', 'SELECT  1;')
+        'changed comment' = $integrityPackage.Replace('-- Transport fixture', '-- Edited fixture')
+        'changed Unicode literal' = $integrityPackage.Replace('stanbul', 'zmir')
+        'changed trailing newline' = $integrityPackage.Replace("line two';`n", "line two';")
+        'inserted payload BOM' = $integrityPackage.Replace('-- Transport fixture', ([char]0xFEFF + '-- Transport fixture'))
+        'inserted bare CR' = $integrityPackage.Replace('SELECT 1;', "SELECT`r 1;")
+        'changed raw header' = $integrityPackage.Replace("-- <AFIFE:SHA256:UP=${originalRawHash}>", "-- <AFIFE:SHA256:UP=${badDigest}>")
+        'changed paired raw digest' = $integrityPackage.Replace($validMarker, "-- <AFIFE:SHA256-LF:UP=${badDigest}:${originalLfHash}>")
+        'changed LF digest' = $integrityPackage.Replace($validMarker, "-- <AFIFE:SHA256-LF:UP=${originalRawHash}:${badDigest}>")
+        'malformed LF marker' = $integrityPackage.Replace($validMarker, '-- <AFIFE:SHA256-LF:UP=INVALID>')
+        'LF marker missing equals' = $integrityPackage.Replace($validMarker, '-- <AFIFE:SHA256-LF:UP>')
+        'LF marker extra colon' = $integrityPackage.Replace($validMarker, '-- <AFIFE:SHA256-LF:UP:INVALID>')
+        'LF marker extra whitespace' = $integrityPackage.Replace($validMarker, '-- <AFIFE:SHA256-LF:UP INVALID>')
+        'duplicate LF marker' = $integrityPackage.Replace($validMarker, "$validMarker`n$validMarker")
+        'duplicate malformed LF marker' = $integrityPackage.Replace($validMarker, "$validMarker`n-- <AFIFE:SHA256-LF:UP=INVALID>")
+        'missing raw marker' = $integrityPackage.Replace("-- <AFIFE:SHA256:UP=${originalRawHash}>", '')
+        'duplicate raw marker' = $integrityPackage.Replace("-- <AFIFE:SHA256:UP=${originalRawHash}>", "-- <AFIFE:SHA256:UP=${originalRawHash}>`n-- <AFIFE:SHA256:UP=${originalRawHash}>")
+        'changed batch count' = $integrityPackage.Replace('-- <AFIFE:BATCHES:UP=2>', '-- <AFIFE:BATCHES:UP=3>')
+    }
+    foreach ($invalid in $invalidPackages.GetEnumerator()) {
+        # Raw bytes still match for metadata-only corruption; it must not fall
+        # back to the raw digest and ignore invalid paired metadata.
+        Write-AfifeUtf8 $integrityPath $invalid.Value
+        Assert-AfifeSqlRejected { Read-AfifeSqlSection $versionRoot $integrityVersion 'UP' } "Integrity validation rejects $($invalid.Key)."
+    }
+    $rawOnlyPackage = [regex]::Replace($integrityPackage,
+        '(?m)^-- <AFIFE:SHA256-LF:(UP|DOWN|SEED)=[A-F0-9]{64}:[A-F0-9]{64}>\r?\n', '')
+    Write-AfifeUtf8 $integrityPath $rawOnlyPackage
+    Assert-AfifeSql ((Read-AfifeSqlSection $versionRoot $integrityVersion 'UP') -ceq $transportSql) 'Old raw-only package remains accepted when exact historic bytes match.'
+    Write-AfifeUtf8 $integrityPath (ConvertTo-AfifeTestTransport $rawOnlyPackage 'LF')
+    Assert-AfifeSqlRejected { Read-AfifeSqlSection $versionRoot $integrityVersion 'UP' } 'Legacy raw-only mixed payload is not guessed or silently rehashed.'
+
+    # Exercise every checked-in version, including SEED and cross-package Down
+    # references. Transform all files together to reproduce CI/source transfer.
+    $repositoryVersionRoot = Join-Path (Split-Path -Parent $PSScriptRoot) 'src/YKBAfife/Migrations/Versions'
+    $historicPackages = @(Get-ChildItem -LiteralPath $repositoryVersionRoot -Filter '*.sql')
+    $historicSections = [Collections.Generic.List[object]]::new()
+    foreach ($historic in $historicPackages) {
+        $source = [IO.File]::ReadAllText($historic.FullName, [Text.Encoding]::UTF8)
+        foreach ($section in @('UP', 'DOWN', 'SEED')) {
+            if (-not [regex]::IsMatch($source, "(?m)^-- <AFIFE:SHA256:${section}=[A-F0-9]{64}>\r?$")) { continue }
+            $sql = Read-AfifeSqlSection $repositoryVersionRoot $historic.BaseName $section
+            $historicSections.Add([pscustomobject]@{ Version = $historic.BaseName; Section = $section; Sql = $sql })
+            Assert-AfifeSql ($source.Contains("-- <AFIFE:SHA256-LF:${section}=")) "Checked-in historic section includes paired transport metadata: $($historic.BaseName)/$section."
+            # The original raw digest and exact SQL still agree, including the
+            # intentionally mixed original CRLF/LF boundaries.
+            $raw = [regex]::Match($source, "(?m)^-- <AFIFE:SHA256:${section}=(?<hash>[A-F0-9]{64})>\r?$")
+            Assert-AfifeSql ($raw.Groups['hash'].Value -ceq (Get-AfifeSqlHash $sql)) "Historic SQL/raw checksum is unchanged: $($historic.BaseName)/$section."
+        }
+    }
+    foreach ($style in @('Original', 'LF', 'CRLF', 'Mixed')) {
+        foreach ($withBom in @($false, $true)) {
+            $transportRoot = Join-Path $afifeSqlTestRoot "Historic_${style}_${withBom}"
+            New-Item -ItemType Directory -Path $transportRoot | Out-Null
+            foreach ($historic in $historicPackages) {
+                $source = [IO.File]::ReadAllText($historic.FullName, [Text.Encoding]::UTF8)
+                [IO.File]::WriteAllText((Join-Path $transportRoot $historic.Name),
+                    (ConvertTo-AfifeTestTransport $source $style), [Text.UTF8Encoding]::new($withBom))
+            }
+            foreach ($historic in $historicSections) {
+                $actual = Read-AfifeSqlSection $transportRoot $historic.Version $historic.Section
+                Assert-AfifeSql ($actual.Replace("`r`n", "`n") -ceq $historic.Sql.Replace("`r`n", "`n")) "Historic $($historic.Version)/$($historic.Section) survives $style / BOM=$withBom."
+            }
+        }
+    }
     Write-Output "PASS: $script:afifeSqlAssertions SQL package and new-module rollback checks (no DB)."
 }
 finally {

@@ -350,7 +350,14 @@ internal static partial class MigrationSqlResources
     private static string ReadVersionSection(
         string version,
         string section,
-        HashSet<string> visited)
+        HashSet<string> visited) =>
+        ReadVersionSection(version, section, visited, Read);
+
+    private static string ReadVersionSection(
+        string version,
+        string section,
+        HashSet<string> visited,
+        Func<string, string> readPackage)
     {
         if (!Regex.IsMatch(version, "^[A-Za-z0-9_]+$", RegexOptions.CultureInvariant) ||
             section is not ("UP" or "DOWN" or "SEED"))
@@ -363,7 +370,10 @@ internal static partial class MigrationSqlResources
             throw new InvalidOperationException($"Circular SQL package reference: {key}.");
         }
 
-        var package = Read($"{version}.sql");
+        var package = readPackage($"{version}.sql");
+        // StreamReader removes a file-level BOM. Keep the text parser consistent
+        // for injected/package-copy readers, but never strip a BOM inside SQL.
+        if (package.StartsWith('\uFEFF')) package = package[1..];
         var options = RegexOptions.Multiline | RegexOptions.CultureInvariant;
         var inline = Regex.Matches(package,
             $@"^-- <AFIFE:{section}>\r?\n(?<sql>[\s\S]*?)\r?\n-- </AFIFE:{section}>\r?$", options);
@@ -380,14 +390,32 @@ internal static partial class MigrationSqlResources
             : ReadVersionSection(
                 reference[0].Groups["version"].Value,
                 reference[0].Groups["section"].Value,
-                visited);
+                visited,
+                readPackage);
         var hash = Regex.Matches(package,
             $@"^-- <AFIFE:SHA256:{section}=(?<hash>[A-F0-9]{{64}})>\r?$", options);
         var actualHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(sql)));
-        if (hash.Count != 1 || hash[0].Groups["hash"].Value != actualHash)
+        var canonicalMarkers = Regex.Matches(package,
+            $@"^-- <AFIFE:SHA256-LF:{section}(?=[=:>\s])", options);
+        var canonicalHash = Regex.Matches(package,
+            $@"^-- <AFIFE:SHA256-LF:{section}=(?<raw>[A-F0-9]{{64}}):(?<hash>[A-F0-9]{{64}})>\r?$", options);
+        // Keep the original raw digest frozen. The paired digest permits ONLY
+        // CRLF/LF transport changes, including historically mixed line endings.
+        // Spaces, literals, Unicode and trailing newlines remain significant.
+        // If canonical metadata exists it must be valid even when raw bytes match.
+        var canonicalMatches = canonicalMarkers.Count == 1 && canonicalHash.Count == 1 &&
+            hash.Count == 1 && canonicalHash[0].Groups["raw"].Value == hash[0].Groups["hash"].Value &&
+            canonicalHash[0].Groups["hash"].Value == Convert.ToHexString(
+                SHA256.HashData(Encoding.UTF8.GetBytes(sql.Replace("\r\n", "\n", StringComparison.Ordinal))));
+        if (hash.Count != 1 || (canonicalMarkers.Count > 0
+                ? !canonicalMatches
+                : hash[0].Groups["hash"].Value != actualHash))
         {
             throw new InvalidOperationException(
-                $"SQL payload hash mismatch for {key}. Historic migration SQL must not be edited.");
+                $"SQL payload hash mismatch for {key}. Historic migration SQL must not be edited. " +
+                $"Actual UTF-8 SHA256: {actualHash}. " +
+                "Use the complete matching application build and SQL packages; " +
+                "do not reset migration history or regenerate hashes for edited SQL.");
         }
         var batches = Regex.Matches(package,
             $@"^-- <AFIFE:BATCHES:{section}=(?<count>[0-9]+)>\r?$", options);
@@ -405,7 +433,7 @@ internal static partial class MigrationSqlResources
         using var stream = assembly.GetManifestResourceStream(resourceName)
             ?? throw new InvalidOperationException(
                 $"Embedded migration resource '{resourceName}' could not be opened.");
-        using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+        using var reader = new StreamReader(stream, new UTF8Encoding(false, true), detectEncodingFromByteOrderMarks: true);
         return reader.ReadToEnd();
     }
     [GeneratedRegex(@"CREATE\s+TABLE\s+\[(?<schema>[^]]+)\]\.\[(?<table>[^]]+)\]",

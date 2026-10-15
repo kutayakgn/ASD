@@ -87,6 +87,8 @@ CheckSoftDelete(new JuryVote { Id = Guid.NewGuid(), IsPublished = true, IsActive
 CheckSoftDelete(new Config { Id = Guid.NewGuid(), IsPublished = true, ConfigValue = "false" },
     entity => !entity.IsPublished && entity.ConfigValue == "false");
 
+MigrationPayloadRuntimeRegression.Run(Assert);
+
 Console.WriteLine($"Entity model parity: {assertions} assertions passed; no DB connection required.");
 
 void CheckSoftDelete<TEntity>(TEntity entity, Func<TEntity, bool> stateIsCorrect) where TEntity : class

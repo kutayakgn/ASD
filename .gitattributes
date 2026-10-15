@@ -3,8 +3,8 @@
 ###############################################################################
 * text=auto
 
-# Immutable migration package hashes cover exact payload bytes. Do not normalize
-# these files' line endings during checkout on another machine or CI platform.
+# Preserve historical payload bytes during checkout. Paired SHA256-LF metadata
+# also validates LF/CRLF-only transport changes without allowing SQL edits.
 src/YKBAfife/Migrations/Versions/*.sql -text
 
 ###############################################################################

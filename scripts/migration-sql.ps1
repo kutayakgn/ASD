@@ -10,6 +10,12 @@ function Get-AfifeSqlHash([string] $Content) {
     finally { $algorithm.Dispose() }
 }
 
+function Get-AfifeSqlLfHash([string] $Content) {
+    # Only CRLF/LF representation is transport-independent. Do not trim text,
+    # remove a payload BOM, or normalize bare CR, whitespace or SQL literals.
+    return Get-AfifeSqlHash ($Content.Replace("`r`n", "`n"))
+}
+
 function Get-AfifeSqlBatchCount([string] $Content) {
     return @([regex]::Split($Content, '(?im)^\s*GO\s*(?:--.*)?$') |
         Where-Object { -not [string]::IsNullOrWhiteSpace($_) }).Count
@@ -211,7 +217,23 @@ function Read-AfifeSqlSection(
     }
     $hash = [regex]::Matches($source,
         "^-- <AFIFE:SHA256:${Section}=(?<hash>[A-F0-9]{64})>\r?$", $options)
-    if ($hash.Count -ne 1 -or $hash[0].Groups['hash'].Value -cne (Get-AfifeSqlHash $sql)) {
+    $lfMarker = [regex]::Matches($source,
+        "^-- <AFIFE:SHA256-LF:${Section}(?=[=:>\s])", $options)
+    $lfHash = [regex]::Matches($source,
+        "^-- <AFIFE:SHA256-LF:${Section}=(?<raw>[A-F0-9]{64}):(?<hash>[A-F0-9]{64})>\r?$", $options)
+    $validHash = $hash.Count -eq 1
+    if ($validHash -and $lfMarker.Count -gt 0) {
+        # Bind the canonical digest to the immutable raw header. Validate it
+        # even when the raw payload still matches, so corrupt metadata is not
+        # silently accepted. Historic raw-only packages stay strictly raw-only.
+        $validHash = $lfMarker.Count -eq 1 -and $lfHash.Count -eq 1 -and
+            $lfHash[0].Groups['raw'].Value -ceq $hash[0].Groups['hash'].Value -and
+            $lfHash[0].Groups['hash'].Value -ceq (Get-AfifeSqlLfHash $sql)
+    }
+    elseif ($validHash) {
+        $validHash = $hash[0].Groups['hash'].Value -ceq (Get-AfifeSqlHash $sql)
+    }
+    if (-not $validHash) {
         throw "SQL payload hash mismatch for $key. Historic migration SQL must not be edited."
     }
     $batches = [regex]::Matches($source,
@@ -240,7 +262,7 @@ function New-AfifeSqlPackage(
     $lines = [Collections.Generic.List[string]]::new()
     $lines.Add("-- Immutable SQL package: $Version")
     $lines.Add('-- Generated with the EF migration. Edit canonical DatabaseObjects, not this history.')
-    $lines.Add('-- SHA256 checks use UTF-8 payload text without a BOM; references preserve exact commands.')
+    $lines.Add('-- SHA256 preserves original UTF-8 text; paired SHA256-LF tolerates CRLF/LF transport only.')
     if ($ModuleNames.Count -gt 0) {
         $lines.Add('-- <AFIFE:MODULES>')
         foreach ($module in $ModuleNames) { $lines.Add("-- $module") }
@@ -249,7 +271,9 @@ function New-AfifeSqlPackage(
     foreach ($name in @('SEED', 'UP', 'DOWN')) {
         if (-not $Sections.Contains($name)) { continue }
         $section = $Sections[$name]
-        $lines.Add("-- <AFIFE:SHA256:${name}=$(Get-AfifeSqlHash $section.Sql)>")
+        $rawHash = Get-AfifeSqlHash $section.Sql
+        $lines.Add("-- <AFIFE:SHA256:${name}=$rawHash>")
+        $lines.Add("-- <AFIFE:SHA256-LF:${name}=${rawHash}:$(Get-AfifeSqlLfHash $section.Sql)>")
         $lines.Add("-- <AFIFE:BATCHES:${name}=$(Get-AfifeSqlBatchCount $section.Sql)>")
         if ($section.Reference) {
             if ($section.Reference -cnotmatch '^[A-Za-z0-9_]+:(UP|DOWN|SEED)$') {
