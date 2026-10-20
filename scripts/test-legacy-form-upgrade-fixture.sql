@@ -87,9 +87,14 @@ VALUES
     '20230915', N'[{"Date":"2023-10-20","Stage":"Şişli — Büyük Salon"}]  ',
     N'Çağrı Öztürk  ', N'Başvuru / Sahne Yönetmeni  ', N'+90 555 123 45 67  ',
     N'cagri@example.invalid  ', N'İpek Şener  ', N'Öykü Çelik  ', N'',
-    N'[{"Name":"Şebnem İnan","Role":"Başrol — A","ImageUrl":null}]  ',
+    /* Signature-valid bytes with old names that disagree with their formats.
+       Adoption must preserve this JSON and generate compatible Images names. */
+    N'[{"Name":"Şebnem İnan","Role":"Başrol — A","ImageUrl":"eski-fotograf.jpg","Base64":"iVBORw0KGgo="},'
+      + N'{"Name":"JPEG Aday","Role":"Başrol — JPEG","ImageUrl":"https://legacy.example.invalid/photo?id=7","Base64":"/9j/"},'
+      + N'{"Name":"WebP Aday","Role":"Başrol — WebP","ImageUrl":"uzantisiz-fotograf","Base64":"UklGRgAAAABXRUJQ"}]  ',
     N'{"Name":"Çağlar Özer","Role":"Başrol — B"}',
-    N'Eski serbest metin: kadın yardımcı  ', N'["Aday",17,null,{"Name":"Ad","Role":"Yardımcı"}]  ',
+    N'[{"Name":"SALİHA BOZKURT","Role":"SALİHA BOZKURT","ImageUrl":"IMG_1023.jpg","Base64":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAA2ADYAAA="}]  ',
+    N'["Aday",17,null,{"Name":"Ad","Role":"Yardımcı"}]  ',
     REPLICATE(N'Ş', 998) + N'  ', REPLICATE(N'Ğ', 1000),
     REPLICATE(N'İ', 1000), REPLICATE(N'Ü', 1000), REPLICATE(N'Ç', 1000),
     1, 0

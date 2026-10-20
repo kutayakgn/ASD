@@ -5,6 +5,11 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
+    /* Retiring an existing legacy image does not upload or change its content.
+       INSERT and every write to the image payload still receive all checks. */
+    IF NOT (UPDATE(FileName) OR UPDATE(ContentType) OR UPDATE(ImageData))
+        RETURN;
+
     IF EXISTS
     (
         SELECT 1

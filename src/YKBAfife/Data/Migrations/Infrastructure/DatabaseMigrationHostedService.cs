@@ -13,18 +13,24 @@ public sealed class DatabaseMigrationHostedService(
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        logger.LogInformation("Starting database initialization.");
         await using var scope = scopeFactory.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<AfifeContext>();
         context.Database.SetCommandTimeout(
             configuration.GetValue("DatabaseMigration:CommandTimeoutSeconds", 300));
         var migrator = context.GetService<IMigrator>();
         var connection = (SqlConnection)context.Database.GetDbConnection();
+        logger.LogInformation("Opening SQL connection for database initialization.");
         await connection.OpenAsync(cancellationToken);
 
         var timeout = configuration.GetValue("DatabaseMigration:LockTimeoutMilliseconds", 120000);
+        logger.LogInformation(
+            "SQL connection opened. Acquiring database migration lock (timeout: {LockTimeoutMilliseconds} ms).",
+            timeout);
         await AcquireLockAsync(connection, timeout, cancellationToken);
         try
         {
+            logger.LogInformation("Database migration lock acquired. Reading migration history.");
             var known = context.Database.GetMigrations().ToArray();
             var applied = (await context.Database.GetAppliedMigrationsAsync(cancellationToken)).ToArray();
             var pending = (await context.Database.GetPendingMigrationsAsync(cancellationToken)).ToArray();
@@ -61,9 +67,11 @@ public sealed class DatabaseMigrationHostedService(
                 (await context.Database.GetAppliedMigrationsAsync(cancellationToken)).ToArray();
             EnsureMigrationHistoryIsSafe(known, appliedAfterUpdate, []);
 
+            logger.LogInformation("Checking legacy database columns.");
             await LegacyColumnCleanupRunner.RunAsync(
                 context, connection, logger, cancellationToken);
 
+            logger.LogInformation("Validating database schema.");
             await DatabaseSchemaValidator.ValidateAsync(context, connection, cancellationToken);
             logger.LogInformation("Database schema validation completed successfully.");
         }

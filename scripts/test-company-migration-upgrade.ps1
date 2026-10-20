@@ -20,6 +20,7 @@ if ($databaseName -notmatch '^YkbAfifeUpgradeTest_[a-f0-9]{32}$') {
     throw 'Disposable database name validation failed.'
 }
 
+$verificationPath = Join-Path $env:TEMP ($databaseName + '.verification.sql')
 $server = '(localdb)\MSSQLLocalDB'
 $connectionString = "Server=$server;Database=$databaseName;Trusted_Connection=True;TrustServerCertificate=True"
 $previousConnection = $env:ConnectionStrings__AfifeConnectionString
@@ -44,7 +45,7 @@ IF OBJECT_ID(N'dbo.CK_Users_Username_InstagramFormat', N'C') IS NOT NULL
 "@
     if ($LASTEXITCODE -ne 0) { throw 'Legacy company constraint setup failed.' }
 
-    sqlcmd -I -S $server -d $databaseName -b -i $fixture
+    sqlcmd -I -S $server -d $databaseName -b -f 65001 -i $fixture
     if ($LASTEXITCODE -ne 0) { throw 'Company fixture creation failed.' }
 
     sqlcmd -I -S $server -d $databaseName -b -Q @"
@@ -315,6 +316,83 @@ IF NOT EXISTS
 )
     THROW 52990, N'Form Base64 photo above 4000 characters was not materialized.', 1;
 
+DECLARE @ExpectedCandidatePhoto varbinary(max) =
+    0x89504E470D0A1A0A + CONVERT(varbinary(max), REPLICATE('A', 5000));
+DECLARE @ExpectedCandidateBase64 nvarchar(max) = CAST(N'' AS xml).value(
+    'xs:base64Binary(sql:variable("@ExpectedCandidatePhoto"))', 'nvarchar(max)');
+DECLARE @ExpectedSupportActor nvarchar(max) =
+    N'[{"Name":"Yardımcı Erkek Bir","Role":"Ortak Rol","ImageUrl":"legacy-photo.jpg?download=1","Base64":"'
+    + @ExpectedCandidateBase64 + N'"},'
+    + N'{"Name":"Yardımcı Erkek İki","Role":"Ortak Rol","ImageUrl":"","Base64":""}]';
+
+IF NOT EXISTS
+(
+    SELECT 1 FROM dbo.Form
+    WHERE Id = '11111111-1111-1111-1111-111111111111'
+      AND CONVERT(varbinary(max), SupportActor) = CONVERT(varbinary(max), @ExpectedSupportActor)
+)
+    THROW 53009, N'Image projection changed the original Form candidate JSON.', 1;
+
+DECLARE @ReplacementPhotoId uniqueidentifier =
+(
+    SELECT PhotoImageId FROM dbo.PlayAwardCategories
+    WHERE Id = '99999999-9999-9999-9999-999999999995'
+      AND IsCurrent = 1 AND IsPublished = 1
+);
+
+IF NOT EXISTS
+(
+    SELECT 1 FROM dbo.Images
+    WHERE Id = @ReplacementPhotoId
+      AND Id <> '99999999-9999-9999-9999-999999999996'
+      AND IsPublished = 1
+      AND ContentType = N'image/png'
+      AND FileName LIKE N'%.png'
+      AND DATALENGTH(ImageData) = DATALENGTH(@ExpectedCandidatePhoto)
+      AND ImageData = @ExpectedCandidatePhoto
+)
+    THROW 53010, N'Mapped legacy reference was not replaced with the unchanged PNG photo and a matching filename.', 1;
+
+IF NOT EXISTS
+(
+    SELECT 1 FROM dbo.Images
+    WHERE Id = '99999999-9999-9999-9999-999999999996'
+      AND FileName = N'legacy-candidate-reference'
+      AND ContentType = N'application/x-afife-legacy-reference'
+      AND DATALENGTH(ImageData) = 0
+      AND IsPublished = 0
+)
+    THROW 53011, N'Retiring the replaced legacy image changed or deleted its original data.', 1;
+
+DECLARE @ImageCountBeforeRepeat int = (SELECT COUNT(*) FROM dbo.Images);
+EXEC dbo.usp_SynchronizeFormsToPlays;
+IF (SELECT COUNT(*) FROM dbo.Images) <> @ImageCountBeforeRepeat
+   OR NOT EXISTS
+   (
+       SELECT 1 FROM dbo.PlayAwardCategories
+       WHERE Id = '99999999-9999-9999-9999-999999999995'
+         AND PhotoImageId = @ReplacementPhotoId
+   )
+    THROW 53012, N'Repeated Form synchronization duplicated or replaced the same photo.', 1;
+
+DECLARE @InvalidImageChangeWasRejected bit = 0;
+BEGIN TRY
+    UPDATE dbo.Images
+    SET FileName = N'wrong-extension.jpg',
+        ContentType = N'image/png',
+        ImageData = 0x89504E470D0A1A0A
+    WHERE Id = '99999999-9999-9999-9999-999999999996';
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 52432
+        SET @InvalidImageChangeWasRejected = 1;
+    ELSE
+        THROW;
+END CATCH;
+
+IF @InvalidImageChangeWasRejected = 0
+    THROW 53013, N'Invalid image content changes bypassed strict upload validation.', 1;
+
 UPDATE dbo.Plays
 SET PlayName = N'PlayToForm Sync Name',
     TheaterName = N'PlayToForm Sync Theater',
@@ -446,7 +524,8 @@ IF @NonImageWasRejected = 0
 
 EXEC dbo.usp_RefreshRankings;
 "@
-    sqlcmd -I -S $server -d $databaseName -b -Q $verification
+    [System.IO.File]::WriteAllText($verificationPath, $verification, [System.Text.UTF8Encoding]::new($false))
+    sqlcmd -I -S $server -d $databaseName -b -f 65001 -i $verificationPath
     if ($LASTEXITCODE -ne 0) { throw 'Upgraded database verification failed.' }
 
     $stdoutPath = Join-Path $env:TEMP ($databaseName + '.stdout.log')
@@ -495,6 +574,7 @@ finally {
     }
     $env:ConnectionStrings__AfifeConnectionString = $previousConnection
     $env:ASPNETCORE_URLS = $previousUrls
+    Remove-Item -LiteralPath $verificationPath -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath (Join-Path $env:TEMP ($databaseName + '.stdout.log')) -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath (Join-Path $env:TEMP ($databaseName + '.stderr.log')) -Force -ErrorAction SilentlyContinue
     sqlcmd -I -S $server -d master -b -Q `

@@ -374,7 +374,17 @@ BEGIN
     INSERT INTO dbo.Images
         (Id, FileName, ContentType, ImageData, CreatedAt, CreatedBy, IsPublished)
     SELECT image.NewImageId,
-           COALESCE(NULLIF(image.ImageUrl, N''),
+           /* Legacy ImageUrl may have an unrelated extension or URL suffix.
+              Keep the Form source; name the projected image for its bytes. */
+           COALESCE(CASE
+                        WHEN image.ContentType = N'image/jpeg'
+                         AND (LOWER(image.ImageUrl) LIKE N'%.jpg' OR LOWER(image.ImageUrl) LIKE N'%.jpeg')
+                            THEN image.ImageUrl
+                        WHEN image.ContentType = N'image/png' AND LOWER(image.ImageUrl) LIKE N'%.png'
+                            THEN image.ImageUrl
+                        WHEN image.ContentType = N'image/webp' AND LOWER(image.ImageUrl) LIKE N'%.webp'
+                            THEN image.ImageUrl
+                    END,
                     CONCAT(N'form-candidate-', CONVERT(nvarchar(36), image.CandidateId),
                            CASE image.ContentType WHEN N'image/png' THEN N'.png'
                                 WHEN N'image/webp' THEN N'.webp' ELSE N'.jpg' END)),
@@ -526,7 +536,15 @@ BEGIN
     INSERT INTO dbo.Images
         (Id, FileName, ContentType, ImageData, CreatedAt, CreatedBy, IsPublished)
     SELECT candidate.ImageId,
-           COALESCE(NULLIF(candidate.ImageUrl, N''),
+           COALESCE(CASE
+                        WHEN candidate.ContentType = N'image/jpeg'
+                         AND (LOWER(candidate.ImageUrl) LIKE N'%.jpg' OR LOWER(candidate.ImageUrl) LIKE N'%.jpeg')
+                            THEN candidate.ImageUrl
+                        WHEN candidate.ContentType = N'image/png' AND LOWER(candidate.ImageUrl) LIKE N'%.png'
+                            THEN candidate.ImageUrl
+                        WHEN candidate.ContentType = N'image/webp' AND LOWER(candidate.ImageUrl) LIKE N'%.webp'
+                            THEN candidate.ImageUrl
+                    END,
                     CONCAT(N'form-candidate-', CONVERT(nvarchar(36), candidate.CandidateId),
                            CASE candidate.ContentType WHEN N'image/png' THEN N'.png'
                                 WHEN N'image/webp' THEN N'.webp' ELSE N'.jpg' END)),

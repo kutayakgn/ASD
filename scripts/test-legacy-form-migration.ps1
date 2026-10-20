@@ -322,6 +322,38 @@ OR NOT EXISTS
       AND CONVERT(varbinary(max), candidate.Candidate) = CONVERT(varbinary(max), N'Ad')
 )
     THROW 53213, N'Mixed legacy JSON did not import only its object candidate at the original array position.', 1;
+DECLARE @ExpectedPhotos TABLE
+(
+    CategoryCode int, SourceOrder int, ContentType nvarchar(100),
+    Extension nvarchar(5), ImageData varbinary(max), FileName nvarchar(255) NULL,
+    PRIMARY KEY (CategoryCode, SourceOrder)
+);
+INSERT @ExpectedPhotos (CategoryCode, SourceOrder, ContentType, Extension, ImageData, FileName)
+VALUES
+    (1003, 1, N'image/png', N'.png', 0x89504E470D0A1A0A, NULL),
+    (1003, 2, N'image/jpeg', N'.jpg', 0xFFD8FF, NULL),
+    (1003, 3, N'image/webp', N'.webp', 0x524946460000000057454250, NULL),
+    (1005, 1, N'image/jpeg', N'.jpg', 0xFFD8FFE000104A4649460001010000D800D80000, N'IMG_1023.jpg');
+IF EXISTS
+(
+    SELECT 1 FROM @ExpectedPhotos AS expected
+    WHERE NOT EXISTS
+    (
+        SELECT 1 FROM dbo.Form AS formRecord
+        INNER JOIN dbo.Plays AS play ON play.SourceFormId = formRecord.Id
+        INNER JOIN dbo.PlayAwardCategories AS candidate ON candidate.PlayId = play.Id
+        INNER JOIN dbo.Images AS image ON image.Id = candidate.PhotoImageId
+        WHERE formRecord.LegacyId = 7 AND candidate.AwardCategoryCode = expected.CategoryCode
+          AND candidate.SourceFormCandidateOrder = expected.SourceOrder
+          AND candidate.IsCurrent = 1 AND candidate.IsPublished = 1 AND candidate.IsActive = 1
+          AND image.IsPublished = 1 AND image.ContentType = expected.ContentType
+          AND image.ImageData = expected.ImageData
+          AND DATALENGTH(image.ImageData) = DATALENGTH(expected.ImageData)
+          AND image.FileName = COALESCE(expected.FileName, CONCAT(N'form-candidate-',
+              CONVERT(nvarchar(36), candidate.Id), expected.Extension))
+    )
+)
+    THROW 53214, N'Legacy photo bytes, MIME, generated filename or candidate association changed.', 1;
 DECLARE @ExpectedMigrations TABLE (MigrationId nvarchar(150) PRIMARY KEY);
 INSERT @ExpectedMigrations (MigrationId) VALUES
 $expectedMigrationValues;
@@ -349,6 +381,66 @@ SELECT * INTO [$originalDatabase].dbo.HistoryAfterFirstStartup FROM dbo.__EFMigr
         $idempotence = Get-ExactTableComparison $originalDatabase 'FormAfterFirstStartup' 'Form' $currentFormColumns
         $idempotence += Get-ExactTableComparison $originalDatabase 'HistoryAfterFirstStartup' '__EFMigrationsHistory' $historyColumns
         Invoke-LegacySql $database $idempotence
+        # Seed one historical reference outside strict upload validation, then
+        # prove retirement preserves it while new/changed image content stays strict.
+        Invoke-LegacySql $database @"
+DECLARE @LegacyImageId uniqueidentifier = NEWID();
+DISABLE TRIGGER dbo.TR_Images_EnforceMaximumSize ON dbo.Images;
+BEGIN TRY
+    INSERT dbo.Images (Id, FileName, ContentType, ImageData, CreatedAt, CreatedBy, IsPublished)
+    VALUES (@LegacyImageId, N'eski-referans', N'application/x-afife-legacy-reference',
+            0x, SYSDATETIME(), NEWID(), 1);
+END TRY
+BEGIN CATCH
+    ENABLE TRIGGER dbo.TR_Images_EnforceMaximumSize ON dbo.Images;
+    THROW;
+END CATCH;
+ENABLE TRIGGER dbo.TR_Images_EnforceMaximumSize ON dbo.Images;
+
+UPDATE dbo.Images SET IsPublished = 0, UpdatedAt = SYSDATETIME()
+WHERE Id = @LegacyImageId;
+IF NOT EXISTS
+(
+    SELECT 1 FROM dbo.Images WHERE Id = @LegacyImageId AND IsPublished = 0
+      AND FileName = N'eski-referans'
+      AND ContentType = N'application/x-afife-legacy-reference'
+      AND DATALENGTH(ImageData) = 0
+)
+    THROW 53215, N'Metadata-only legacy image retirement changed its original content.', 1;
+
+DECLARE @RejectedInsert bit = 0;
+BEGIN TRY
+    INSERT dbo.Images (Id, FileName, ContentType, ImageData, CreatedAt, CreatedBy, IsPublished)
+    VALUES (NEWID(), N'invalid.png', N'image/png', 0x3C7363726970743E, SYSDATETIME(), NEWID(), 1);
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 52432 SET @RejectedInsert = 1;
+    ELSE THROW;
+END CATCH;
+IF @RejectedInsert = 0
+    THROW 53216, N'Invalid new image content bypassed strict upload validation.', 1;
+
+DECLARE @RejectedUpdate bit = 0;
+BEGIN TRY
+    UPDATE dbo.Images
+    SET FileName = N'invalid.png', ContentType = N'image/png', ImageData = 0x3C7363726970743E
+    WHERE Id = @LegacyImageId;
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 52432 SET @RejectedUpdate = 1;
+    ELSE THROW;
+END CATCH;
+IF @RejectedUpdate = 0
+    THROW 53217, N'Invalid changed image content bypassed strict upload validation.', 1;
+IF NOT EXISTS
+(
+    SELECT 1 FROM dbo.Images WHERE Id = @LegacyImageId AND IsPublished = 0
+      AND FileName = N'eski-referans'
+      AND ContentType = N'application/x-afife-legacy-reference'
+      AND DATALENGTH(ImageData) = 0
+)
+    THROW 53218, N'Rejected image content update damaged the original legacy image.', 1;
+"@
         Write-Host "Legacy production Form startup upgrade and repeat startup passed ($scenario)."
     }
 }

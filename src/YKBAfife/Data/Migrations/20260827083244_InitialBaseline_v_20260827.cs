@@ -68,6 +68,10 @@ public partial class InitialBaseline_v_20260827 : Migration
         // projection without changing the historical SQL packages.
         MigrationSqlResources.Execute(migrationBuilder,
             "LegacyFormProjectionCompatibility.sql");
+        // The first synchronization can import legacy photo URLs that do not
+        // match the detected binary type, or retire a legacy reference image.
+        MigrationSqlResources.Execute(migrationBuilder,
+            "LegacyFormImageCompatibility.sql");
         MigrationSqlResources.Execute(migrationBuilder, "BaselineDataRepairs.sql");
 
         migrationBuilder.Sql("""

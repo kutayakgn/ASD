@@ -20,6 +20,8 @@ DECLARE @DuplicateRoleCandidateOneId uniqueidentifier = '99999999-9999-9999-9999
 DECLARE @DuplicateRoleCandidateTwoId uniqueidentifier = '99999999-9999-9999-9999-999999999992';
 DECLARE @SharedRoleDifferentCandidateOneId uniqueidentifier = '99999999-9999-9999-9999-999999999993';
 DECLARE @SharedRoleDifferentCandidateTwoId uniqueidentifier = '99999999-9999-9999-9999-999999999994';
+DECLARE @ReplacementCandidateId uniqueidentifier = '99999999-9999-9999-9999-999999999995';
+DECLARE @ReplacementImageId uniqueidentifier = '99999999-9999-9999-9999-999999999996';
 DECLARE @LargeCandidatePhoto varbinary(max) =
     0x89504E470D0A1A0A + CONVERT(varbinary(max), REPLICATE('A', 5000));
 DECLARE @LargeCandidateBase64 nvarchar(max) = CAST(N'' AS xml).value(
@@ -45,7 +47,7 @@ VALUES
     N'Test İletişim', N'5550000000', NULL,
     N'[{"Name":"Erkek Aday Bir","Role":"Ortak Erkek Rol"},{"Name":"Erkek Aday İki","Role":"Ortak Erkek Rol"}]',
     N'[{"Name":"deneme","Role":"Yardımcı Rol"},{"Name":"deneme","Role":"Yardımcı Rol"}]',
-    N'[{"Name":"Yardımcı Erkek Bir","Role":"Ortak Rol","ImageUrl":"buyuk-aday.png","Base64":"'
+    N'[{"Name":"Yardımcı Erkek Bir","Role":"Ortak Rol","ImageUrl":"legacy-photo.jpg?download=1","Base64":"'
       + @LargeCandidateBase64 + N'"},'
       + N'{"Name":"Yardımcı Erkek İki","Role":"Ortak Rol","ImageUrl":"","Base64":""}]',
     NULL, NULL, NULL, NULL, NULL, NULL, 1, 1
@@ -121,6 +123,31 @@ VALUES
 (
     @SharedRoleDifferentCandidateTwoId, @PlayId, SYSDATETIME(), NULL, NULL, NULL,
     1, 0, N'Eski Erkek Aday İki', 1004, 0, N'Ortak Erkek Rol', 17, NULL, 1
+);
+
+/* Old installations stored image references before strict upload validation.
+   Replacing this reference must not validate its unchanged legacy payload as a
+   new upload; the Form photo itself has valid PNG bytes and an old JPEG URL. */
+DISABLE TRIGGER dbo.TR_Images_EnforceMaximumSize ON dbo.Images;
+INSERT INTO dbo.Images
+    (Id, FileName, ContentType, ImageData, CreatedAt, CreatedBy, IsPublished)
+VALUES
+    (@ReplacementImageId, N'legacy-candidate-reference',
+     N'application/x-afife-legacy-reference', 0x,
+     SYSDATETIME(), @ReplacementCandidateId, 1);
+ENABLE TRIGGER dbo.TR_Images_EnforceMaximumSize ON dbo.Images;
+
+INSERT INTO dbo.PlayAwardCategories
+(
+    Id, PlayId, CreatedAt, CreatedBy, UpdatedAt, UpdatedBy,
+    IsPublished, IsActive, Candidate, AwardCategoryCode,
+    IsCurrent, Role, RoleCode, PhotoImageId, SourceFormCandidateOrder
+)
+VALUES
+(
+    @ReplacementCandidateId, @PlayId, SYSDATETIME(), NULL, NULL, NULL,
+    1, 1, N'Yardımcı Erkek Bir', 1006, 1, N'Ortak Rol', 23,
+    @ReplacementImageId, 1
 );
 
 INSERT INTO dbo.Plays
