@@ -30,15 +30,7 @@
         select.classList.remove("is-open");
     });
 
-    const createToken = (label, value, type) => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "add-play-selection-token";
-        button.dataset.removeValue = value;
-        button.dataset.removeType = type;
-        button.textContent = label;
-        return button;
-    };
+    const createToken = window.selectionTokens.create;
 
     const setupSelect = (select, inputName, allLabel, placeholder) => {
         const trigger = select.querySelector("[data-multi-trigger]");
@@ -92,14 +84,14 @@
                     if (members.length > 0 &&
                         members.every(item => item.checked) &&
                         group.querySelector("[data-group-checkbox]")) {
-                        selected.append(createToken(group.dataset.groupName, group.dataset.groupKey, "group"));
+                        selected.append(createToken(group.dataset.groupName, "group", group.dataset.groupKey));
                         members.forEach(item => represented.add(item.value));
                     }
                 });
                 selectedOptions
                     .filter(option => !represented.has(option.value))
                     .forEach(option => selected.append(
-                        createToken(option.dataset.optionName, option.value, "option")));
+                        createToken(option.dataset.optionName, "option", option.value)));
                 selectedOptions.forEach(option => {
                     const input = document.createElement("input");
                     input.type = "hidden";
@@ -118,7 +110,7 @@
         };
 
         trigger.addEventListener("click", event => {
-            if (event.target.closest("[data-remove-value]")) return;
+            if (event.target.closest("[data-selection-remove]")) return;
             const open = menu.hidden;
             closeAll(select);
             menu.hidden = !open;
@@ -128,6 +120,7 @@
         });
         trigger.addEventListener("keydown", event => {
             if (event.key !== "Enter" && event.key !== " ") return;
+            if (event.target.closest("[data-selection-remove]")) return;
             event.preventDefault();
             trigger.click();
         });
@@ -161,18 +154,19 @@
         });
 
         selected.addEventListener("click", event => {
-            const token = event.target.closest("[data-remove-value]");
+            const token = event.target.closest("[data-selection-remove]");
             if (!token) return;
             event.stopPropagation();
-            if (token.dataset.removeType === "all") {
+            if (token.dataset.selectionRemove === "all") {
+                allCheckbox.checked = false;
                 options.forEach(option => { option.checked = false; });
-            } else if (token.dataset.removeType === "group") {
+            } else if (token.dataset.selectionRemove === "group") {
                 select.querySelector(
-                    `[data-selection-group][data-group-key="${CSS.escape(token.dataset.removeValue)}"]`)
+                    `[data-selection-group][data-group-key="${CSS.escape(token.dataset.selectionValue)}"]`)
                     ?.querySelectorAll("[data-option]")
                     .forEach(option => { option.checked = false; });
             } else {
-                const option = options.find(item => item.value === token.dataset.removeValue);
+                const option = options.find(item => item.value === token.dataset.selectionValue);
                 if (option) option.checked = false;
             }
             render();

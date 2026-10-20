@@ -59,22 +59,7 @@
         groupCheckbox.indeterminate = selectedCount > 0 && selectedCount < members.length;
     };
 
-    const createToken = (text, type, value) => {
-        const token = document.createElement("button");
-        token.type = "button";
-        token.className = "add-play-selection-token";
-        token.setAttribute("aria-label", `${text} seçimini kaldır`);
-        token.dataset.selectionRemove = type;
-        token.dataset.selectionValue = value;
-        const label = document.createElement("span");
-        label.textContent = text;
-        const removeIcon = document.createElement("img");
-        removeIcon.className = "add-play-selection-remove-icon";
-        removeIcon.setAttribute("aria-hidden", "true");
-        removeIcon.src = "/icons/x-white.svg";
-        token.append(label, removeIcon);
-        return token;
-    };
+    const createToken = window.selectionTokens.create;
 
     const renderJurySelection = () => {
         groups.forEach(syncGroupState);
