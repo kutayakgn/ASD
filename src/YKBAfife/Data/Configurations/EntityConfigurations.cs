@@ -696,12 +696,12 @@ internal sealed class PlayConfiguration : IEntityTypeConfiguration<Play>
             .OnDelete(DeleteBehavior.NoAction)
             .HasConstraintName("FK_JuryAssignedPlays_Plays");
         entity.Property(x => x.PlayName)
-            .HasMaxLength(255);
+            .HasMaxLength(500);
         entity.Property(x => x.Slug)
             .HasMaxLength(255)
             .IsUnicode(false);
         entity.Property(x => x.TheaterName)
-            .HasMaxLength(255);
+            .HasMaxLength(500);
         entity.Property(x => x.Phone)
             .HasMaxLength(255);
         entity.Property(x => x.ContactPersonName)
@@ -767,7 +767,7 @@ internal sealed class PlayAwardCategoryConfiguration : IEntityTypeConfiguration<
             .OnDelete(DeleteBehavior.NoAction)
             .HasConstraintName("FK_PlayAwardCategories_Plays");
         entity.Property(x => x.Candidate)
-            .HasMaxLength(250);
+            .HasMaxLength(500);
         entity.Property(x => x.Role)
             .HasMaxLength(200);
         entity.Property(x => x.IsActive)

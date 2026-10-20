@@ -1413,8 +1413,8 @@ namespace YKBAfife.Data.Migrations
 
                     b.Property<string>("PlayName")
                         .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<bool>("RecordType")
                         .ValueGeneratedOnAdd()
@@ -1435,8 +1435,8 @@ namespace YKBAfife.Data.Migrations
 
                     b.Property<string>("TheaterName")
                         .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -1485,8 +1485,8 @@ namespace YKBAfife.Data.Migrations
 
                     b.Property<string>("Candidate")
                         .IsRequired()
-                        .HasMaxLength(250)
-                        .HasColumnType("nvarchar(250)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<DateTime?>("CreatedAt")
                         .HasColumnType("datetime2");

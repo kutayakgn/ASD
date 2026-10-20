@@ -72,7 +72,9 @@ BEGIN
             ELSE N'[' + category.CandidateJson + N']'
         END
     ) AS jsonItem
-    CROSS APPLY OPENJSON(jsonItem.value)
+    /* Legacy payloads can mix objects with scalar array items. Only objects
+       carry named candidate fields; leave the original Form JSON untouched. */
+    CROSS APPLY OPENJSON(CASE WHEN jsonItem.[type] = 5 THEN jsonItem.value ELSE N'{}' END)
     WITH
     (
         [Name] nvarchar(250) N'$.Name',

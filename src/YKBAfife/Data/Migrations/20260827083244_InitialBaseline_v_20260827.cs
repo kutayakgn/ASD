@@ -63,6 +63,11 @@ public partial class InitialBaseline_v_20260827 : Migration
             migrationBuilder,
             "InitialBaseline_v_20260827",
             "Up.sql");
+        // Old Form rows are synchronized in this migration, before later
+        // migrations run. Apply the frozen compatibility fix before that first
+        // projection without changing the historical SQL packages.
+        MigrationSqlResources.Execute(migrationBuilder,
+            "LegacyFormProjectionCompatibility.sql");
         MigrationSqlResources.Execute(migrationBuilder, "BaselineDataRepairs.sql");
 
         migrationBuilder.Sql("""

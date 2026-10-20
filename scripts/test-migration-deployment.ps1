@@ -8,6 +8,7 @@ $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $validationScript = Join-Path $PSScriptRoot 'validate-migrations.ps1'
 $emptyDatabaseScript = Join-Path $PSScriptRoot 'test-empty-database-migration.ps1'
 $oldestPreprodScript = Join-Path $PSScriptRoot 'test-oldest-preprod-migration.ps1'
+$legacyFormScript = Join-Path $PSScriptRoot 'test-legacy-form-migration.ps1'
 $currentSchemaScript = Join-Path $PSScriptRoot 'test-current-schema-adoption.ps1'
 $companyUpgradeScript = Join-Path $PSScriptRoot 'test-company-migration-upgrade.ps1'
 $candidateRulesScript = Join-Path $PSScriptRoot 'test-candidate-category-rules.ps1'
@@ -35,6 +36,9 @@ try {
 
     & $oldestPreprodScript -Configuration $Configuration
     if ($LASTEXITCODE -ne 0) { throw 'Oldest-preprod migration scenario failed.' }
+
+    & $legacyFormScript -Configuration $Configuration
+    if ($LASTEXITCODE -ne 0) { throw 'Legacy production Form migration scenario failed.' }
 
     & $currentSchemaScript -Configuration $Configuration
     if ($LASTEXITCODE -ne 0) { throw 'Current 27.08 schema adoption scenario failed.' }
