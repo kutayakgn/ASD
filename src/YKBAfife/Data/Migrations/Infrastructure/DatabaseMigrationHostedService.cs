@@ -15,6 +15,8 @@ public sealed class DatabaseMigrationHostedService(
     {
         await using var scope = scopeFactory.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<AfifeContext>();
+        context.Database.SetCommandTimeout(
+            configuration.GetValue("DatabaseMigration:CommandTimeoutSeconds", 300));
         var migrator = context.GetService<IMigrator>();
         var connection = (SqlConnection)context.Database.GetDbConnection();
         await connection.OpenAsync(cancellationToken);
@@ -67,7 +69,22 @@ public sealed class DatabaseMigrationHostedService(
         }
         finally
         {
-            await ReleaseLockAsync(connection, cancellationToken);
+            try
+            {
+                // Cleanup must still run when startup was cancelled, and must
+                // never replace the SQL error that caused startup to fail.
+                await ReleaseLockAsync(connection, CancellationToken.None);
+            }
+            catch (Exception exception)
+            {
+                logger.LogWarning(exception, "Could not release the database migration lock.");
+                if (connection.State == ConnectionState.Open)
+                {
+                    // Discard this session when its owning context is disposed;
+                    // an unreleased session lock must not return to the pool.
+                    SqlConnection.ClearPool(connection);
+                }
+            }
         }
     }
 
@@ -111,6 +128,10 @@ public sealed class DatabaseMigrationHostedService(
         CancellationToken cancellationToken)
     {
         await using var command = connection.CreateCommand();
+        // SQL's configured lock wait can exceed SqlCommand's 30-second default.
+        command.CommandTimeout = timeout < 0
+            ? 0
+            : Math.Max(30, (int)Math.Ceiling(timeout / 1000d) + 5);
         command.CommandText = """
             DECLARE @result int;
             EXEC @result = sys.sp_getapplock
@@ -129,7 +150,12 @@ public sealed class DatabaseMigrationHostedService(
         SqlConnection connection,
         CancellationToken cancellationToken)
     {
+        // A timeout or lost SQL session may already have closed the connection.
+        // Reopening it would create a different session that does not own the lock.
+        if (connection.State != ConnectionState.Open) return;
+
         await using var command = connection.CreateCommand();
+        command.CommandTimeout = 10;
         command.CommandText = """
             EXEC sys.sp_releaseapplock
                 @Resource = N'YKBAfife:EFCoreMigrations',
