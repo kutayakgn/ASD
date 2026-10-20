@@ -93,8 +93,8 @@ public sealed class AfifeContext : DbContext
 
         modelBuilder.Entity<AdditionalVotingUsage>()
             .HasIndex(x => new { x.AdditionalVotingId, x.JuryId, x.PlayId })
-            .HasDatabaseName("UX_AdditionalVotingUsages_OneTime")
-            .IsUnique()
+            .HasDatabaseName("IX_AdditionalVotingUsages_Jury_Play")
+            .IsUnique(false)
             .HasFilter("[IsPublished] = 1");
     }
 }

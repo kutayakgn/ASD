@@ -252,8 +252,7 @@ namespace YKBAfife.Data.Migrations
                     b.HasIndex("UpdatedBy");
 
                     b.HasIndex("AdditionalVotingId", "JuryId", "PlayId")
-                        .IsUnique()
-                        .HasDatabaseName("UX_AdditionalVotingUsages_OneTime")
+                        .HasDatabaseName("IX_AdditionalVotingUsages_Jury_Play")
                         .HasFilter("[IsPublished] = 1");
 
                     b.HasIndex("AdditionalVotingId", "UsageType", "JuryId")
@@ -600,7 +599,15 @@ namespace YKBAfife.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Configs", "dbo");
+                    b.HasIndex("ConfigName")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Configs_JuryHomePageTableName")
+                        .HasFilter("[ConfigName] IN ('HomePageJuryTableEnabled', 'HomePageMissionTableEnabled', 'HomePageMostWatchedTableEnabled', 'HomePageLeastWatchedTableEnabled')");
+
+                    b.ToTable("Configs", "dbo", t =>
+                        {
+                            t.HasCheckConstraint("CK_Configs_JuryHomePageTableValue", "NOT ([ConfigName] IN ('HomePageJuryTableEnabled', 'HomePageMissionTableEnabled', 'HomePageMostWatchedTableEnabled', 'HomePageLeastWatchedTableEnabled')) OR ([IsPublished] = 1 AND [ConfigValue] COLLATE Latin1_General_100_BIN2 IN ('true', 'false') AND DATALENGTH([ConfigValue]) = CASE WHEN [ConfigValue] COLLATE Latin1_General_100_BIN2 = 'true' THEN 8 ELSE 10 END)");
+                        });
 
                     b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
                 });
@@ -1135,13 +1142,17 @@ namespace YKBAfife.Data.Migrations
 
                     b.HasIndex("AdditionalVotingId");
 
-                    b.HasIndex("CorrelationId");
+                    b.HasIndex("CorrelationId")
+                        .HasDatabaseName("IX_JuryLogs_CorrelationId");
 
-                    b.HasIndex("JuryId", "OccurredAt");
+                    b.HasIndex("JuryId", "OccurredAt")
+                        .HasDatabaseName("IX_JuryLogs_JuryId_OccurredAt");
 
-                    b.HasIndex("PlayId", "OccurredAt");
+                    b.HasIndex("PlayId", "OccurredAt")
+                        .HasDatabaseName("IX_JuryLogs_PlayId_OccurredAt");
 
-                    b.HasIndex("OperationType", "IsSuccessful", "OccurredAt");
+                    b.HasIndex("OperationType", "IsSuccessful", "OccurredAt")
+                        .HasDatabaseName("IX_JuryLogs_OperationType_IsSuccessful_OccurredAt");
 
                     b.ToTable("JuryLogs", "dbo");
 

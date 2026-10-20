@@ -9,6 +9,7 @@ $projectFile = Join-Path $projectRoot 'YKBAfife.csproj'
 $migrationRoot = Join-Path $projectRoot 'Data/Migrations'
 $objectRoot = Join-Path $projectRoot 'Migrations/DatabaseObjects'
 $versionRoot = Join-Path $projectRoot 'Migrations/Versions'
+. (Join-Path $PSScriptRoot 'migration-sql.ps1')
 
 Push-Location $repositoryRoot
 try {
@@ -26,11 +27,17 @@ try {
             throw "Migration $($migration.Name) must end with _v_<date>."
         }
 
-        $versionDirectory = Join-Path $versionRoot $logicalName
-        foreach ($direction in @('Up.sql', 'Down.sql')) {
-            if (-not (Test-Path (Join-Path $versionDirectory $direction))) {
-                throw "Versioned database-object snapshot missing: $logicalName/$direction"
-            }
+        $versionFile = Join-Path $versionRoot "$logicalName.sql"
+        if (-not (Test-Path -LiteralPath $versionFile -PathType Leaf)) {
+            throw ("SQL package missing for $logicalName. Use scripts/migration.ps1 add <Name> " +
+                'to capture SQL changes as well as the standard EF model migration.')
+        }
+        foreach ($direction in @('UP', 'DOWN')) {
+            [void](Read-AfifeSqlSection $versionRoot $logicalName $direction)
+        }
+        $package = [IO.File]::ReadAllText($versionFile, [Text.Encoding]::UTF8)
+        if ($package -cmatch '<AFIFE:SHA256:SEED=') {
+            [void](Read-AfifeSqlSection $versionRoot $logicalName 'SEED')
         }
     }
 
@@ -51,8 +58,21 @@ try {
         }
     }
 
+    # SQL files are outside EF's model snapshot. Fail before deployment when a
+    # plain dotnet-ef add (or a forgotten add) did not capture those edits.
+    $latestLogicalName = $migrations[-1].BaseName -replace '^\d+_', ''
+    $latestVersionFile = Join-Path $versionRoot "$latestLogicalName.sql"
+    $manifest = @(Read-AfifeModuleManifest $latestVersionFile)
+    $canonicalNames = @(Get-AfifeCanonicalModuleNames $objectRoot)
+    if (@($manifest | Where-Object { $canonicalNames -cnotcontains $_ }).Count -gt 0 -or
+        @($canonicalNames | Where-Object { $manifest -cnotcontains $_ }).Count -gt 0 -or
+        -not (Test-AfifeSqlEquivalent (Read-AfifeSqlSection $versionRoot $latestLogicalName 'UP') (Get-AfifeCanonicalSql $objectRoot))) {
+        throw ('Canonical SQL and the latest immutable migration package differ. ' +
+            'Create a migration with scripts/migration.ps1 add <Name>; do not edit released packages.')
+    }
+
     $sqlFiles = @(
-        Get-ChildItem (Join-Path $projectRoot 'Migrations/Scripts') -Filter '*.sql'
+        Get-ChildItem (Join-Path $projectRoot 'Migrations/Legacy') -Filter '*.sql'
         Get-ChildItem $objectRoot -Recurse -Filter '*.sql'
         Get-ChildItem $versionRoot -Recurse -Filter '*.sql'
     )

@@ -17,6 +17,7 @@ $project = Join-Path $repositoryRoot 'src/YKBAfife/YKBAfife.csproj'
 $migrationRoot = Join-Path $repositoryRoot 'src/YKBAfife/Data/Migrations'
 $objectRoot = Join-Path $repositoryRoot 'src/YKBAfife/Migrations/DatabaseObjects'
 $versionRoot = Join-Path $repositoryRoot 'src/YKBAfife/Migrations/Versions'
+. (Join-Path $PSScriptRoot 'migration-sql.ps1')
 
 function Invoke-Checked([scriptblock] $Command, [string] $FailureMessage) {
     & $Command
@@ -29,21 +30,11 @@ function Invoke-Ef([string[]] $Arguments) {
 }
 
 function Get-CanonicalDatabaseObjects {
-    $files = Get-ChildItem -LiteralPath $objectRoot -Recurse -File -Filter '*.sql' |
-        Sort-Object FullName
-    if (-not $files) { throw 'No canonical database object SQL files were found.' }
-
-    return ($files | ForEach-Object {
-        (Get-Content -Raw -LiteralPath $_.FullName).Trim() +
-            [Environment]::NewLine + 'GO' + [Environment]::NewLine
-    }) -join [Environment]::NewLine
+    return Get-AfifeCanonicalSql $objectRoot
 }
 
-function Write-Utf8([string] $Path, [string] $Content) {
-    [System.IO.File]::WriteAllText(
-        $Path,
-        $Content,
-        [System.Text.UTF8Encoding]::new($false))
+function Get-CanonicalModuleNames {
+    return @(Get-AfifeCanonicalModuleNames $objectRoot)
 }
 
 Push-Location $repositoryRoot
@@ -74,20 +65,51 @@ try {
                 throw 'The initial EF migration is missing.'
             }
             $previousLogicalName = $previousMigration.BaseName -replace '^\d+_', ''
-            $previousVersion = Get-Item (Join-Path $versionRoot $previousLogicalName) -ErrorAction SilentlyContinue
-            if (-not $previousVersion) {
-                throw 'The initial versioned database-object snapshot is missing.'
+            $previousVersionFile = Join-Path $versionRoot "$previousLogicalName.sql"
+            if (-not (Test-Path -LiteralPath $previousVersionFile -PathType Leaf)) {
+                throw 'The previous versioned SQL package is missing.'
             }
+            $previousSql = Read-AfifeSqlSection $versionRoot $previousLogicalName 'UP'
+            $previousModules = @(Read-AfifeModuleManifest $previousVersionFile)
+            $currentModules = @(Get-CanonicalModuleNames)
+            $removedModules = @($previousModules | Where-Object { $currentModules -cnotcontains $_ })
+            if ($removedModules.Count -gt 0) {
+                throw ('Canonical SQL files cannot disappear silently. Restore the file(s) and ' +
+                    'review an explicit compatibility migration before removing database behavior: ' +
+                    ($removedModules -join ', '))
+            }
+            $addedModules = @($currentModules | Where-Object { $previousModules -cnotcontains $_ })
+            $moduleRollback = Get-AfifeNewModuleRollback $objectRoot $addedModules $previousSql
 
             Invoke-Checked { dotnet build $project -c $Configuration } 'Build failed.'
             Invoke-Ef (@('migrations', 'add', $migrationName) + $common + @(
                 '--output-dir', 'Data/Migrations', '--no-build'))
 
-            $versionDirectory = Join-Path $versionRoot $migrationName
-            New-Item -ItemType Directory -Force $versionDirectory | Out-Null
-            Write-Utf8 (Join-Path $versionDirectory 'Up.sql') (Get-CanonicalDatabaseObjects)
-            Copy-Item -LiteralPath (Join-Path $previousVersion.FullName 'Up.sql') `
-                -Destination (Join-Path $versionDirectory 'Down.sql')
+            $canonicalSql = Get-CanonicalDatabaseObjects
+            $upReference = $null
+            $upSql = $canonicalSql
+            if (Test-AfifeSqlEquivalent $canonicalSql $previousSql) {
+                $upReference = "${previousLogicalName}:UP"
+                $upSql = $previousSql # Reference hash covers the actual immutable target.
+            }
+            $downSql = $previousSql
+            $downReference = "${previousLogicalName}:UP"
+            if (-not [string]::IsNullOrWhiteSpace($moduleRollback.AfterSql)) {
+                $downSql += [Environment]::NewLine + 'GO' + [Environment]::NewLine +
+                    '-- Remove new procedures/functions after restoring prior definitions.' +
+                    [Environment]::NewLine + $moduleRollback.AfterSql + [Environment]::NewLine
+                $downReference = $null
+            }
+            $sections = @{
+                UP = @{ Sql = $upSql; Reference = $upReference }
+                DOWN = @{ Sql = $downSql; Reference = $downReference }
+            }
+            $versionFile = Join-Path $versionRoot "$migrationName.sql"
+            if (Test-Path -LiteralPath $versionFile) { throw "SQL package already exists: $versionFile" }
+            Write-AfifeUtf8 $versionFile (New-AfifeSqlPackage $migrationName $sections $currentModules)
+            # Detect corrupt/incomplete packages before touching the migration source.
+            [void](Read-AfifeSqlSection $versionRoot $migrationName 'UP')
+            [void](Read-AfifeSqlSection $versionRoot $migrationName 'DOWN')
 
             $migrationFiles = @(Get-ChildItem -LiteralPath $migrationRoot -File `
                 -Filter "*_$migrationName.cs" |
@@ -98,7 +120,7 @@ try {
             }
             $migrationFile = $migrationFiles[0]
 
-            $source = Get-Content -Raw -LiteralPath $migrationFile.FullName
+            $source = Get-Content -Raw -Encoding utf8 -LiteralPath $migrationFile.FullName
             $upCall = @"
             MigrationSqlResources.ExecuteVersionedDatabaseObjects(
                 migrationBuilder, "$migrationName", "Up.sql");
@@ -115,11 +137,27 @@ try {
             if ($upClose -lt 0) { throw 'Generated Up method closing brace was not found.' }
             $source = $source.Insert($upClose, $upCall)
 
+            if (-not [string]::IsNullOrWhiteSpace($moduleRollback.BeforeSql)) {
+                # Drop new triggers before EF archives columns/tables they use.
+                # Literal ASCII object names were validated by the package helper.
+                $escapedDrops = ConvertTo-AfifeCSharpStringContent $moduleRollback.BeforeSql
+                $preDownCall = @"
+            // Introduced in this version; remove before schema rollback.
+            migrationBuilder.Sql("$escapedDrops");
+"@ + [Environment]::NewLine
+                $downMarker = $source.IndexOf(
+                    'protected override void Down(MigrationBuilder migrationBuilder)',
+                    [StringComparison]::Ordinal)
+                $downOpen = $source.IndexOf('{', $downMarker, [StringComparison]::Ordinal)
+                if ($downOpen -lt 0) { throw 'Generated Down method opening brace was not found.' }
+                $source = $source.Insert($downOpen + 1, [Environment]::NewLine + $preDownCall)
+            }
+
             $classClose = $source.LastIndexOf('    }', [StringComparison]::Ordinal)
             $downClose = $source.LastIndexOf('        }', $classClose, [StringComparison]::Ordinal)
             if ($downClose -lt 0) { throw 'Generated Down method closing brace was not found.' }
             $source = $source.Insert($downClose, $downCall)
-            Write-Utf8 $migrationFile.FullName $source
+            Write-AfifeUtf8 $migrationFile.FullName $source
 
             & (Join-Path $PSScriptRoot 'validate-migrations.ps1') -Configuration $Configuration
             if ($LASTEXITCODE -ne 0) { throw 'Migration validation failed.' }
@@ -136,9 +174,9 @@ try {
 
             $logicalName = $lastMigration.BaseName -replace '^\d+_', ''
             Invoke-Ef (@('migrations', 'remove') + $common)
-            $versionDirectory = Join-Path $versionRoot $logicalName
-            if (Test-Path $versionDirectory) {
-                Remove-Item -LiteralPath $versionDirectory -Recurse -Force
+            $versionFile = Join-Path $versionRoot "$logicalName.sql"
+            if (Test-Path -LiteralPath $versionFile) {
+                Remove-Item -LiteralPath $versionFile -Force
             }
             Write-Host "Removed unapplied migration $logicalName."
         }

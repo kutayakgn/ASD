@@ -5,8 +5,9 @@ using Microsoft.EntityFrameworkCore;
 namespace YKBAfife.Data.Migrations;
 
 /// <summary>
-/// Drops only the legacy columns explicitly listed in ColumnsToDrop. The list
-/// is code-controlled and runs idempotently after EF migrations during deploy.
+/// Retires only the legacy columns explicitly listed in ColumnsToDrop. Values
+/// remain in nullable __Archived_* columns on the same rows, without defaults.
+/// This code-controlled list runs idempotently after EF migrations during deploy.
 /// </summary>
 internal static class LegacyColumnCleanupRunner
 {
@@ -41,12 +42,12 @@ internal static class LegacyColumnCleanupRunner
                 throw new InvalidOperationException(
                     $"Legacy column {target.Schema}.{target.Table}.{target.Column} has an index, " +
                     "key, foreign key, check constraint, or computed-column dependency. " +
-                    "Remove that dependency in a reviewed code change before dropping the column.");
+                    "Remove that dependency in a reviewed code change before retiring the column.");
             }
 
             logger.LogWarning(
-                "Legacy column {Schema}.{Table}.{Column} will be dropped; " +
-                "{NonNullCount} row(s) contain a value.",
+                "Legacy column {Schema}.{Table}.{Column} will be archived; " +
+                "values from {NonNullCount} row(s) will be retained on the same rows.",
                 target.Schema, target.Table, target.Column, state.NonNullCount);
             cleanupPlan.Add(target);
         }
@@ -56,11 +57,12 @@ internal static class LegacyColumnCleanupRunner
             return;
         }
 
-        await DropColumnsAsync(connection, cleanupPlan, cancellationToken);
+        await ArchiveColumnsAsync(connection, cleanupPlan, cancellationToken);
         foreach (var target in cleanupPlan)
         {
             logger.LogInformation(
-                "Legacy column {Schema}.{Table}.{Column} was dropped successfully.",
+                "Legacy column {Schema}.{Table}.{Column} was retired; " +
+                "its data is recoverable from its __Archived_* column.",
                 target.Schema, target.Table, target.Column);
         }
     }
@@ -145,7 +147,7 @@ internal static class LegacyColumnCleanupRunner
             Convert.ToInt64(countParameter.Value));
     }
 
-    private static async Task DropColumnsAsync(
+    private static async Task ArchiveColumnsAsync(
         SqlConnection connection,
         IReadOnlyCollection<LegacyColumnTarget> targets,
         CancellationToken cancellationToken)
@@ -157,42 +159,7 @@ internal static class LegacyColumnCleanupRunner
             {
                 await using var command = connection.CreateCommand();
                 command.Transaction = transaction;
-                command.CommandText = $"""
-                    DECLARE @objectId int = OBJECT_ID(@qualifiedTable, N'U');
-                    DECLARE @columnId int =
-                        CASE WHEN @objectId IS NULL THEN NULL
-                             ELSE COLUMNPROPERTY(@objectId, @column, 'ColumnId') END;
-
-                    IF @columnId IS NULL
-                        RETURN;
-
-                    DECLARE @defaultConstraint sysname =
-                    (
-                        SELECT defaultConstraint.name
-                        FROM sys.default_constraints AS defaultConstraint
-                        WHERE defaultConstraint.parent_object_id = @objectId
-                          AND defaultConstraint.parent_column_id = @columnId
-                    );
-
-                    IF @defaultConstraint IS NOT NULL
-                    BEGIN
-                        DECLARE @dropDefaultSql nvarchar(max) =
-                            N'ALTER TABLE {Delimited(target.Schema)}.{Delimited(target.Table)} DROP CONSTRAINT '
-                            + QUOTENAME(@defaultConstraint) + N';';
-                        EXEC sys.sp_executesql @dropDefaultSql;
-                    END;
-
-                    ALTER TABLE {Delimited(target.Schema)}.{Delimited(target.Table)}
-                        DROP COLUMN {Delimited(target.Column)};
-                    """;
-                command.Parameters.Add(new SqlParameter("@qualifiedTable", SqlDbType.NVarChar, 517)
-                {
-                    Value = $"{Delimited(target.Schema)}.{Delimited(target.Table)}"
-                });
-                command.Parameters.Add(new SqlParameter("@column", SqlDbType.NVarChar, 128)
-                {
-                    Value = target.Column
-                });
+                command.CommandText = RetainedColumnSql.Archive(target.Schema, target.Table, target.Column);
                 await command.ExecuteNonQueryAsync(cancellationToken);
             }
 

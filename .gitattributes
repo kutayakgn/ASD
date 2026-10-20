@@ -3,6 +3,10 @@
 ###############################################################################
 * text=auto
 
+# Preserve historical payload bytes during checkout. Paired SHA256-LF metadata
+# also validates LF/CRLF-only transport changes without allowing SQL edits.
+src/YKBAfife/Migrations/Versions/*.sql -text
+
 ###############################################################################
 # Set default behavior for command prompt diff.
 #

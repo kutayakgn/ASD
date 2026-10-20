@@ -89,7 +89,7 @@ VALUES
     ('40000000-0000-0000-0000-000000000008', 1008, N'Yılın En Başarılı Giysi Tasarımı', 1, 1),
     ('40000000-0000-0000-0000-000000000010', 1009, N'Yılın En Başarılı Sahne Müziği', 1, 1),
     ('40000000-0000-0000-0000-000000000009', 1010, N'Yılın En Başarılı Işık Tasarımı', 1, 1),
-    ('40000000-0000-0000-0000-000000000012', 1011, N'Yılın En Başarılı Hareket Düzeni (Kareografisi)', 1, 1);
+    ('40000000-0000-0000-0000-000000000012', 1011, N'Yılın En Başarılı Hareket Tasarımı (Kareografisi)', 1, 1);
 
 IF EXISTS
 (

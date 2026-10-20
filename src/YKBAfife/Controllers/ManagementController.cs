@@ -1479,13 +1479,6 @@ public sealed partial class ManagementController(
             item => item.Id == id && item.IsPublished,
             cancellationToken);
         if (candidate is null) return NotFound();
-        if (CandidateCategoryPolicy.IsSystemManaged(candidate.AwardCategoryCode))
-        {
-            return BadRequest(new
-            {
-                message = "Sistem tarafından yönetilen oyun kategorisinin statüsü değiştirilemez."
-            });
-        }
 
         candidate.IsActive = isActive;
         candidate.UpdatedAt = TurkeyTime.Now;
@@ -2618,12 +2611,29 @@ public sealed partial class ManagementController(
                 Text = item.Text ?? string.Empty
             })
             .ToArrayAsync(cancellationToken);
+        var juryHomePageConfigNames = JuryHomePageTableSettings.Definitions
+            .Select(definition => definition.Name)
+            .ToArray();
+        var juryHomePageConfigs = await context.Configs.AsNoTracking()
+            .Where(item => item.IsPublished && juryHomePageConfigNames.Contains(item.ConfigName))
+            .ToDictionaryAsync(item => item.ConfigName, item => item.ConfigValue, cancellationToken);
+        var juryHomePageTables = JuryHomePageTableSettings.Definitions
+            .Select(definition => new JuryHomePageTableSettingsRowViewModel
+            {
+                ConfigName = definition.Name,
+                Title = definition.Title,
+                IsAvailable = juryHomePageConfigs.ContainsKey(definition.Name),
+                IsEnabled = JuryHomePageTableSettings.IsEnabled(
+                    juryHomePageConfigs.GetValueOrDefault(definition.Name))
+            })
+            .ToArray();
         return View(new VotingSettingsViewModel
         {
             SeasonTable = SeasonSettingsComplexTableFactory.Create(seasonReport),
             AdditionalVotingTable = AdditionalVotingComplexTableFactory.Create(additionalVotingReport),
             PlayStatusTable = PlayStatusSettingsComplexTableFactory.Create(playStatuses),
-            AnnouncementTable = AnnouncementSettingsComplexTableFactory.Create(announcements)
+            AnnouncementTable = AnnouncementSettingsComplexTableFactory.Create(announcements),
+            JuryHomePageTable = JuryHomePageTableSettingsComplexTableFactory.Create(juryHomePageTables)
         });
     }
 

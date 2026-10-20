@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Migrations\Scripts\*.sql" />
+    <EmbeddedResource Include="Migrations\Legacy\*.sql" />
     <EmbeddedResource Include="Migrations\DatabaseObjects\**\*.sql" />
     <EmbeddedResource Include="Migrations\Versions\**\*.sql" />
   </ItemGroup>

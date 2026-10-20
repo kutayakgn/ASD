@@ -10,6 +10,8 @@ public enum AdditionalVotingUsageType : byte
 }
 
 [Table("AdditionalVotingUsages")]
+// Event history for usage counts, detail screens and JuryLogs correlation.
+// These rows never consume or limit an additional-voting permission.
 public sealed class AdditionalVotingUsage
 {
     [Key] public Guid Id { get; set; }

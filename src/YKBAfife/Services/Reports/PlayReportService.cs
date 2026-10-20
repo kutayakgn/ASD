@@ -123,8 +123,10 @@ public sealed class PlayReportService(AfifeContext context) : IPlayReportService
                 ? prioritizedRows.ThenByDescending(row => row.RecordType).ThenBy(row => row.PlayName)
                 : prioritizedRows.ThenBy(row => row.RecordType).ThenBy(row => row.PlayName),
             PlaySortColumns.CreatedAt => descending
-                ? prioritizedRows.ThenByDescending(row => row.CreatedAt).ThenBy(row => row.PlayName)
-                : prioritizedRows.ThenBy(row => row.CreatedAt).ThenBy(row => row.PlayName),
+                ? prioritizedRows.ThenByDescending(row => row.CreatedAt.HasValue)
+                    .ThenByDescending(row => row.CreatedAt).ThenBy(row => row.PlayName).ThenBy(row => row.PlayId)
+                : prioritizedRows.ThenByDescending(row => row.CreatedAt.HasValue)
+                    .ThenBy(row => row.CreatedAt).ThenBy(row => row.PlayName).ThenBy(row => row.PlayId),
             PlaySortColumns.JuryVotingStatus => descending
                 ? prioritizedRows.ThenByDescending(row => row.JuriOylamaStatus).ThenBy(row => row.PlayName)
                 : prioritizedRows.ThenBy(row => row.JuriOylamaStatus).ThenBy(row => row.PlayName),
@@ -198,8 +200,9 @@ public sealed class PlayReportService(AfifeContext context) : IPlayReportService
         return new PlayTableQuery
         {
             Search = (query.Search ?? string.Empty).Trim(),
-            SortBy = allowedSortColumns.Contains(query.SortBy) ? query.SortBy : PlaySortColumns.PlayName,
-            SortDirection = string.Equals(query.SortDirection, "desc", StringComparison.OrdinalIgnoreCase) ? "desc" : "asc",
+            SortBy = allowedSortColumns.Contains(query.SortBy) ? query.SortBy : PlaySortColumns.CreatedAt,
+            SortDirection = allowedSortColumns.Contains(query.SortBy) &&
+                string.Equals(query.SortDirection, "asc", StringComparison.OrdinalIgnoreCase) ? "asc" : "desc",
             Page = Math.Max(1, query.Page),
             JuryVotingStatus = query.JuryVotingStatus,
             KunyeGirisStatus = query.KunyeGirisStatus,

@@ -8,4 +8,5 @@ public sealed class VotingSettingsViewModel
     public ComplexTableViewModel AdditionalVotingTable { get; init; } = new();
     public ComplexTableViewModel PlayStatusTable { get; init; } = new();
     public ComplexTableViewModel AnnouncementTable { get; init; } = new();
+    public ComplexTableViewModel JuryHomePageTable { get; init; } = new();
 }

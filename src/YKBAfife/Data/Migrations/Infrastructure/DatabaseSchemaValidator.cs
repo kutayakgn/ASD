@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using YKBAfife.Helpers;
 
 namespace YKBAfife.Data.Migrations;
 
@@ -57,59 +58,14 @@ internal static partial class DatabaseSchemaValidator
             }
         }
 
-        var schemaSql = MigrationSqlResources.Read("InitialSchema.sql");
-        foreach (Match match in IndexRegex().Matches(schemaSql))
+        await ValidateModelRulesAsync(context, connection, missing, cancellationToken);
+        foreach (var obsolete in new[]
         {
-            var indexName = match.Groups["name"].Value;
-            if (string.Equals(
-                    indexName,
-                    "UX_PlayAwardCategories_Current_Play_Category_Role",
-                    StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(
-                    indexName,
-                    "UX_PlayAwardCategories_FormSourceSlot",
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            if (!catalog.Indexes.Contains(indexName))
-            {
-                missing.Add($"index {indexName}");
-            }
-        }
-        if (!catalog.NonUniqueIndexes.Contains(
-                "IX_PlayAwardCategories_Current_Play_Category_Role"))
-        {
-            missing.Add("non-unique index IX_PlayAwardCategories_Current_Play_Category_Role");
-        }
-        if (catalog.Indexes.Contains("UX_PlayAwardCategories_Current_Play_Category_Role"))
-        {
-            missing.Add(
-                "obsolete unique index UX_PlayAwardCategories_Current_Play_Category_Role");
-        }
-        if (!catalog.NonUniqueIndexes.Contains("IX_PlayAwardCategories_FormSourceSlot"))
-        {
-            missing.Add("non-unique index IX_PlayAwardCategories_FormSourceSlot");
-        }
-        if (catalog.Indexes.Contains("UX_PlayAwardCategories_FormSourceSlot"))
-        {
-            missing.Add("obsolete unique index UX_PlayAwardCategories_FormSourceSlot");
-        }
-        foreach (Match match in ConstraintRegex().Matches(schemaSql))
-        {
-            var constraintName = match.Groups["name"].Value;
-            if (constraintName.StartsWith("PK_", StringComparison.OrdinalIgnoreCase) ||
-                constraintName.EndsWith("_IsPublished_SoftDelete", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            if (!catalog.Constraints.Contains(constraintName))
-            {
-                missing.Add($"constraint {constraintName}");
-            }
-        }
+            "UX_AdditionalVotingUsages_OneTime",
+            "UX_PlayAwardCategories_Current_Play_Category_Role",
+            "UX_PlayAwardCategories_FormSourceSlot"
+        })
+            if (catalog.Indexes.Contains(obsolete)) missing.Add($"obsolete restrictive index {obsolete}");
 
         var programmableSql = MigrationSqlResources.ReadCanonicalDatabaseObjects();
         foreach (Match match in ProcedureRegex().Matches(programmableSql))
@@ -132,6 +88,7 @@ internal static partial class DatabaseSchemaValidator
         }
 
         foreach (var table in catalog.Tables.Where(x =>
+                     !x.Split('.', 2)[1].StartsWith("__Archived_", StringComparison.OrdinalIgnoreCase) &&
                      !x.EndsWith(".AdminLogs", StringComparison.OrdinalIgnoreCase) &&
                      !x.EndsWith(".JuryLogs", StringComparison.OrdinalIgnoreCase) &&
                      !x.EndsWith(".UsersLog", StringComparison.OrdinalIgnoreCase) &&
@@ -163,7 +120,7 @@ internal static partial class DatabaseSchemaValidator
         }
 
         var unexpectedTriggers = catalog.Triggers.Except(
-            expectedTriggers, StringComparer.OrdinalIgnoreCase);
+            expectedTriggers.Concat(catalog.ArchivedTriggers), StringComparer.OrdinalIgnoreCase);
         foreach (var trigger in unexpectedTriggers)
         {
             missing.Add($"unexpected trigger {trigger}");
@@ -172,6 +129,7 @@ internal static partial class DatabaseSchemaValidator
         if (missing.Count == 0)
         {
             await ValidateReferenceDataAsync(connection, missing, cancellationToken);
+            await ValidateJuryHomePageTableSettingsAsync(connection, missing, cancellationToken);
         }
 
         if (missing.Count > 0)
@@ -179,6 +137,36 @@ internal static partial class DatabaseSchemaValidator
             throw new InvalidOperationException(
                 "Database schema drift detected. Missing or invalid objects: " +
                 string.Join(", ", missing.Order(StringComparer.OrdinalIgnoreCase)));
+        }
+    }
+
+    private static async Task ValidateJuryHomePageTableSettingsAsync(
+        SqlConnection connection,
+        ICollection<string> invalid,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        var parameters = JuryHomePageTableSettings.Definitions.Select((definition, index) =>
+        {
+            var name = $"@name{index}";
+            command.Parameters.Add(new SqlParameter(name, SqlDbType.NVarChar, 255) { Value = definition.Name });
+            return name;
+        });
+        command.CommandText = $"SELECT ConfigName, ConfigValue, IsPublished FROM dbo.Configs WHERE ConfigName IN ({string.Join(",", parameters)});";
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            var name = reader.GetString(0);
+            if (!JuryHomePageTableSettings.IsKnown(name) || !seen.Add(name) ||
+                !reader.GetBoolean(2) || reader.GetString(1) is not ("true" or "false"))
+            {
+                invalid.Add($"fixed jury home-page table setting {name}");
+            }
+        }
+        foreach (var definition in JuryHomePageTableSettings.Definitions.Where(definition => !seen.Contains(definition.Name)))
+        {
+            invalid.Add($"fixed jury home-page table setting {definition.Name}");
         }
     }
 
@@ -252,7 +240,7 @@ internal static partial class DatabaseSchemaValidator
             [("AwardCategory", 1008)] = new("Yılın En Başarılı Giysi Tasarımı", true, true, "1"),
             [("AwardCategory", 1009)] = new("Yılın En Başarılı Sahne Müziği", true, true, "1"),
             [("AwardCategory", 1010)] = new("Yılın En Başarılı Işık Tasarımı", true, true, "1"),
-            [("AwardCategory", 1011)] = new("Yılın En Başarılı Hareket Düzeni (Kareografisi)", true, true, "1"),
+            [("AwardCategory", 1011)] = new("Yılın En Başarılı Hareket Tasarımı (Kareografisi)", true, true, "1"),
             [("PlayStatus", 1)] = new("Oylama Aktif", true, null, "#27ae60"),
             [("PlayStatus", 2)] = new("Değerlendirmeyecek Oyun", true, null, "#d9322d"),
             [("PlayStatus", 3)] = new("Başvuru Yapmayacak Oyun", true, null, "#2CA9E8"),
@@ -284,6 +272,9 @@ internal static partial class DatabaseSchemaValidator
             SELECT N'N', i.name FROM sys.indexes i
             WHERE i.name IS NOT NULL AND i.is_unique = 0
             UNION ALL
+            SELECT N'V', i.name FROM sys.indexes i
+            WHERE i.name IS NOT NULL AND i.is_unique = 1
+            UNION ALL
             SELECT N'K', o.name FROM sys.objects o
             WHERE o.type IN (N'PK', N'UQ', N'F', N'C', N'D')
             UNION ALL
@@ -293,6 +284,10 @@ internal static partial class DatabaseSchemaValidator
             WHERE o.type IN (N'FN', N'IF', N'TF')
             UNION ALL
             SELECT N'R', tr.name FROM sys.triggers tr WHERE tr.parent_class = 1
+            UNION ALL
+            SELECT N'A', tr.name FROM sys.triggers tr
+            JOIN sys.tables t ON t.object_id = tr.parent_id
+            WHERE t.name LIKE N'\_\_Archived\_%' ESCAPE N'\'
             UNION ALL
             SELECT N'F', fk.name FROM sys.foreign_keys fk
             WHERE fk.delete_referential_action <> 0
@@ -366,10 +361,12 @@ internal static partial class DatabaseSchemaValidator
                 "C" => result.Columns,
                 "I" => result.Indexes,
                 "N" => result.NonUniqueIndexes,
+                "V" => result.UniqueIndexes,
                 "K" => result.Constraints,
                 "P" => result.Procedures,
                 "U" => result.Functions,
                 "R" => result.Triggers,
+                "A" => result.ArchivedTriggers,
                 "F" => result.CascadingForeignKeys,
                 "Q" => result.PrimaryKeyTables,
                 "B" => result.IsPublishedDefaultOneTables,
@@ -387,23 +384,17 @@ internal static partial class DatabaseSchemaValidator
         public HashSet<string> Columns { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> Indexes { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> NonUniqueIndexes { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public HashSet<string> UniqueIndexes { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> Constraints { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> Procedures { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> Functions { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> Triggers { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public HashSet<string> ArchivedTriggers { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> CascadingForeignKeys { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> PrimaryKeyTables { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> IsPublishedDefaultOneTables { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> ObsoleteCandidateIndexes { get; } = new(StringComparer.OrdinalIgnoreCase);
     }
-
-    [GeneratedRegex(@"CREATE\s+(?:UNIQUE\s+)?(?:NONCLUSTERED\s+)?INDEX\s+\[(?<name>[^]]+)\]",
-        RegexOptions.IgnoreCase)]
-    private static partial Regex IndexRegex();
-
-    [GeneratedRegex(@"CONSTRAINT\s+\[(?<name>[^]]+)\]",
-        RegexOptions.IgnoreCase)]
-    private static partial Regex ConstraintRegex();
 
     [GeneratedRegex(@"CREATE\s+OR\s+ALTER\s+PROCEDURE\s+(?:\[?dbo\]?\.)?\[?(?<name>[A-Za-z0-9_]+)\]?",
         RegexOptions.IgnoreCase)]
