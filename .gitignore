@@ -368,3 +368,4 @@ FodyWeavers.xsd
 appsettings*.json
 *.md
 /.codex-temp/diag
+/src/YKBAfife/Controllers/TemporaryAdminBootstrapController.cs
