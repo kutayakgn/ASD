@@ -1,10 +1,17 @@
 param(
     [ValidateSet('Debug', 'Release')]
     [string] $Configuration = 'Release',
-    [string] $Server = '(localdb)\MSSQLLocalDB'
+    [string] $Server = $(if ($env:AFIFE_TEST_SQL_SERVER) { $env:AFIFE_TEST_SQL_SERVER } else { '(localdb)\MSSQLLocalDB' })
 )
 
 $ErrorActionPreference = 'Stop'
+if ($env:AFIFE_TEST_SQL_SERVER -and
+    $env:AFIFE_TEST_SQL_SERVER -notmatch '^\(localdb\)\\[A-Za-z0-9_-]+$') {
+    throw 'AFIFE_TEST_SQL_SERVER must name a local SQL Server LocalDB instance.'
+}
+if ($Server -notmatch '^\(localdb\)\\[A-Za-z0-9_-]+$') {
+    throw 'Server must name a local SQL Server LocalDB instance.'
+}
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $projectDirectory = Join-Path $repositoryRoot 'src/YKBAfife'
 $applicationDll = Join-Path $projectDirectory "bin/$Configuration/net8.0/YKBAfife.dll"

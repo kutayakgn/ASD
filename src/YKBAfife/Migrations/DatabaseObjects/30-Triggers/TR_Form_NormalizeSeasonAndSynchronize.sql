@@ -109,5 +109,8 @@ BEGIN
        statement. Running the forward procedure here would re-enter the graph. */
     IF TRY_CONVERT(int, SESSION_CONTEXT(N'PlayToFormSyncInProgress')) <> 1
        OR SESSION_CONTEXT(N'PlayToFormSyncInProgress') IS NULL
-        EXEC dbo.usp_SynchronizeFormsToPlays;
+    BEGIN
+        DECLARE @FormIdsJson nvarchar(max) = (SELECT Id FROM inserted FOR JSON PATH);
+        EXEC dbo.usp_SynchronizeFormsToPlays @FormIdsJson = @FormIdsJson;
+    END;
 END;

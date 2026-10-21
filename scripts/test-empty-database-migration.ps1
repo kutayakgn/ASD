@@ -19,7 +19,13 @@ if ($databaseName -notmatch '^YkbAfifeEmptyTest_[a-f0-9]{32}$') {
     throw 'Disposable empty database name validation failed.'
 }
 
-$server = '(localdb)\MSSQLLocalDB'
+$server = if ($env:AFIFE_TEST_SQL_SERVER) { $env:AFIFE_TEST_SQL_SERVER } else { '(localdb)\MSSQLLocalDB' }
+if ($server -notmatch '^\(localdb\)\\[A-Za-z0-9_-]+$') {
+    throw 'AFIFE_TEST_SQL_SERVER must name a local SQL Server LocalDB instance.'
+}
+if ($server -notmatch '^\(localdb\)\\[A-Za-z0-9_-]+$') {
+    throw 'AFIFE_TEST_SQL_SERVER must name a local SQL Server LocalDB instance.'
+}
 $connectionString = "Server=$server;Database=$databaseName;Trusted_Connection=True;TrustServerCertificate=True"
 $previousConnection = $env:ConnectionStrings__AfifeConnectionString
 

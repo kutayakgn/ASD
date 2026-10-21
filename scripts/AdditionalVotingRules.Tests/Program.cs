@@ -23,8 +23,14 @@ var connection = args.Length == 2 && args[0] == "--connection" ? args[1] : null;
 if (string.IsNullOrWhiteSpace(connection))
     throw new ArgumentException("Pass --connection for the runner's disposable additional voting regression database.");
 var settings = new SqlConnectionStringBuilder(connection);
+var allowedLocalTestServer = Environment.GetEnvironmentVariable("AFIFE_TEST_SQL_SERVER");
+if (string.IsNullOrWhiteSpace(allowedLocalTestServer))
+    allowedLocalTestServer = @"(localdb)\MSSQLLocalDB";
+if (!Regex.IsMatch(allowedLocalTestServer, @"^\(localdb\)\\[A-Za-z0-9_-]+$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+    throw new ArgumentException("AFIFE_TEST_SQL_SERVER must name a local SQL Server LocalDB instance.");
 if (!Regex.IsMatch(settings.InitialCatalog, "^YkbAfifeAdditionalVotingTest_[a-f0-9]{32}$") ||
-    !string.Equals(settings.DataSource, @"(localdb)\MSSQLLocalDB", StringComparison.OrdinalIgnoreCase) ||
+    !string.Equals(settings.DataSource, allowedLocalTestServer, StringComparison.OrdinalIgnoreCase) ||
     !settings.IntegratedSecurity)
     throw new ArgumentException("Only the dedicated GUID-suffixed disposable LocalDB is allowed.");
 

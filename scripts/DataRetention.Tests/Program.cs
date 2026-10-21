@@ -12,8 +12,14 @@ using YKBAfife.Data.Migrations;
 var connectionString = args.Length == 2 && args[0] == "--connection" ? args[1] : null;
 if (string.IsNullOrWhiteSpace(connectionString)) throw new ArgumentException("Use the dedicated disposable database runner.");
 var settings = new SqlConnectionStringBuilder(connectionString);
+var allowedLocalTestServer = Environment.GetEnvironmentVariable("AFIFE_TEST_SQL_SERVER");
+if (string.IsNullOrWhiteSpace(allowedLocalTestServer))
+    allowedLocalTestServer = @"(localdb)\MSSQLLocalDB";
+if (!Regex.IsMatch(allowedLocalTestServer, @"^\(localdb\)\\[A-Za-z0-9_-]+$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+    throw new ArgumentException("AFIFE_TEST_SQL_SERVER must name a local SQL Server LocalDB instance.");
 if (!Regex.IsMatch(settings.InitialCatalog, "^YkbAfifeDataRetentionTest_[a-f0-9]{32}$") ||
-    !string.Equals(settings.DataSource, @"(localdb)\MSSQLLocalDB", StringComparison.OrdinalIgnoreCase) || !settings.IntegratedSecurity)
+    !string.Equals(settings.DataSource, allowedLocalTestServer, StringComparison.OrdinalIgnoreCase) || !settings.IntegratedSecurity)
     throw new ArgumentException("Only a GUID-suffixed dedicated LocalDB retention database is allowed.");
 
 await using var context = new AfifeContext(new DbContextOptionsBuilder<AfifeContext>()

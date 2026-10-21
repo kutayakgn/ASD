@@ -15,6 +15,7 @@ $candidateRulesScript = Join-Path $PSScriptRoot 'test-candidate-category-rules.p
 $additionalVotingRulesScript = Join-Path $PSScriptRoot 'test-additional-voting-rules.ps1'
 $juryHomePageSettingsScript = Join-Path $PSScriptRoot 'test-jury-homepage-settings.ps1'
 $dataRetentionScript = Join-Path $PSScriptRoot 'test-data-retention.ps1'
+$scopedFormSyncScript = Join-Path $PSScriptRoot 'test-scoped-form-sync.ps1'
 $project = Join-Path $repositoryRoot 'src/YKBAfife/YKBAfife.csproj'
 $publishPath = Join-Path $env:TEMP ('YKBAfifeMigrationDeploy_' + [Guid]::NewGuid().ToString('N'))
 
@@ -57,6 +58,9 @@ try {
 
     & $dataRetentionScript -Configuration $Configuration
     if ($LASTEXITCODE -ne 0) { throw 'Migration data retention scenario failed.' }
+
+    & $scopedFormSyncScript -Configuration $Configuration
+    if ($LASTEXITCODE -ne 0) { throw 'Scoped Form synchronization regression scenario failed.' }
 
     dotnet publish $project --no-restore -c $Configuration -o $publishPath
     if ($LASTEXITCODE -ne 0) { throw 'Deployment publish validation failed.' }

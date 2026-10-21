@@ -26,8 +26,14 @@ var connection = args.Length == 2 && args[0] == "--connection"
 if (string.IsNullOrWhiteSpace(connection))
     throw new ArgumentException("Pass --connection for a disposable candidate regression database.");
 var connectionSettings = new SqlConnectionStringBuilder(connection);
+var allowedLocalTestServer = Environment.GetEnvironmentVariable("AFIFE_TEST_SQL_SERVER");
+if (string.IsNullOrWhiteSpace(allowedLocalTestServer))
+    allowedLocalTestServer = @"(localdb)\MSSQLLocalDB";
+if (!Regex.IsMatch(allowedLocalTestServer, @"^\(localdb\)\\[A-Za-z0-9_-]+$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+    throw new ArgumentException("AFIFE_TEST_SQL_SERVER must name a local SQL Server LocalDB instance.");
 if (!Regex.IsMatch(connectionSettings.InitialCatalog, "^YkbAfifeCandidateRulesTest_[a-f0-9]{32}$") ||
-    !string.Equals(connectionSettings.DataSource, @"(localdb)\MSSQLLocalDB", StringComparison.OrdinalIgnoreCase) ||
+    !string.Equals(connectionSettings.DataSource, allowedLocalTestServer, StringComparison.OrdinalIgnoreCase) ||
     !connectionSettings.IntegratedSecurity)
     throw new ArgumentException("Only the dedicated GUID-suffixed disposable LocalDB is allowed.");
 

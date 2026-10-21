@@ -16,7 +16,13 @@ $expectedMigrationValues = ($expectedMigrationIds | ForEach-Object { "(N'$_')" }
 $schemaSource = Join-Path $PSScriptRoot '27.08.2026_guncel_db_schema_script.sql'
 $databaseName = 'YkbAfifeCurrentSchemaTest_' + ([Guid]::NewGuid().ToString('N'))
 $temporarySchema = Join-Path $env:TEMP ($databaseName + '.sql')
-$server = '(localdb)\MSSQLLocalDB'
+$server = if ($env:AFIFE_TEST_SQL_SERVER) { $env:AFIFE_TEST_SQL_SERVER } else { '(localdb)\MSSQLLocalDB' }
+if ($server -notmatch '^\(localdb\)\\[A-Za-z0-9_-]+$') {
+    throw 'AFIFE_TEST_SQL_SERVER must name a local SQL Server LocalDB instance.'
+}
+if ($server -notmatch '^\(localdb\)\\[A-Za-z0-9_-]+$') {
+    throw 'AFIFE_TEST_SQL_SERVER must name a local SQL Server LocalDB instance.'
+}
 $connectionString = "Server=$server;Database=$databaseName;Trusted_Connection=True;TrustServerCertificate=True"
 $previousConnection = $env:ConnectionStrings__AfifeConnectionString
 $previousUrls = $env:ASPNETCORE_URLS

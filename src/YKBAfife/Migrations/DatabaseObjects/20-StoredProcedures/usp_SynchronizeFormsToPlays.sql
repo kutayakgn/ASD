@@ -1,4 +1,5 @@
 CREATE OR ALTER PROCEDURE [dbo].[usp_SynchronizeFormsToPlays]
+    @FormIdsJson nvarchar(max) = NULL
 WITH EXECUTE AS OWNER
 AS
 BEGIN
@@ -6,6 +7,38 @@ BEGIN
     SET XACT_ABORT ON;
 
     IF TRY_CONVERT(int, SESSION_CONTEXT(N'FormLifecycleSyncInProgress')) = 1
+        RETURN;
+
+    /* Trigger calls carry the complete statement's Form IDs. NULL is reserved
+       for the existing explicit full-repair/migration entry point. */
+    CREATE TABLE #SyncForms (FormId uniqueidentifier NOT NULL PRIMARY KEY);
+
+    IF @FormIdsJson IS NULL
+        INSERT INTO #SyncForms (FormId) SELECT Id FROM dbo.Form;
+    ELSE
+    BEGIN
+        IF ISJSON(@FormIdsJson) <> 1
+           OR LEFT(LTRIM(REPLACE(REPLACE(REPLACE(@FormIdsJson,
+               NCHAR(9), N' '), NCHAR(10), N' '), NCHAR(13), N' ')), 1) <> N'['
+            THROW 52433, N'Form senkronizasyon kapsamı geçerli bir Id dizisi olmalıdır.', 1;
+
+        IF EXISTS
+        (
+            SELECT 1 FROM OPENJSON(@FormIdsJson) AS scopeItem
+            WHERE scopeItem.[type] <> 5
+               OR DATALENGTH(JSON_VALUE(CASE WHEN scopeItem.[type] = 5
+                   THEN scopeItem.[value] ELSE N'{}' END, N'$.Id')) <> 72
+               OR TRY_CONVERT(uniqueidentifier,
+                   JSON_VALUE(CASE WHEN scopeItem.[type] = 5 THEN scopeItem.[value] ELSE N'{}' END, N'$.Id')) IS NULL
+        )
+            THROW 52433, N'Form senkronizasyon kapsamı geçerli bir Id dizisi olmalıdır.', 1;
+
+        INSERT INTO #SyncForms (FormId)
+        SELECT DISTINCT CONVERT(uniqueidentifier, JSON_VALUE(scopeItem.[value], N'$.Id'))
+        FROM OPENJSON(@FormIdsJson) AS scopeItem;
+    END;
+
+    IF @FormIdsJson IS NOT NULL AND NOT EXISTS (SELECT 1 FROM #SyncForms)
         RETURN;
 
     DECLARE @LockResult int;
@@ -24,15 +57,17 @@ BEGIN
     BEGIN TRY
         DECLARE @Now datetime2(7) = DATEADD(HOUR, 3, SYSUTCDATETIME());
 
-        /* Link a unique exact legacy match before creating a new play. */
+        /* Search only affected Forms for legacy matches. Ambiguity must still
+           be checked against ALL Forms: a scoped call must not steal a legacy
+           play that also matches an unrelated (even inactive) Form. */
         ;WITH ExactMatches AS
         (
             SELECT
                 formRecord.Id AS FormId,
                 play.Id AS PlayId,
-                COUNT_BIG(*) OVER (PARTITION BY formRecord.Id) AS PlayMatchCount,
-                COUNT_BIG(*) OVER (PARTITION BY play.Id) AS FormMatchCount
+                COUNT_BIG(*) OVER (PARTITION BY formRecord.Id) AS PlayMatchCount
             FROM dbo.Form AS formRecord
+            INNER JOIN #SyncForms AS affected ON affected.FormId = formRecord.Id
             INNER JOIN dbo.Plays AS play
                 ON play.RecordType = 0
                AND play.SourceFormId IS NULL
@@ -47,7 +82,15 @@ BEGIN
         FROM dbo.Plays AS play
         INNER JOIN ExactMatches AS exact ON exact.PlayId = play.Id
         WHERE exact.PlayMatchCount = 1
-          AND exact.FormMatchCount = 1;
+          AND NOT EXISTS
+          (
+              SELECT 1 FROM dbo.Form AS otherForm
+              WHERE otherForm.Id <> exact.FormId
+                AND LOWER(LTRIM(RTRIM(otherForm.RepertoireName))) =
+                    LOWER(LTRIM(RTRIM(play.PlayName)))
+                AND LOWER(LTRIM(RTRIM(otherForm.TheatreName))) =
+                    LOWER(LTRIM(RTRIM(play.TheaterName)))
+          );
 
         INSERT INTO dbo.Plays
         (
@@ -88,6 +131,7 @@ BEGIN
             formRecord.Id,
             1
         FROM dbo.Form AS formRecord
+        INNER JOIN #SyncForms AS affected ON affected.FormId = formRecord.Id
         WHERE formRecord.IsPublished = 1
           AND formRecord.IsActive = 1
           AND NOT EXISTS
@@ -110,21 +154,26 @@ BEGIN
             Email = formRecord.Email
         FROM dbo.Plays AS play
         INNER JOIN dbo.Form AS formRecord ON formRecord.Id = play.SourceFormId
+        INNER JOIN #SyncForms AS affected ON affected.FormId = formRecord.Id
         WHERE play.RecordType = 0
-          AND
+          AND EXISTS
           (
-              play.PlayName <> formRecord.RepertoireName
-              OR play.CreatedAt <> formRecord.CreatedDate
-              OR play.TheaterName <> formRecord.TheatreName
-              OR COALESCE(play.Phone, N'') <> COALESCE(formRecord.Phone, N'')
-              OR COALESCE(play.ContactPersonName, N'') <>
-                    COALESCE(NULLIF(formRecord.ContactName, N''), formRecord.ApplicantName)
-              OR COALESCE(play.ContactPersonPhone, N'') <>
-                    COALESCE(NULLIF(formRecord.ContactPhone, N''), formRecord.Phone)
-              OR COALESCE(play.Email, N'') <> COALESCE(formRecord.Email, N'')
+              SELECT CONVERT(varbinary(max), play.PlayName), play.CreatedAt,
+                  CONVERT(varbinary(max), play.TheaterName),
+                  CONVERT(varbinary(max), play.Phone),
+                  CONVERT(varbinary(max), play.ContactPersonName),
+                  CONVERT(varbinary(max), play.ContactPersonPhone),
+                  CONVERT(varbinary(max), play.Email)
+              EXCEPT
+              SELECT CONVERT(varbinary(max), formRecord.RepertoireName), formRecord.CreatedDate,
+                  CONVERT(varbinary(max), formRecord.TheatreName),
+                  CONVERT(varbinary(max), formRecord.Phone),
+                  CONVERT(varbinary(max), COALESCE(NULLIF(formRecord.ContactName, N''), formRecord.ApplicantName)),
+                  CONVERT(varbinary(max), COALESCE(NULLIF(formRecord.ContactPhone, N''), formRecord.Phone)),
+                  CONVERT(varbinary(max), formRecord.Email)
           );
 
-        EXEC dbo.usp_SynchronizeFormCandidates;
+        EXEC dbo.usp_SynchronizeFormCandidates @FormIdsJson = @FormIdsJson;
 
         CREATE TABLE #DeactivateForms
         (
@@ -136,6 +185,7 @@ BEGIN
         SELECT formRecord.Id, play.Id
         FROM dbo.Form AS formRecord
         INNER JOIN dbo.Plays AS play ON play.SourceFormId = formRecord.Id
+        INNER JOIN #SyncForms AS affected ON affected.FormId = formRecord.Id
         WHERE play.IsActive = 1
           AND (formRecord.IsPublished = 0 OR formRecord.IsActive = 0);
 
@@ -268,6 +318,7 @@ BEGIN
         SELECT formRecord.Id, play.Id
         FROM dbo.Form AS formRecord
         INNER JOIN dbo.Plays AS play ON play.SourceFormId = formRecord.Id
+        INNER JOIN #SyncForms AS affected ON affected.FormId = formRecord.Id
         WHERE formRecord.IsPublished = 1
           AND formRecord.IsActive = 1
           AND play.IsActive = 0

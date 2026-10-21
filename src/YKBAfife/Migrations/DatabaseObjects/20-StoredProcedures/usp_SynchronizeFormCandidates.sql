@@ -1,4 +1,5 @@
 CREATE OR ALTER PROCEDURE [dbo].[usp_SynchronizeFormCandidates]
+    @FormIdsJson nvarchar(max) = NULL
 WITH EXECUTE AS OWNER
 AS
 BEGIN
@@ -7,6 +8,61 @@ BEGIN
 
     DECLARE @Now datetime2(7) = DATEADD(HOUR, 3, SYSUTCDATETIME());
     DECLARE @MaximumImageBytes bigint = 150 * 1024 * 1024;
+
+    /* NULL retains the explicit full-maintenance contract. Trigger callers pass
+       [{"Id":"guid"}] so a single Form never repairs or decodes unrelated plays. */
+    CREATE TABLE #CandidateAffectedForms
+    (
+        FormId uniqueidentifier NOT NULL PRIMARY KEY
+    );
+    CREATE TABLE #CandidateAffectedPlays
+    (
+        PlayId uniqueidentifier NOT NULL PRIMARY KEY
+    );
+
+    IF @FormIdsJson IS NULL
+    BEGIN
+        INSERT INTO #CandidateAffectedForms (FormId)
+        SELECT Id FROM dbo.Form;
+
+        /* Historical full repairs also cover mapped legacy slots on plays that
+           no longer have a Form link. Scoped calls must never touch them. */
+        INSERT INTO #CandidateAffectedPlays (PlayId)
+        SELECT Id FROM dbo.Plays;
+    END
+    ELSE
+    BEGIN
+        IF ISJSON(@FormIdsJson) <> 1
+           OR LEFT(LTRIM(REPLACE(REPLACE(REPLACE(@FormIdsJson,
+               NCHAR(9), N' '), NCHAR(10), N' '), NCHAR(13), N' ')), 1) <> N'['
+            THROW 52433, N'Form senkronizasyon kapsamı geçerli bir Id dizisi olmalıdır.', 1;
+
+        IF EXISTS
+        (
+            SELECT 1
+            FROM OPENJSON(@FormIdsJson) AS scopeItem
+            WHERE scopeItem.[type] <> 5
+               OR DATALENGTH(JSON_VALUE(CASE WHEN scopeItem.[type] = 5
+                   THEN scopeItem.[value] ELSE N'{}' END, N'$.Id')) <> 72
+               OR TRY_CONVERT(uniqueidentifier,
+                   JSON_VALUE(CASE WHEN scopeItem.[type] = 5 THEN scopeItem.[value] ELSE N'{}' END, N'$.Id')) IS NULL
+        )
+            THROW 52433, N'Form senkronizasyon kapsamı geçerli bir Id dizisi olmalıdır.', 1;
+
+        INSERT INTO #CandidateAffectedForms (FormId)
+        SELECT DISTINCT CONVERT(uniqueidentifier, JSON_VALUE(scopeItem.[value], N'$.Id'))
+        FROM OPENJSON(@FormIdsJson) AS scopeItem;
+
+        /* Include inactive/unpublished Forms: only source creation is filtered
+           by active flags; legacy slot repair keeps its previous semantics. */
+        INSERT INTO #CandidateAffectedPlays (PlayId)
+        SELECT play.Id
+        FROM dbo.Plays AS play
+        INNER JOIN #CandidateAffectedForms AS affected ON affected.FormId = play.SourceFormId;
+    END;
+
+    IF NOT EXISTS (SELECT 1 FROM #CandidateAffectedPlays)
+        RETURN;
 
     CREATE TABLE #CandidateSource
     (
@@ -26,7 +82,9 @@ BEGIN
     SELECT 0, play.Id, 1002, LEFT(LTRIM(RTRIM(formRecord.Director)), 250),
            NULL, 0, NULL, NULL
     FROM dbo.Form AS formRecord
+    INNER JOIN #CandidateAffectedForms AS affectedForm ON affectedForm.FormId = formRecord.Id
     INNER JOIN dbo.Plays AS play ON play.SourceFormId = formRecord.Id
+    INNER JOIN #CandidateAffectedPlays AS affectedPlay ON affectedPlay.PlayId = play.Id
     WHERE formRecord.IsPublished = 1
       AND formRecord.IsActive = 1
       AND play.RecordType = 0
@@ -50,7 +108,9 @@ BEGIN
            LEFT(NULLIF(LTRIM(RTRIM(candidateValue.ImageUrl)), N''), 255),
            NULLIF(LTRIM(RTRIM(candidateValue.Base64)), N'')
     FROM dbo.Form AS formRecord
+    INNER JOIN #CandidateAffectedForms AS affectedForm ON affectedForm.FormId = formRecord.Id
     INNER JOIN dbo.Plays AS play ON play.SourceFormId = formRecord.Id
+    INNER JOIN #CandidateAffectedPlays AS affectedPlay ON affectedPlay.PlayId = play.Id
     CROSS APPLY
     (
         VALUES
@@ -114,6 +174,7 @@ BEGIN
                             candidate.Id
                ) AS SlotOccurrence
         FROM dbo.PlayAwardCategories AS candidate
+        INNER JOIN #CandidateAffectedPlays AS affected ON affected.PlayId = candidate.PlayId
         WHERE candidate.SourceFormCandidateOrder IS NOT NULL
           AND candidate.AwardCategoryCode BETWEEN 1002 AND 1011
     )
@@ -153,6 +214,7 @@ BEGIN
                             candidate.RoleCode, candidate.Id
                ) AS MatchOrder
         FROM dbo.PlayAwardCategories AS candidate
+        INNER JOIN #CandidateAffectedPlays AS affected ON affected.PlayId = candidate.PlayId
         WHERE candidate.SourceFormCandidateOrder IS NULL
           AND candidate.CreatedBy IS NULL
           AND candidate.AwardCategoryCode BETWEEN 1002 AND 1011
@@ -205,6 +267,7 @@ BEGIN
                             candidate.RoleCode, candidate.Id
                ) AS SlotOrder
         FROM dbo.PlayAwardCategories AS candidate
+        INNER JOIN #CandidateAffectedPlays AS affected ON affected.PlayId = candidate.PlayId
         WHERE candidate.SourceFormCandidateOrder IS NULL
           AND candidate.CreatedBy IS NULL
           AND candidate.AwardCategoryCode BETWEEN 1002 AND 1011
@@ -296,6 +359,7 @@ BEGIN
                             candidate.Id
                ) AS TargetOrder
         FROM dbo.PlayAwardCategories AS candidate
+        INNER JOIN #CandidateAffectedPlays AS affected ON affected.PlayId = candidate.PlayId
         WHERE candidate.SourceFormCandidateOrder IS NOT NULL
     )
     UPDATE candidate
@@ -315,7 +379,20 @@ BEGIN
     INNER JOIN #CandidateSource AS source
         ON source.PlayId = candidate.PlayId
        AND source.AwardCategoryCode = candidate.AwardCategoryCode
-       AND source.SourceOrder = candidate.SourceFormCandidateOrder;
+       AND source.SourceOrder = candidate.SourceFormCandidateOrder
+    /* Avoid audit/ranking work for unchanged slots. Binary text comparisons
+       preserve case and trailing-space edits, and EXCEPT treats NULLs equally.
+       Published/current candidates retain their manual IsActive value above. */
+    WHERE EXISTS
+    (
+        SELECT CONVERT(varbinary(max), candidate.Candidate),
+               CONVERT(varbinary(max), candidate.Role),
+               candidate.RoleCode, candidate.IsPublished, candidate.IsCurrent
+        EXCEPT
+        SELECT CONVERT(varbinary(max), source.Candidate),
+               CONVERT(varbinary(max), source.Role),
+               source.RoleCode, CONVERT(bit, 1), CONVERT(bit, 1)
+    );
 
     /* A non-empty valid Base64 value replaces the mapped candidate photo.
        Empty/invalid legacy values preserve the existing image. */
@@ -417,6 +494,8 @@ BEGIN
         ON replacement.OldImageId = oldImage.Id
     INNER JOIN dbo.Images AS newImage ON newImage.Id = replacement.NewImageId
     WHERE oldImage.IsPublished = 1
+      /* Reference checks intentionally span all plays: a photo shared with an
+         unscoped published candidate must remain published. */
       AND NOT EXISTS
       (
           SELECT 1 FROM dbo.PlayAwardCategories AS candidate
@@ -430,6 +509,7 @@ BEGIN
         IsCurrent = 0,
         UpdatedAt = @Now
     FROM dbo.PlayAwardCategories AS candidate
+    INNER JOIN #CandidateAffectedPlays AS affected ON affected.PlayId = candidate.PlayId
     INNER JOIN dbo.Plays AS play ON play.Id = candidate.PlayId
     INNER JOIN dbo.Form AS formRecord ON formRecord.Id = play.SourceFormId
     WHERE candidate.SourceFormCandidateOrder IS NOT NULL

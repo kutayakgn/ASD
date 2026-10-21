@@ -7,7 +7,13 @@ $ErrorActionPreference = 'Stop'
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $testProject = Join-Path $PSScriptRoot 'CandidateCategoryRules.Tests/CandidateCategoryRules.Tests.csproj'
 $databaseName = 'YkbAfifeCandidateRulesTest_' + ([Guid]::NewGuid().ToString('N'))
-$server = '(localdb)\MSSQLLocalDB'
+$server = if ($env:AFIFE_TEST_SQL_SERVER) { $env:AFIFE_TEST_SQL_SERVER } else { '(localdb)\MSSQLLocalDB' }
+if ($server -notmatch '^\(localdb\)\\[A-Za-z0-9_-]+$') {
+    throw 'AFIFE_TEST_SQL_SERVER must name a local SQL Server LocalDB instance.'
+}
+if ($server -notmatch '^\(localdb\)\\[A-Za-z0-9_-]+$') {
+    throw 'AFIFE_TEST_SQL_SERVER must name a local SQL Server LocalDB instance.'
+}
 
 if ($databaseName -notmatch '^YkbAfifeCandidateRulesTest_[a-f0-9]{32}$') {
     throw 'Disposable candidate regression database name validation failed.'

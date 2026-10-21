@@ -12,5 +12,9 @@ BEGIN
     FROM dbo.Form AS target
     INNER JOIN deleted AS source ON source.Id = target.Id;
 
-    EXEC dbo.usp_SynchronizeFormsToPlays;
+    /* The UPDATE above already passes this statement's IDs through the Form
+       INSERT/UPDATE trigger. Keep soft deletion within the same scope as well;
+       never fall back to a full-history repair from a DELETE statement. */
+    DECLARE @FormIdsJson nvarchar(max) = (SELECT Id FROM deleted FOR JSON PATH);
+    EXEC dbo.usp_SynchronizeFormsToPlays @FormIdsJson = @FormIdsJson;
 END;
