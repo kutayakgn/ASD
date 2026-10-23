@@ -655,7 +655,6 @@ namespace YKBAfife.Data.Migrations
                         .HasColumnType("datetime");
 
                     b.Property<string>("Director")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
@@ -698,6 +697,12 @@ namespace YKBAfife.Data.Migrations
 
                     b.Property<DateOnly>("PremiereDate")
                         .HasColumnType("date");
+
+                    b.Property<bool>("PreviousProductionVersion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("previousProductionVersion");
 
                     b.Property<string>("RepertoireName")
                         .IsRequired()

@@ -22,7 +22,7 @@
         <div class="add-candidate-grid">
             <div class="add-candidate-field">
                 <label asp-for="Input.PlayId">Oyun Adı</label>
-                <div class="add-candidate-select@(Model.LockPlay ? " is-disabled" : string.Empty)" data-candidate-select>
+                <div class="add-candidate-select@(Model.LockPlay ? " is-disabled" : string.Empty)" data-candidate-select data-candidate-play-select>
                     <input asp-for="Input.PlayId" type="hidden" data-candidate-select-value />
                     <button type="button"
                             class="add-candidate-select-trigger"
@@ -44,6 +44,7 @@
                                     aria-selected="@(play.Selected ? "true" : "false")"
                                     data-candidate-select-option
                                     data-value="@play.Value"
+                                    data-previous-production-version="@(Guid.TryParse(play.Value, out var playOptionId) && Model.PreviousProductionVersionPlayIds.Contains(playOptionId) ? "true" : "false")"
                                     data-label="@play.Text">@play.Text</button>
                         }
                     </div>
@@ -72,6 +73,7 @@
                                     data-candidate-select-option
                                     data-value="@category.CategoryCode"
                                     data-label="@category.CategoryName"
+                                    data-previous-production-version-excluded="@YKBAfife.Helpers.CandidateCategoryPolicy.IsExcludedForPreviousProductionVersion(category.CategoryCode).ToString().ToLowerInvariant()"
                                     data-multi-candidate="@category.MultiCandidate.ToString().ToLowerInvariant()"
                                     data-supports-role-photo="@YKBAfife.Helpers.CandidateCategoryPolicy.SupportsRoleAndPhoto(category.CategoryCode).ToString().ToLowerInvariant()">@category.CategoryName</button>
                         }

@@ -37,6 +37,9 @@ public sealed partial class ManagementController
         ).SingleOrDefaultAsync(cancellationToken);
         if (data is null) return NotFound();
         if (CandidateCategoryPolicy.IsSystemManaged(data.Candidate.AwardCategoryCode)) return BadRequest();
+        if (!await IsCandidateCategoryAllowedForPlayAsync(
+                data.Play.Id, data.Candidate.AwardCategoryCode, cancellationToken))
+            return BadRequest(new { message = "Bu oyun için seçilen ödül kategorisi kullanılamaz." });
         var supportsRoleAndPhoto =
             CandidateCategoryPolicy.SupportsRoleAndPhoto(data.Candidate.AwardCategoryCode);
 
@@ -69,6 +72,13 @@ public sealed partial class ManagementController
             cancellationToken);
         try
         {
+            if (!await IsCandidateCategoryAllowedForPlayAsync(
+                    data.Play.Id, data.Candidate.AwardCategoryCode, cancellationToken))
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return BadRequest(new { message = "Bu oyun için seçilen ödül kategorisi kullanılamaz." });
+            }
+
             var candidates = await context.PlayAwardCategories
                 .Where(item => item.PlayId == data.Play.Id && item.IsPublished)
                 .ToListAsync(cancellationToken);
@@ -171,7 +181,7 @@ public sealed partial class ManagementController
         CancellationToken cancellationToken)
     {
         var data = await (
-            from candidate in context.PlayAwardCategories.AsNoTracking()
+            from candidate in context.PlayAwardCategories.AsNoTracking().WhereAllowedForProductionVersion()
             join play in context.Plays.AsNoTracking() on candidate.PlayId equals play.Id
             join category in context.AwardCategories.AsNoTracking()
                 on candidate.AwardCategoryCode equals category.CategoryCode

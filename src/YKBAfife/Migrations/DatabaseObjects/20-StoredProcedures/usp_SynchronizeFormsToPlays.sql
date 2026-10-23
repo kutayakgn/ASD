@@ -355,7 +355,16 @@ BEGIN
            AND state.EntityId = candidate.Id
            AND state.IsPublished = 1
         INNER JOIN #ReactivateForms AS affected
-            ON affected.FormId = state.FormId;
+            ON affected.FormId = state.FormId
+        INNER JOIN dbo.Form AS formRecord ON formRecord.Id = affected.FormId
+        WHERE NOT
+        (
+            (formRecord.previousProductionVersion = 1
+             AND (candidate.AwardCategoryCode = 1002
+                  OR candidate.AwardCategoryCode BETWEEN 1007 AND 1011))
+            OR (candidate.AwardCategoryCode = 1002
+                AND NULLIF(LTRIM(RTRIM(formRecord.Director)), N'') IS NULL)
+        );
 
         UPDATE vote
         SET IsPublished = state.WasPublished,

@@ -88,6 +88,9 @@ try {
     & (Join-Path $PSScriptRoot 'test-db-workload-scope.ps1') -Configuration $Configuration
     if ($LASTEXITCODE -ne 0) { throw 'Scoped database workload regression scenario failed.' }
 
+    & (Join-Path $PSScriptRoot 'test-form-previous-production.ps1') -Configuration $Configuration
+    if ($LASTEXITCODE -ne 0) { throw 'Previous-production Form regression scenario failed.' }
+
     dotnet publish $project --no-restore -c $Configuration -o $publishPath
     if ($LASTEXITCODE -ne 0) { throw 'Deployment publish validation failed.' }
     if (-not (Test-Path (Join-Path $publishPath 'YKBAfife.dll'))) {

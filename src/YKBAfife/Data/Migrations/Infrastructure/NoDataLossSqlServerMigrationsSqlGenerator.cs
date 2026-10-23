@@ -15,6 +15,7 @@ public sealed partial class NoDataLossSqlServerMigrationsSqlGenerator(
 {
     private const string ArchivedTableSourceProperty = "Afife:ArchivedTableSource";
     private const string ArchivedTableTimeProperty = "Afife:ArchivedTableAt";
+    internal const string PreserveExistingColumnAnnotation = "Afife:PreserveExistingColumn";
 
     protected override void Generate(
         MigrationOperation operation,
@@ -141,6 +142,13 @@ public sealed partial class NoDataLossSqlServerMigrationsSqlGenerator(
         var defaultSql = operation.DefaultValueSql ??
             (operation.DefaultValue is null ? null : Dependencies.TypeMappingSource.GetMappingForValue(operation.DefaultValue).GenerateSqlLiteral(operation.DefaultValue));
 
+        // Explicit opt-in for legacy schema adoption. Preserve an existing
+        // column/value; hosted schema validation still checks its definition.
+        // Unannotated historical operations keep their original behavior.
+        var preserveExisting = operation[PreserveExistingColumnAnnotation] as bool? == true;
+        if (preserveExisting)
+            builder.AppendLine($"IF COL_LENGTH(N'{qualifiedLiteral}', N'{column}') IS NULL BEGIN");
+
         builder.Append($$"""
             DECLARE @restoreObjectId int = OBJECT_ID(N'{{qualifiedLiteral}}', N'U');
             DECLARE @restoreArchive sysname;
@@ -220,7 +228,9 @@ public sealed partial class NoDataLossSqlServerMigrationsSqlGenerator(
         {
             builder.AppendLine(command.CommandText);
         }
-        builder.AppendLine("END;").EndCommand();
+        builder.AppendLine("END;");
+        if (preserveExisting) builder.AppendLine("END;");
+        builder.EndCommand();
     }
 
     private static void GenerateArchiveTable(

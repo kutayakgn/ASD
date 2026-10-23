@@ -21,7 +21,7 @@ public class Form
     public string ApplicantRole { get; set; } = null!;
     public string Phone { get; set; } = null!;
     public string Email { get; set; } = null!;
-    public string Director { get; set; } = null!;
+    public string? Director { get; set; }
     public string? ContactName { get; set; }
     public string? ContactPhone { get; set; }
     public string? LeadActress { get; set; }
@@ -34,6 +34,7 @@ public class Form
     public string? StageMusic { get; set; }
     public string? Choreography { get; set; }
     public string? YoungGenerationArtist { get; set; }
+    public bool PreviousProductionVersion { get; set; }
     public bool IsActive { get; set; } = true;
     public bool IsPublished { get; set; } = true;
     public Season? Season { get; set; }

@@ -165,6 +165,7 @@ try
 
     Check((await Hashes())[otherId] == "opaque-existing-unsupported-hash", "Unrecognized historical hashes remain untouched.");
     await TestBulkReset(client);
+    await PreviousProductionHttpScenarios.RunAsync(client, options, Antiforgery, Check);
     Console.WriteLine($"PASS: {assertions} actual HTTP credential, voting-history and session assertions; local process and database are disposable.");
 }
 catch

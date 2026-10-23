@@ -19,5 +19,7 @@ public sealed class CandidateDetailsViewModel
     public string? UpdatedByName { get; init; }
     public bool HasRoleAndPhoto { get; init; }
     public bool HasPhoto { get; init; }
-    public bool CanManage => !CandidateCategoryPolicy.IsSystemManaged(CategoryCode);
+    public bool PreviousProductionVersion { get; init; }
+    public bool CanManage => !CandidateCategoryPolicy.IsSystemManaged(CategoryCode) &&
+        CandidateCategoryPolicy.IsAllowedForProductionVersion(CategoryCode, PreviousProductionVersion);
 }

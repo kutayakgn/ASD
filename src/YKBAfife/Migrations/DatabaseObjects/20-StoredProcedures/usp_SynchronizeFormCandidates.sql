@@ -64,6 +64,30 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM #CandidateAffectedPlays)
         RETURN;
 
+    /* A previous production has only acting categories. Retire every forbidden
+       row on the affected plays, including manually created/unmapped slots.
+       A normal Form without a director likewise has no category 1002 candidate.
+       Keep identities and past votes; lifecycle/ranking triggers retain their
+       existing history rules while the flags exclude these rows from voting. */
+    UPDATE candidate
+    SET IsPublished = 0,
+        IsActive = 0,
+        IsCurrent = 0,
+        UpdatedAt = @Now
+    FROM dbo.PlayAwardCategories AS candidate
+    INNER JOIN #CandidateAffectedPlays AS affected ON affected.PlayId = candidate.PlayId
+    INNER JOIN dbo.Plays AS play ON play.Id = candidate.PlayId
+    INNER JOIN dbo.Form AS formRecord ON formRecord.Id = play.SourceFormId
+    WHERE
+        (
+            (formRecord.previousProductionVersion = 1
+             AND (candidate.AwardCategoryCode = 1002
+                  OR candidate.AwardCategoryCode BETWEEN 1007 AND 1011))
+            OR (candidate.AwardCategoryCode = 1002
+                AND NULLIF(LTRIM(RTRIM(formRecord.Director)), N'') IS NULL)
+        )
+      AND (candidate.IsPublished = 1 OR candidate.IsActive = 1 OR candidate.IsCurrent = 1);
+
     CREATE TABLE #CandidateSource
     (
         SourceOrder int NOT NULL,
@@ -76,7 +100,7 @@ BEGIN
         Base64 nvarchar(max) NULL
     );
 
-    /* Director is the mandatory, single-slot category 1002 candidate. */
+    /* A non-empty director on a normal production is the category 1002 slot. */
     INSERT INTO #CandidateSource
         (SourceOrder, PlayId, AwardCategoryCode, Candidate, Role, RoleCode, ImageUrl, Base64)
     SELECT 0, play.Id, 1002, LEFT(LTRIM(RTRIM(formRecord.Director)), 250),
@@ -90,6 +114,7 @@ BEGIN
       AND play.RecordType = 0
       AND play.IsPublished = 1
       AND play.IsActive = 1
+      AND formRecord.previousProductionVersion = 0
       AND NULLIF(LTRIM(RTRIM(formRecord.Director)), N'') IS NOT NULL;
 
     /* Every category except 1001/1002 creates one role-scoped row per JSON item. */
@@ -118,11 +143,11 @@ BEGIN
             (1004, formRecord.LeadActor),
             (1005, formRecord.SupportActress),
             (1006, formRecord.SupportActor),
-            (1007, formRecord.StageDesign),
-            (1008, formRecord.ClothesDesign),
-            (1009, formRecord.StageMusic),
-            (1010, formRecord.LightDesign),
-            (1011, formRecord.Choreography)
+            (1007, CASE WHEN formRecord.previousProductionVersion = 1 THEN NULL ELSE formRecord.StageDesign END),
+            (1008, CASE WHEN formRecord.previousProductionVersion = 1 THEN NULL ELSE formRecord.ClothesDesign END),
+            (1009, CASE WHEN formRecord.previousProductionVersion = 1 THEN NULL ELSE formRecord.StageMusic END),
+            (1010, CASE WHEN formRecord.previousProductionVersion = 1 THEN NULL ELSE formRecord.LightDesign END),
+            (1011, CASE WHEN formRecord.previousProductionVersion = 1 THEN NULL ELSE formRecord.Choreography END)
     ) AS category(AwardCategoryCode, CandidateJson)
     CROSS APPLY OPENJSON
     (

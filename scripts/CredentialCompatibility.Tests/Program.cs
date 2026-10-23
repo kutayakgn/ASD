@@ -13,6 +13,7 @@ using Microsoft.Extensions.Primitives;
 using YKBAfife.Business.Helpers;
 using YKBAfife.Models.ViewModels;
 using YKBAfife.Services.Security;
+using JuryPasswordHashHelper = YkbAfife.Business.Helpers.PasswordHashHelper;
 
 var assertions = 0;
 void Check(bool condition, string message)
@@ -38,6 +39,12 @@ try
         Check(PasswordHashHelper.VerifyPassword(exactPassword, modernVector), $"Modern jury vector works under {culture}.");
         Check(!PasswordHashHelper.VerifyPassword(exactPassword.Trim(), legacyVector), "Password whitespace is not trimmed.");
         Check(!PasswordHashHelper.VerifyPassword(exactPassword + "wrong", modernVector), "Wrong modern password is rejected.");
+        Check(JuryPasswordHashHelper.VerifyPassword(exactPassword, legacyVector), $"The supplied jury implementation reads the same legacy vector under {culture}.");
+        Check(JuryPasswordHashHelper.VerifyPassword(exactPassword, modernVector), $"The supplied jury implementation reads the same modern vector under {culture}.");
+        Check(JuryPasswordHashHelper.NeedsRehash(legacyVector), "The jury upgrades the admin's legacy format after a successful login.");
+        Check(!JuryPasswordHashHelper.NeedsRehash(modernVector), "A current jury hash requires no repeated upgrade.");
+        Check(!JuryPasswordHashHelper.VerifyPassword(exactPassword.Trim(), legacyVector), "The jury also preserves password whitespace.");
+        Check(!JuryPasswordHashHelper.VerifyPassword(exactPassword + "wrong", modernVector), "The jury rejects the same wrong modern password.");
     }
 }
 finally
@@ -62,6 +69,59 @@ Check(!PasswordHashHelper.VerifyPassword(string.Empty, generated), "Empty passwo
 Check(!PasswordHashHelper.VerifyPassword(null!, generated), "Null password is rejected.");
 Check(!PasswordHashHelper.VerifyPassword(exactPassword, null!), "Null hash is rejected.");
 
+// Exercise the actual supplied jury helper, rather than only reproducing its
+// PBKDF2 parameters in this runner. The admin and jury namespaces are distinct.
+Check(JuryPasswordHashHelper.VerifyPassword(exactPassword, generated), "The supplied jury verifies a freshly admin-generated password hash.");
+Check(JuryPasswordHashHelper.NeedsRehash(generated), "The jury recognizes a freshly admin-generated hash as eligible for its normal upgrade.");
+var juryGenerated = JuryPasswordHashHelper.HashPassword(exactPassword);
+var juryParts = juryGenerated.Split('$');
+Check(juryParts.Length == 4 && juryParts[0] == "pbkdf2-sha256" && juryParts[1] == "600000", "The supplied jury emits its current algorithm and iteration count.");
+Check(Convert.FromBase64String(juryParts[2]).Length == 16, "A supplied-jury hash contains the supported 16-byte salt.");
+Check(Convert.FromBase64String(juryParts[3]).Length == 32, "A supplied-jury hash contains the supported 32-byte SHA256 hash.");
+Check(PasswordHashHelper.VerifyPassword(exactPassword, juryGenerated), "The admin accepts a hash created by the actual jury helper.");
+Check(JuryPasswordHashHelper.VerifyPassword(exactPassword, juryGenerated), "The jury verifies its generated hash.");
+Check(!JuryPasswordHashHelper.NeedsRehash(juryGenerated), "A jury-generated hash does not require another upgrade.");
+Check(juryGenerated != JuryPasswordHashHelper.HashPassword(exactPassword), "The supplied jury uses independent random salts.");
+
+// This is the hash transition performed by AuthenticateUserAsync. The plain
+// password remains unchanged and must keep working in the other application.
+var upgradedHash = generated;
+if (JuryPasswordHashHelper.VerifyPassword(exactPassword, upgradedHash) && JuryPasswordHashHelper.NeedsRehash(upgradedHash))
+    upgradedHash = JuryPasswordHashHelper.HashPassword(exactPassword);
+Check(upgradedHash != generated && upgradedHash.StartsWith("pbkdf2-sha256$", StringComparison.Ordinal), "A successful jury login upgrades the stored representation.");
+Check(PasswordHashHelper.VerifyPassword(exactPassword, upgradedHash), "The original password still logs into admin after the jury upgrade.");
+Check(JuryPasswordHashHelper.VerifyPassword(exactPassword, upgradedHash), "The original password still logs into jury after the upgrade.");
+Check(!JuryPasswordHashHelper.NeedsRehash(upgradedHash), "A second jury login does not upgrade the current representation again.");
+Check(!PasswordHashHelper.VerifyPassword(exactPassword.Trim(), upgradedHash), "The upgrade does not trim the password for admin.");
+Check(!JuryPasswordHashHelper.VerifyPassword(exactPassword.Trim(), upgradedHash), "The upgrade does not trim the password for jury.");
+Check(!PasswordHashHelper.VerifyPassword(exactPassword + "wrong", upgradedHash), "Admin rejects a wrong password after the jury upgrade.");
+Check(!JuryPasswordHashHelper.VerifyPassword(exactPassword + "wrong", upgradedHash), "Jury rejects a wrong password after the upgrade.");
+Check(JuryPasswordHashHelper.VerifyPassword(exactPassword, PasswordHashHelper.HashPassword(exactPassword)), "An admin password reset remains readable by the jury after previous modern upgrades.");
+
+foreach (var crossProjectPassword in new[]
+{
+    "École123!", "E\u0301cole123!", " \t ", "Abcd123<>\"'&\\{}=+$;%!", "\0opaque", "İIıi🚀Abc123!"
+})
+{
+    var adminHash = PasswordHashHelper.HashPassword(crossProjectPassword);
+    var juryHash = JuryPasswordHashHelper.HashPassword(crossProjectPassword);
+    Check(JuryPasswordHashHelper.VerifyPassword(crossProjectPassword, adminHash), "Jury preserves exact Unicode, punctuation and whitespace when reading admin hashes.");
+    Check(JuryPasswordHashHelper.NeedsRehash(adminHash), "Every supported admin-generated hash is upgradeable by the supplied jury.");
+    Check(PasswordHashHelper.VerifyPassword(crossProjectPassword, juryHash), "Admin preserves exact Unicode, punctuation and whitespace when reading jury hashes.");
+    Check(JuryPasswordHashHelper.VerifyPassword(crossProjectPassword, juryHash), "Jury verifies its own exact Unicode, punctuation and whitespace credentials.");
+    Check(!JuryPasswordHashHelper.NeedsRehash(juryHash), "Exact credentials do not cause repeated jury rehashes.");
+    Check(!PasswordHashHelper.VerifyPassword(crossProjectPassword + "wrong", juryHash), "Admin rejects a changed password in a jury-created hash.");
+    Check(!JuryPasswordHashHelper.VerifyPassword(crossProjectPassword + "wrong", juryHash), "Jury rejects a changed password in its current format.");
+    Check(!JuryPasswordHashHelper.VerifyPassword(crossProjectPassword + "wrong", adminHash), "Jury rejects a changed password in the admin legacy format.");
+}
+var juryComposed = JuryPasswordHashHelper.HashPassword("École123!");
+Check(!JuryPasswordHashHelper.VerifyPassword("E\u0301cole123!", composed), "Jury never normalizes Unicode when reading the admin format.");
+Check(!PasswordHashHelper.VerifyPassword("E\u0301cole123!", juryComposed), "Admin never normalizes Unicode when reading the jury format.");
+Check(!JuryPasswordHashHelper.VerifyPassword("E\u0301cole123!", juryComposed), "Jury never normalizes Unicode in its current format.");
+Check(!JuryPasswordHashHelper.VerifyPassword(string.Empty, generated), "The supplied jury rejects an empty password.");
+Check(!JuryPasswordHashHelper.VerifyPassword(null!, generated), "The supplied jury rejects a null password.");
+Check(!JuryPasswordHashHelper.VerifyPassword(exactPassword, null!), "The supplied jury rejects a null stored hash.");
+
 foreach (var invalidHash in new[]
 {
     "", " ", "not-a-hash", "argon2id$opaque-existing-format", "pbkdf2-sha256$", "pbkdf2-sha256$600000$bad$bad",
@@ -73,6 +133,7 @@ foreach (var invalidHash in new[]
 })
 {
     Check(!PasswordHashHelper.VerifyPassword(exactPassword, invalidHash), "Malformed, unsupported or unbounded hash is rejected without fallback.");
+    Check(!JuryPasswordHashHelper.VerifyPassword(exactPassword, invalidHash), "The supplied jury rejects the same malformed, unsupported or unbounded hash.");
 }
 
 var services = new ServiceCollection();

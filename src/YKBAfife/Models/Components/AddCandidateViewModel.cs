@@ -9,6 +9,7 @@ public sealed class AddCandidateViewModel
     public required IReadOnlyList<SelectListItem> Plays { get; init; }
     public required IReadOnlyList<AddCandidateCategoryOptionViewModel> AwardCategories { get; init; }
     public required IReadOnlyList<AddCandidateReplacementOptionViewModel> ReplacementCandidates { get; init; }
+    public IReadOnlySet<Guid> PreviousProductionVersionPlayIds { get; init; } = new HashSet<Guid>();
     public bool LockPlay { get; init; }
     public string FormAction { get; init; } = string.Empty;
 }

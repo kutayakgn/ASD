@@ -1480,6 +1480,10 @@ public sealed partial class ManagementController(
             cancellationToken);
         if (candidate is null) return NotFound();
 
+        if (!await IsCandidateCategoryAllowedForPlayAsync(
+                candidate.PlayId, candidate.AwardCategoryCode, cancellationToken))
+            return BadRequest(new { message = "Bu oyun için seçilen ödül kategorisi kullanılamaz." });
+
         candidate.IsActive = isActive;
         candidate.UpdatedAt = TurkeyTime.Now;
         candidate.UpdatedBy = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)
@@ -1675,6 +1679,10 @@ public sealed partial class ManagementController(
             return RedirectToCandidateSectionWithPopup(slug, "fail", "Geçerli bir ödül kategorisi seçiniz.");
         }
 
+        if (!await IsCandidateCategoryAllowedForPlayAsync(play.Id, category.CategoryCode, cancellationToken))
+            return RedirectToCandidateSectionWithPopup(
+                slug, "fail", "Bu oyun için seçilen ödül kategorisi kullanılamaz.");
+
         var categorySupportsRoleAndPhoto =
             CandidateCategoryPolicy.SupportsRoleAndPhoto(category.CategoryCode);
         if (!categorySupportsRoleAndPhoto)
@@ -1744,6 +1752,15 @@ public sealed partial class ManagementController(
             cancellationToken);
         try
         {
+            // Recheck inside the transaction so changing the Form version while
+            // this screen is open cannot enable a restricted candidate write.
+            if (!await IsCandidateCategoryAllowedForPlayAsync(play.Id, category.CategoryCode, cancellationToken))
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return RedirectToCandidateSectionWithPopup(
+                    slug, "fail", "Bu oyun için seçilen ödül kategorisi kullanılamaz.");
+            }
+
             var publishedPlayCandidates = await context.PlayAwardCategories
                 .Where(item => item.PlayId == play.Id && item.IsPublished)
                 .OrderByDescending(item => item.IsCurrent)
@@ -1812,7 +1829,11 @@ public sealed partial class ManagementController(
             }
             else if (category.MultiCandidate)
             {
-                role = input.Role;
+                // Technical categories have no role input. Use the same
+                // internal name fallback as Form-to-candidate projection.
+                role = categorySupportsRoleAndPhoto
+                    ? input.Role
+                    : input.Candidate[..Math.Min(input.Candidate.Length, 200)];
                 var usedRoleCodes = publishedPlayCandidates
                     .Where(item => item.RoleCode > 0)
                     .Select(item => item.RoleCode)

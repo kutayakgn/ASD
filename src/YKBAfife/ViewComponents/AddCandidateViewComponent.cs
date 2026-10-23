@@ -15,20 +15,32 @@ public sealed class AddCandidateViewComponent(AfifeContext context) : ViewCompon
         string? formAction = null,
         CancellationToken cancellationToken = default)
     {
-        var plays = await context.Plays
+        var playRecords = await context.Plays
             .AsNoTracking()
             .Where(play => play.IsPublished && !play.RecordType)
             .OrderBy(play => play.PlayName)
             .ThenBy(play => play.TheaterName)
-            .Select(play => new SelectListItem
+            .Select(play => new
             {
-                Value = play.Id.ToString(),
+                play.Id,
                 Text = play.PlayName + " / " + play.TheaterName,
-                Selected = playId.HasValue && play.Id == playId.Value
+                PreviousProductionVersion = play.SourceForm != null && play.SourceForm.PreviousProductionVersion
             })
             .ToListAsync(cancellationToken);
+        var previousProductionVersionPlayIds = playRecords
+            .Where(play => play.PreviousProductionVersion)
+            .Select(play => play.Id)
+            .ToHashSet();
+        var selectedPreviousProductionVersion = playId.HasValue &&
+            previousProductionVersionPlayIds.Contains(playId.Value);
+        var plays = playRecords.Select(play => new SelectListItem
+        {
+            Value = play.Id.ToString(),
+            Text = play.Text,
+            Selected = playId.HasValue && play.Id == playId.Value
+        }).ToArray();
 
-        var categories = await context.AwardCategories
+        var categoryRecords = await context.AwardCategories
             .AsNoTracking()
             .Where(category => category.IsPublished &&
                                category.CategoryCode != CandidateCategoryPolicy.BestPlayCategoryCode &&
@@ -41,10 +53,13 @@ public sealed class AddCandidateViewComponent(AfifeContext context) : ViewCompon
                 MultiCandidate = category.MultiCandidate
             })
             .ToListAsync(cancellationToken);
+        var categories = categoryRecords.Where(category => CandidateCategoryPolicy.IsAllowedForProductionVersion(
+            category.CategoryCode, selectedPreviousProductionVersion)).ToArray();
 
         var replacementRows = playId.HasValue
             ? await context.PlayAwardCategories
                 .AsNoTracking()
+                .WhereAllowedForProductionVersion()
                 .Where(candidate =>
                     candidate.PlayId == playId.Value &&
                     candidate.IsPublished &&
@@ -83,6 +98,7 @@ public sealed class AddCandidateViewComponent(AfifeContext context) : ViewCompon
             Plays = plays,
             AwardCategories = categories,
             ReplacementCandidates = replacementCandidates,
+            PreviousProductionVersionPlayIds = previousProductionVersionPlayIds,
             LockPlay = playId.HasValue,
             FormAction = formAction ?? string.Empty
         });

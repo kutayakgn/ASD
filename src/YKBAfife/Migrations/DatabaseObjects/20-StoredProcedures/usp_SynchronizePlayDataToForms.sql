@@ -124,8 +124,11 @@ BEGIN
             FROM dbo.PlayAwardCategories AS candidate
             INNER JOIN dbo.Plays AS play ON play.Id = candidate.PlayId
             INNER JOIN #ReverseSyncPlays AS affected ON affected.PlayId = play.Id
+            INNER JOIN dbo.Form AS formRecord ON formRecord.Id = play.SourceFormId
             WHERE play.SourceFormId IS NOT NULL
               AND candidate.AwardCategoryCode BETWEEN 1003 AND 1011
+              AND (formRecord.previousProductionVersion = 0
+                   OR candidate.AwardCategoryCode BETWEEN 1003 AND 1006)
               AND candidate.SourceFormCandidateOrder IS NULL
               AND candidate.IsPublished = 1
               AND candidate.IsCurrent = 1
@@ -178,12 +181,15 @@ BEGIN
                )
         FROM dbo.Plays AS play
         INNER JOIN #ReverseSyncPlays AS affected ON affected.PlayId = play.Id
+        INNER JOIN dbo.Form AS formRecord ON formRecord.Id = play.SourceFormId
         CROSS JOIN
         (
             VALUES (1003), (1004), (1005), (1006), (1007),
                    (1008), (1009), (1010), (1011)
         ) AS category(AwardCategoryCode)
-        WHERE play.SourceFormId IS NOT NULL;
+        WHERE play.SourceFormId IS NOT NULL
+          AND (formRecord.previousProductionVersion = 0
+               OR category.AwardCategoryCode BETWEEN 1003 AND 1006);
 
         UPDATE formRecord
         SET
@@ -193,16 +199,17 @@ BEGIN
             ContactName = play.ContactPersonName,
             ContactPhone = play.ContactPersonPhone,
             Email = COALESCE(play.Email, formRecord.Email),
-            Director = COALESCE(director.Candidate, formRecord.Director),
+            Director = CASE WHEN formRecord.previousProductionVersion = 1 THEN NULL
+                            ELSE COALESCE(director.Candidate, formRecord.Director) END,
             LeadActress = actress.CandidateJson,
             LeadActor = actor.CandidateJson,
             SupportActress = supportActress.CandidateJson,
             SupportActor = supportActor.CandidateJson,
-            StageDesign = stageDesign.CandidateJson,
-            ClothesDesign = clothesDesign.CandidateJson,
-            StageMusic = stageMusic.CandidateJson,
-            LightDesign = lightDesign.CandidateJson,
-            Choreography = choreography.CandidateJson,
+            StageDesign = CASE WHEN formRecord.previousProductionVersion = 1 THEN NULL ELSE stageDesign.CandidateJson END,
+            ClothesDesign = CASE WHEN formRecord.previousProductionVersion = 1 THEN NULL ELSE clothesDesign.CandidateJson END,
+            StageMusic = CASE WHEN formRecord.previousProductionVersion = 1 THEN NULL ELSE stageMusic.CandidateJson END,
+            LightDesign = CASE WHEN formRecord.previousProductionVersion = 1 THEN NULL ELSE lightDesign.CandidateJson END,
+            Choreography = CASE WHEN formRecord.previousProductionVersion = 1 THEN NULL ELSE choreography.CandidateJson END,
             IsActive = play.IsActive,
             IsPublished = play.IsPublished,
             UpdatedDate = @Now
@@ -214,6 +221,7 @@ BEGIN
             SELECT TOP (1) candidate.Candidate
             FROM dbo.PlayAwardCategories AS candidate
             WHERE candidate.PlayId = play.Id
+              AND formRecord.previousProductionVersion = 0
               AND candidate.AwardCategoryCode = 1002
               AND candidate.IsPublished = 1
               AND candidate.IsCurrent = 1
@@ -227,15 +235,15 @@ BEGIN
             ON supportActress.PlayId = play.Id AND supportActress.AwardCategoryCode = 1005
         INNER JOIN #CandidatePayload AS supportActor
             ON supportActor.PlayId = play.Id AND supportActor.AwardCategoryCode = 1006
-        INNER JOIN #CandidatePayload AS stageDesign
+        LEFT JOIN #CandidatePayload AS stageDesign
             ON stageDesign.PlayId = play.Id AND stageDesign.AwardCategoryCode = 1007
-        INNER JOIN #CandidatePayload AS clothesDesign
+        LEFT JOIN #CandidatePayload AS clothesDesign
             ON clothesDesign.PlayId = play.Id AND clothesDesign.AwardCategoryCode = 1008
-        INNER JOIN #CandidatePayload AS stageMusic
+        LEFT JOIN #CandidatePayload AS stageMusic
             ON stageMusic.PlayId = play.Id AND stageMusic.AwardCategoryCode = 1009
-        INNER JOIN #CandidatePayload AS lightDesign
+        LEFT JOIN #CandidatePayload AS lightDesign
             ON lightDesign.PlayId = play.Id AND lightDesign.AwardCategoryCode = 1010
-        INNER JOIN #CandidatePayload AS choreography
+        LEFT JOIN #CandidatePayload AS choreography
             ON choreography.PlayId = play.Id AND choreography.AwardCategoryCode = 1011
         WHERE EXISTS
         (
@@ -245,16 +253,17 @@ BEGIN
                    CONVERT(varbinary(max), play.ContactPersonName),
                    CONVERT(varbinary(max), play.ContactPersonPhone),
                    CONVERT(varbinary(max), COALESCE(play.Email, formRecord.Email)),
-                   CONVERT(varbinary(max), COALESCE(director.Candidate, formRecord.Director)),
+                   CONVERT(varbinary(max), CASE WHEN formRecord.previousProductionVersion = 1 THEN NULL
+                       ELSE COALESCE(director.Candidate, formRecord.Director) END),
                    CONVERT(varbinary(max), actress.CandidateJson),
                    CONVERT(varbinary(max), actor.CandidateJson),
                    CONVERT(varbinary(max), supportActress.CandidateJson),
                    CONVERT(varbinary(max), supportActor.CandidateJson),
-                   CONVERT(varbinary(max), stageDesign.CandidateJson),
-                   CONVERT(varbinary(max), clothesDesign.CandidateJson),
-                   CONVERT(varbinary(max), stageMusic.CandidateJson),
-                   CONVERT(varbinary(max), lightDesign.CandidateJson),
-                   CONVERT(varbinary(max), choreography.CandidateJson),
+                   CONVERT(varbinary(max), CASE WHEN formRecord.previousProductionVersion = 1 THEN NULL ELSE stageDesign.CandidateJson END),
+                   CONVERT(varbinary(max), CASE WHEN formRecord.previousProductionVersion = 1 THEN NULL ELSE clothesDesign.CandidateJson END),
+                   CONVERT(varbinary(max), CASE WHEN formRecord.previousProductionVersion = 1 THEN NULL ELSE stageMusic.CandidateJson END),
+                   CONVERT(varbinary(max), CASE WHEN formRecord.previousProductionVersion = 1 THEN NULL ELSE lightDesign.CandidateJson END),
+                   CONVERT(varbinary(max), CASE WHEN formRecord.previousProductionVersion = 1 THEN NULL ELSE choreography.CandidateJson END),
                    play.IsActive, play.IsPublished
             EXCEPT
             SELECT CONVERT(varbinary(max), formRecord.RepertoireName),

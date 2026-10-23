@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using YKBAfife.Data;
+using YKBAfife.Helpers;
 using YKBAfife.Models.ViewModels;
 
 namespace YKBAfife.Services.Reports;
@@ -19,7 +20,10 @@ public sealed class CandidateReportService(AfifeContext context) : ICandidateRep
             .Skip((currentPage - 1) * CandidateTableViewModel.PageSize)
             .Take(CandidateTableViewModel.PageSize)
             .ToArrayAsync(cancellationToken);
-        var categories = await context.AwardCategories
+        var previousProductionVersion = await context.Plays.AsNoTracking().AnyAsync(
+            play => play.Id == normalized.PlayId && play.SourceForm != null &&
+                play.SourceForm.PreviousProductionVersion, cancellationToken);
+        var categoryRecords = await context.AwardCategories
             .AsNoTracking()
             .Where(category => category.IsPublished)
             .OrderBy(category => category.CategoryCode)
@@ -29,6 +33,8 @@ public sealed class CandidateReportService(AfifeContext context) : ICandidateRep
                 CategoryName = category.CategoryName
             })
             .ToArrayAsync(cancellationToken);
+        var categories = categoryRecords.Where(category => CandidateCategoryPolicy.IsAllowedForProductionVersion(
+            category.CategoryCode, previousProductionVersion)).ToArray();
 
         return new CandidateTableViewModel
         {
@@ -55,7 +61,7 @@ public sealed class CandidateReportService(AfifeContext context) : ICandidateRep
     private IQueryable<CandidateTableRowViewModel> BuildQuery(CandidateTableQuery query)
     {
         var candidates =
-            from candidate in context.PlayAwardCategories.AsNoTracking()
+            from candidate in context.PlayAwardCategories.AsNoTracking().WhereAllowedForProductionVersion()
             join category in context.AwardCategories.AsNoTracking()
                 on candidate.AwardCategoryCode equals category.CategoryCode
             where candidate.PlayId == query.PlayId

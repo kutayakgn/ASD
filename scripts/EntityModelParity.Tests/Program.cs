@@ -41,6 +41,14 @@ foreach (var entity in model.GetEntityTypes())
 }
 
 var play = model.FindEntityType(typeof(Play))!;
+var form = model.FindEntityType(typeof(Form))!;
+var previousProductionVersion = form.FindProperty(nameof(Form.PreviousProductionVersion))!;
+Assert(form.FindProperty(nameof(Form.Director))!.IsNullable,
+    "A Form can omit its director without failing EF materialization.");
+Assert(previousProductionVersion.ClrType == typeof(bool) && !previousProductionVersion.IsNullable &&
+       previousProductionVersion.GetColumnName(StoreObjectIdentifier.Table("Form", "dbo")) == "previousProductionVersion" &&
+       Equals(previousProductionVersion.GetDefaultValue(), false),
+    "External Form submissions use the exact previousProductionVersion bit column with a false default.");
 Assert(play.FindProperty(nameof(Play.RecordType))!.GetAfterSaveBehavior() == PropertySaveBehavior.Throw,
     "A play's record type remains immutable after first save.");
 Assert(play.GetQueryFilter()!.ToString().Contains("IsActive", StringComparison.Ordinal),

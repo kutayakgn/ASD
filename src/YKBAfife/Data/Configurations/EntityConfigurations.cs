@@ -371,6 +371,9 @@ internal sealed class FormConfiguration : IEntityTypeConfiguration<Form>
             .HasMaxLength(1000);
         entity.Property(x => x.Choreography)
             .HasMaxLength(1000);
+        entity.Property(x => x.PreviousProductionVersion)
+            .HasColumnName("previousProductionVersion")
+            .HasDefaultValue(false);
         entity.Property(x => x.Id)
             .HasDefaultValueSql("newsequentialid()");
         entity.Property(x => x.IsActive)

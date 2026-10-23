@@ -42,19 +42,20 @@ BEGIN
         ApplicantRole = changed.ApplicantRole,
         Phone = changed.Phone,
         Email = changed.Email,
-        Director = changed.Director,
+        Director = CASE WHEN changed.previousProductionVersion = 1 THEN NULL ELSE changed.Director END,
         ContactName = changed.ContactName,
         ContactPhone = changed.ContactPhone,
         LeadActress = changed.LeadActress,
         LeadActor = changed.LeadActor,
         SupportActress = changed.SupportActress,
         SupportActor = changed.SupportActor,
-        StageDesign = changed.StageDesign,
-        ClothesDesign = changed.ClothesDesign,
-        LightDesign = changed.LightDesign,
-        StageMusic = changed.StageMusic,
-        Choreography = changed.Choreography,
+        StageDesign = CASE WHEN changed.previousProductionVersion = 1 THEN NULL ELSE changed.StageDesign END,
+        ClothesDesign = CASE WHEN changed.previousProductionVersion = 1 THEN NULL ELSE changed.ClothesDesign END,
+        LightDesign = CASE WHEN changed.previousProductionVersion = 1 THEN NULL ELSE changed.LightDesign END,
+        StageMusic = CASE WHEN changed.previousProductionVersion = 1 THEN NULL ELSE changed.StageMusic END,
+        Choreography = CASE WHEN changed.previousProductionVersion = 1 THEN NULL ELSE changed.Choreography END,
         YoungGenerationArtist = changed.YoungGenerationArtist,
+        previousProductionVersion = changed.previousProductionVersion,
         IsActive = changed.IsActive,
         IsPublished = changed.IsPublished
     FROM dbo.Form AS target
@@ -77,7 +78,7 @@ BEGIN
         ApplicantRole, Phone, Email, Director, ContactName, ContactPhone,
         LeadActress, LeadActor, SupportActress, SupportActor, StageDesign,
         ClothesDesign, LightDesign, StageMusic, Choreography,
-        YoungGenerationArtist,
+        YoungGenerationArtist, previousProductionVersion,
         IsActive, IsPublished
     )
     SELECT
@@ -85,13 +86,17 @@ BEGIN
         changed.CreatedDate, changed.UpdatedDate,
         changed.RepertoireName, changed.TheatreName, changed.PremiereDate,
         changed.Display, changed.ApplicantName, changed.ApplicantRole,
-        changed.Phone, changed.Email, changed.Director,
+        changed.Phone, changed.Email,
+        CASE WHEN changed.previousProductionVersion = 1 THEN NULL ELSE changed.Director END,
         changed.ContactName, changed.ContactPhone,
         changed.LeadActress, changed.LeadActor,
         changed.SupportActress, changed.SupportActor,
-        changed.StageDesign, changed.ClothesDesign, changed.LightDesign,
-        changed.StageMusic, changed.Choreography,
-        changed.YoungGenerationArtist,
+        CASE WHEN changed.previousProductionVersion = 1 THEN NULL ELSE changed.StageDesign END,
+        CASE WHEN changed.previousProductionVersion = 1 THEN NULL ELSE changed.ClothesDesign END,
+        CASE WHEN changed.previousProductionVersion = 1 THEN NULL ELSE changed.LightDesign END,
+        CASE WHEN changed.previousProductionVersion = 1 THEN NULL ELSE changed.StageMusic END,
+        CASE WHEN changed.previousProductionVersion = 1 THEN NULL ELSE changed.Choreography END,
+        changed.YoungGenerationArtist, changed.previousProductionVersion,
         changed.IsActive, changed.IsPublished
     FROM inserted AS changed
     OUTER APPLY

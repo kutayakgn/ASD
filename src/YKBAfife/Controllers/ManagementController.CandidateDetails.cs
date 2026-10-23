@@ -19,7 +19,8 @@ public sealed partial class ManagementController
             {
                 Candidate = candidate,
                 Play = play,
-                category.CategoryName
+                category.CategoryName,
+                PreviousProductionVersion = play.SourceForm != null && play.SourceForm.PreviousProductionVersion
             }).SingleOrDefaultAsync(cancellationToken);
         if (data is null) return NotFound();
 
@@ -63,6 +64,7 @@ public sealed partial class ManagementController
                     ? updater
                     : null,
             HasRoleAndPhoto = supportsRoleAndPhoto,
+            PreviousProductionVersion = data.PreviousProductionVersion,
             HasPhoto = hasPhoto
         });
     }

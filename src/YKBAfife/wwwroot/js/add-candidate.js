@@ -41,6 +41,7 @@
     };
 
     const selectOption = (select, option, dispatchChange = true) => {
+        if (option.hidden || option.disabled) return;
         const input = select.querySelector("[data-candidate-select-value]");
         const label = select.querySelector("[data-candidate-select-label]");
         if (!input || !label) return;
@@ -122,6 +123,8 @@
 
     const setupComponent = (component) => {
         const form = component.querySelector("[data-candidate-form]");
+        const playSelect = component.querySelector("[data-candidate-play-select]");
+        const playInput = playSelect?.querySelector("[data-candidate-select-value]");
         const categorySelect = component.querySelector("[data-candidate-category-select]");
         const categoryInput = component.querySelector("[data-candidate-category]");
         const replacementField = component.querySelector("[data-candidate-replacement-field]");
@@ -139,6 +142,16 @@
             `[data-candidate-select-option][data-value='${CSS.escape(categoryInput?.value || "")}']`);
         const selectedReplacementOption = () => replacementSelect?.querySelector(
             `[data-candidate-select-option][data-value='${CSS.escape(replacementInput?.value || "")}']`);
+
+        const syncCategories = () => {
+            const selectedPlay = playSelect?.querySelector(
+                `[data-candidate-select-option][data-value='${CSS.escape(playInput?.value || "")}']`);
+            const previousProductionVersion = selectedPlay?.dataset.previousProductionVersion === "true";
+            categorySelect?.querySelectorAll("[data-candidate-select-option]").forEach((option) => {
+                option.hidden = previousProductionVersion && option.dataset.previousProductionVersionExcluded === "true";
+            });
+            if (selectedCategoryOption()?.hidden && categorySelect) clearSelect(categorySelect);
+        };
 
         const syncRole = () => {
             if (!roleField || !roleInput) return;
@@ -189,6 +202,7 @@
         };
 
         const syncAll = () => {
+            syncCategories();
             syncReplacements();
             syncRole();
             syncPhoto();
@@ -225,6 +239,10 @@
             if (roleInput) roleInput.value = "";
             syncAll();
         });
+        playInput?.addEventListener("change", () => {
+            resetModeFields();
+            syncAll();
+        });
         replacementInput?.addEventListener("change", syncRole);
 
         form?.addEventListener("submit", (event) => {
@@ -234,7 +252,8 @@
             const photoInput = component.querySelector("[data-candidate-photo-input]");
             const supportsRoleAndPhoto = selectedCategoryOption()?.dataset.supportsRolePhoto === "true";
             if (!form.querySelector("[name='Input.PlayId']")?.value) errors.push("Oyun seçimi zorunludur.");
-            if (!categoryInput?.value) errors.push("Ödül kategorisi seçimi zorunludur.");
+            if (!categoryInput?.value || !selectedCategoryOption() || selectedCategoryOption().hidden)
+                errors.push("Geçerli bir ödül kategorisi seçiniz.");
             if (selectedMode() === "change" && !replacementInput?.value) errors.push("Değişimi yapılacak aday/rol seçimi zorunludur.");
             if (candidate.length < 2) errors.push("Adı Soyadı alanı en az 2 karakter olmalıdır.");
             if (!status) errors.push("Statü seçimi zorunludur.");
