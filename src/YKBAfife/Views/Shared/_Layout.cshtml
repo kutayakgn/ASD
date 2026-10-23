@@ -1,3 +1,13 @@
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using YKBAfife.Services.Authentication
+@inject TimeProvider SessionClock
+@{
+    var sessionTicket = await Context.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+    var sessionProperties = sessionTicket.Properties;
+    var hasIdleSession = sessionTicket.Succeeded && sessionProperties is not null &&
+        AdminSessionPolicy.TryGetDeadline(sessionProperties, out _);
+}
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -22,6 +32,15 @@
 </head>
 <body>
     @await Component.InvokeAsync("Header")
+    @if (hasIdleSession)
+    {
+        <form hidden data-idle-session
+              data-session-id="@AdminSessionPolicy.GetSessionId(sessionProperties!)"
+              data-expires-at="@sessionProperties!.ExpiresUtc!.Value.ToUnixTimeMilliseconds()"
+              data-server-now="@SessionClock.GetUtcNow().ToUnixTimeMilliseconds()">
+            @Html.AntiForgeryToken()
+        </form>
+    }
 
     <main class="container-fluid admin-main">
         @RenderBody()
@@ -42,6 +61,10 @@
     <script src="~/js/complex-table-toggle.js" asp-append-version="true"></script>
     <script src="~/js/add-candidate.js" asp-append-version="true"></script>
     <script src="~/js/selection-tokens.js" asp-append-version="true"></script>
+    @if (hasIdleSession)
+    {
+        <script src="~/js/idle-session.js" asp-append-version="true"></script>
+    }
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

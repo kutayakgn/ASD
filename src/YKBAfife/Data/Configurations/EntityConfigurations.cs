@@ -296,6 +296,8 @@ internal sealed class BlacklistConfiguration : IEntityTypeConfiguration<Blacklis
         entity.HasIndex(x => x.CreatedOn)
             .IsDescending()
             .HasDatabaseName("IX_Blacklist_CreatedOn");
+        entity.HasIndex(x => new { x.PlayId, x.IsPublished })
+            .HasDatabaseName("IX_Blacklist_PlayId_IsPublished");
     }
 }
 
@@ -321,6 +323,11 @@ internal sealed class FormConfiguration : IEntityTypeConfiguration<Form>
     public void Configure(EntityTypeBuilder<Form> entity)
     {
         entity.ToTable("Form", "dbo");
+        entity.HasIndex(x => x.CreatedDate)
+            .IncludeProperties(x => x.SeasonId)
+            .HasDatabaseName("IX_Form_SeasonAssignment_Date");
+        entity.HasIndex(x => x.SeasonId)
+            .HasDatabaseName("IX_Form_SeasonAssignment_Season");
         entity.HasIndex(x => x.ApplicationNumber)
             .IsUnique()
             .HasFilter("[IsPublished] = 1")
@@ -724,6 +731,12 @@ internal sealed class PlayConfiguration : IEntityTypeConfiguration<Play>
             .HasDatabaseName("IX_Plays_SeasonStatistics");
         entity.HasIndex(x => x.StatusCode)
             .HasDatabaseName("IX_Plays_StatusCode");
+        entity.HasIndex(x => x.Slug)
+            .HasDatabaseName("IX_Plays_Slug");
+        entity.HasIndex(x => x.SourceFormId, "IX_Plays_UnlinkedFormMatch")
+            .IncludeProperties(x => new { x.RecordType, x.PlayName, x.TheaterName })
+            .HasFilter("[SourceFormId] IS NULL")
+            .HasDatabaseName("IX_Plays_UnlinkedFormMatch");
         entity.HasIndex(x => x.SourceFormId)
             .IsUnique()
             .HasFilter("[SourceFormId] IS NOT NULL")
@@ -987,6 +1000,23 @@ internal sealed class UserLogConfiguration : IEntityTypeConfiguration<UserLog>
     }
 }
 
+internal sealed class SharedAdminDataProtectionKeyConfiguration : IEntityTypeConfiguration<SharedAdminDataProtectionKey>
+{
+    public void Configure(EntityTypeBuilder<SharedAdminDataProtectionKey> entity)
+    {
+        entity.ToTable("SharedAdminDataProtectionKeys", "dbo", table =>
+        {
+            table.UseSqlOutputClause(false);
+            table.HasCheckConstraint("CK_SharedAdminDataProtectionKeys_Published", "[IsPublished] = 1");
+        });
+        entity.HasKey(key => key.Id);
+        entity.Property(key => key.Id).HasDefaultValueSql("newsequentialid()");
+        entity.Property(key => key.FriendlyName).HasMaxLength(255);
+        entity.Property(key => key.Xml).IsRequired();
+        entity.Property(key => key.CreatedAtUtc).HasDefaultValueSql("sysutcdatetime()");
+    }
+}
+
 internal static class AfifeModelConventions
 {
     // Preserve the legacy physical index set; shared FK conventions would otherwise
@@ -1007,7 +1037,6 @@ internal static class AfifeModelConventions
         RemoveIndex<AdditionalVotingUsage>(modelBuilder, "PlayId");
         RemoveIndex<Blacklist>(modelBuilder, "CreatedBy");
         RemoveIndex<Blacklist>(modelBuilder, "PlayId");
-        RemoveIndex<Form>(modelBuilder, "SeasonId");
     }
 
     private static void RemoveIndex<TEntity>(ModelBuilder modelBuilder, params string[] propertyNames)

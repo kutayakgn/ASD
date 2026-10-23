@@ -4,12 +4,14 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace YKBAfife.Services.Security;
 
-public sealed class UnsafeInputValidationFilter : IAsyncActionFilter
+public sealed class UnsafeInputValidationFilter(IModelMetadataProvider metadataProvider) : IAsyncActionFilter
 {
     private const string ErrorMessage =
         "Güvenlik nedeniyle HTML, script veya çalıştırılabilir içerik gönderilemez.";
@@ -33,9 +35,11 @@ public sealed class UnsafeInputValidationFilter : IAsyncActionFilter
         if (!hasUnsafeRequestValue && request.HasFormContentType)
         {
             var form = await request.ReadFormAsync(context.HttpContext.RequestAborted);
+            var passwordFields = BoundPasswordFields(context, form);
             hasUnsafeRequestValue = form.Any(item =>
                 IsUnsafe(item.Key) ||
-                item.Value.Any(value => IsUnsafe(value ?? string.Empty)));
+                (!passwordFields.Contains(item.Key) &&
+                 item.Value.Any(value => IsUnsafe(value ?? string.Empty))));
         }
 
         var visited = new HashSet<object>(ReferenceEqualityComparer.Instance);
@@ -50,7 +54,7 @@ public sealed class UnsafeInputValidationFilter : IAsyncActionFilter
         await next();
     }
 
-    private static bool ContainsUnsafeInput(
+    private bool ContainsUnsafeInput(
         object? value,
         ISet<object> visited,
         int depth)
@@ -82,6 +86,11 @@ public sealed class UnsafeInputValidationFilter : IAsyncActionFilter
         foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
         {
             if (!property.CanRead || property.GetIndexParameters().Length != 0) continue;
+            var propertyMetadata = metadataProvider.GetMetadataForType(type).Properties
+                .FirstOrDefault(item => item.PropertyName == property.Name);
+            // Passwords are opaque credentials. Their exact characters are
+            // verified/hashed, never interpreted as HTML or normalized here.
+            if (IsBoundPassword(propertyMetadata)) continue;
             object? propertyValue;
             try
             {
@@ -97,6 +106,74 @@ public sealed class UnsafeInputValidationFilter : IAsyncActionFilter
 
         return false;
     }
+
+    private HashSet<string> BoundPasswordFields(ActionExecutingContext context, IFormCollection form)
+    {
+        var fields = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var argument in context.ActionArguments)
+        {
+            if (argument.Value is null) continue;
+            var parameter = context.ActionDescriptor.Parameters.FirstOrDefault(item => item.Name == argument.Key);
+            if (parameter?.BindingInfo?.BindingSource is { } source &&
+                !source.CanAcceptDataFrom(BindingSource.Form)) continue;
+
+            var explicitPrefix = parameter?.BindingInfo?.BinderModelName;
+            var candidatePrefix = explicitPrefix ?? argument.Key;
+            // MVC uses the parameter prefix when present, otherwise it binds a
+            // top-level form model from unprefixed property names.
+            var usesPrefix = explicitPrefix is not null || form.Keys.Any(key =>
+                key.Equals(candidatePrefix, StringComparison.OrdinalIgnoreCase) ||
+                key.StartsWith(candidatePrefix + ".", StringComparison.OrdinalIgnoreCase) ||
+                key.StartsWith(candidatePrefix + "[", StringComparison.OrdinalIgnoreCase));
+            CollectPasswordFields(argument.Value, usesPrefix ? candidatePrefix : string.Empty,
+                fields, new HashSet<object>(ReferenceEqualityComparer.Instance), 0);
+        }
+        return fields;
+    }
+
+    private void CollectPasswordFields(object? value, string prefix,
+        ISet<string> fields, ISet<object> visited, int depth)
+    {
+        if (value is null || depth > 8 || value is string or IFormFile or JsonElement) return;
+        var type = value.GetType();
+        if (type.IsPrimitive || type.IsEnum || value is decimal or DateTime or DateOnly or TimeOnly or TimeSpan or Guid or CancellationToken)
+            return;
+        if (!type.IsValueType && !visited.Add(value)) return;
+
+        if (value is IEnumerable values)
+        {
+            var index = 0;
+            foreach (var item in values)
+                CollectPasswordFields(item, $"{prefix}[{index++}]", fields, visited, depth + 1);
+            return;
+        }
+
+        foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+        {
+            if (!property.CanRead || property.GetIndexParameters().Length != 0) continue;
+            var metadata = metadataProvider.GetMetadataForType(type).Properties
+                .FirstOrDefault(item => item.PropertyName == property.Name);
+            var name = metadata?.BinderModelName ?? property.Name;
+            var path = string.IsNullOrEmpty(prefix) ? name : prefix + "." + name;
+            if (IsBoundPassword(metadata))
+            {
+                fields.Add(path);
+                continue;
+            }
+            try
+            {
+                CollectPasswordFields(property.GetValue(value), path, fields, visited, depth + 1);
+            }
+            catch (TargetInvocationException)
+            {
+                // Match the model inspection behavior for unreadable getters.
+            }
+        }
+    }
+
+    private static bool IsBoundPassword(ModelMetadata? metadata) =>
+        metadata is { IsBindingAllowed: true, ModelType: var modelType, DataTypeName: "Password" } &&
+        modelType == typeof(string);
 
     private static bool ContainsUnsafeJson(JsonElement json) => json.ValueKind switch
     {

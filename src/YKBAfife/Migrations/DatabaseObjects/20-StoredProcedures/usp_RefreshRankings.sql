@@ -1,4 +1,6 @@
 CREATE OR ALTER PROCEDURE [dbo].[usp_RefreshRankings]
+    @CategoryCodesJson nvarchar(max) = NULL,
+    @CandidateIdsJson nvarchar(max) = NULL
 WITH EXECUTE AS OWNER
 AS
 BEGIN
@@ -8,10 +10,71 @@ BEGIN
     IF TRY_CONVERT(int, SESSION_CONTEXT(N'RankingsRefreshInProgress')) = 1
         RETURN;
 
+    /* Explicit maintenance keeps the historical full-rebuild contract. Normal
+       DML supplies old/new categories and dirty candidate IDs. Rankings depend
+       on peers in the same category, but their unchanged votes need no reread. */
+    DECLARE @FullRefresh bit = CASE WHEN @CategoryCodesJson IS NULL THEN 1 ELSE 0 END;
+    CREATE TABLE #RankingAffectedCategories (CategoryCode int NOT NULL PRIMARY KEY);
+    CREATE TABLE #RankingDirtyCandidates (CandidateId uniqueidentifier NOT NULL PRIMARY KEY);
+    CREATE TABLE #RankingCategoryLocks
+    (
+        CategoryCode int NOT NULL PRIMARY KEY,
+        IsAcquired bit NOT NULL DEFAULT (0)
+    );
+
+    IF @CategoryCodesJson IS NULL AND @CandidateIdsJson IS NOT NULL
+        THROW 52740, N'Aday kapsamı için ödül kategorisi kapsamı da gereklidir.', 1;
+
+    IF @CategoryCodesJson IS NOT NULL
+    BEGIN
+        IF ISJSON(@CategoryCodesJson) <> 1 OR LEFT(LTRIM(@CategoryCodesJson), 1) <> N'['
+            THROW 52740, N'Sıralama kapsamı geçerli bir CategoryCode dizisi olmalıdır.', 1;
+        IF EXISTS
+        (
+            SELECT 1 FROM OPENJSON(@CategoryCodesJson) AS item
+            WHERE item.[type] <> 5 OR TRY_CONVERT(int,
+                JSON_VALUE(CASE WHEN item.[type] = 5 THEN item.[value] ELSE N'{}' END, N'$.CategoryCode')) IS NULL
+        )
+            THROW 52740, N'Sıralama kapsamı geçerli bir CategoryCode dizisi olmalıdır.', 1;
+        INSERT INTO #RankingAffectedCategories (CategoryCode)
+        SELECT DISTINCT CONVERT(int, JSON_VALUE(item.[value], N'$.CategoryCode'))
+        FROM OPENJSON(@CategoryCodesJson) AS item;
+    END;
+
+    IF @CandidateIdsJson IS NOT NULL
+    BEGIN
+        IF ISJSON(@CandidateIdsJson) <> 1 OR LEFT(LTRIM(@CandidateIdsJson), 1) <> N'['
+            THROW 52740, N'Sıralama aday kapsamı geçerli bir Id dizisi olmalıdır.', 1;
+        IF EXISTS
+        (
+            SELECT 1 FROM OPENJSON(@CandidateIdsJson) AS item
+            WHERE item.[type] <> 5
+               OR DATALENGTH(JSON_VALUE(CASE WHEN item.[type] = 5 THEN item.[value] ELSE N'{}' END, N'$.Id')) <> 72
+               OR TRY_CONVERT(uniqueidentifier,
+                   JSON_VALUE(CASE WHEN item.[type] = 5 THEN item.[value] ELSE N'{}' END, N'$.Id')) IS NULL
+        )
+            THROW 52740, N'Sıralama aday kapsamı geçerli bir Id dizisi olmalıdır.', 1;
+        INSERT INTO #RankingDirtyCandidates (CandidateId)
+        SELECT DISTINCT CONVERT(uniqueidentifier, JSON_VALUE(item.[value], N'$.Id'))
+        FROM OPENJSON(@CandidateIdsJson) AS item;
+    END;
+
+    IF @FullRefresh = 0
+       AND NOT EXISTS (SELECT 1 FROM #RankingAffectedCategories)
+       AND NOT EXISTS (SELECT 1 FROM #RankingDirtyCandidates)
+        RETURN;
+
     DECLARE @ApplicationLockResult int;
+    DECLARE @GlobalLockMode nvarchar(32) = CASE WHEN @FullRefresh = 1 THEN N'Exclusive' ELSE N'Shared' END;
+    DECLARE @LockedCategory int;
+    DECLARE @CategoryLockResource nvarchar(255);
+    /* Scalar variables survive a deadlock victim's transaction rollback. A
+       temp-table acquisition log does not, while session-owned locks survive. */
+    DECLARE @AcquiredCategoryLocks nvarchar(max) = N'';
+    DECLARE @CategoryLockDelimiter int;
     EXEC @ApplicationLockResult = sys.sp_getapplock
         @Resource = N'AfifeAdmin.Rankings.Refresh',
-        @LockMode = N'Exclusive',
+        @LockMode = @GlobalLockMode,
         @LockOwner = N'Session',
         @LockTimeout = 30000;
 
@@ -26,38 +89,94 @@ BEGIN
         @value = 1;
 
     BEGIN TRY
-        ;WITH EligibleCandidates AS
-        (
-            SELECT
-                candidate.Id AS PlayAwardCategoryId,
-                candidate.PlayId,
-                candidate.AwardCategoryCode
+        IF @FullRefresh = 1
+            INSERT INTO #RankingAffectedCategories (CategoryCode)
+            SELECT DISTINCT AwardCategoryCode FROM dbo.PlayAwardCategories;
+        ELSE
+            /* A moved dirty candidate brings its new category even if a caller
+               only supplied its previous category. */
+            INSERT INTO #RankingAffectedCategories (CategoryCode)
+            SELECT DISTINCT candidate.AwardCategoryCode
             FROM dbo.PlayAwardCategories AS candidate
-            INNER JOIN dbo.Plays AS play ON play.Id = candidate.PlayId
-            WHERE play.RecordType = 0
-              AND play.IsPublished = 1
-              AND play.IsActive = 1
-              AND candidate.IsPublished = 1
-              AND candidate.IsCurrent = 1
-              AND candidate.IsActive = 1
-        ),
-        OrderedActiveVotes AS
+            INNER JOIN #RankingDirtyCandidates AS dirty ON dirty.CandidateId = candidate.Id
+            WHERE NOT EXISTS
+            (
+                SELECT 1 FROM #RankingAffectedCategories AS affected
+                WHERE affected.CategoryCode = candidate.AwardCategoryCode
+            );
+
+        /* Different categories can refresh concurrently. Full maintenance takes
+           the global lock exclusively; scoped callers share it and acquire all
+           their category locks in numeric order, including both sides of moves. */
+        IF @FullRefresh = 0
+        BEGIN
+            INSERT INTO #RankingCategoryLocks (CategoryCode)
+            SELECT CategoryCode FROM #RankingAffectedCategories;
+            WHILE EXISTS (SELECT 1 FROM #RankingCategoryLocks WHERE IsAcquired = 0)
+            BEGIN
+                SELECT TOP (1) @LockedCategory = CategoryCode
+                FROM #RankingCategoryLocks WHERE IsAcquired = 0 ORDER BY CategoryCode;
+                SET @CategoryLockResource = N'AfifeAdmin.Rankings.Category.' + CONVERT(nvarchar(12), @LockedCategory);
+                EXEC @ApplicationLockResult = sys.sp_getapplock
+                    @Resource = @CategoryLockResource, @LockMode = N'Exclusive',
+                    @LockOwner = N'Session', @LockTimeout = 30000;
+                IF @ApplicationLockResult < 0
+                    THROW 52001, N'Rankings category refresh lock could not be acquired.', 1;
+                SET @AcquiredCategoryLocks += CONVERT(nvarchar(12), @LockedCategory) + N';';
+                UPDATE #RankingCategoryLocks SET IsAcquired = 1 WHERE CategoryCode = @LockedCategory;
+            END;
+        END;
+
+        CREATE TABLE #RankingTargetScope (CandidateId uniqueidentifier NOT NULL PRIMARY KEY);
+        INSERT INTO #RankingTargetScope (CandidateId)
+        SELECT candidate.Id
+        FROM dbo.PlayAwardCategories AS candidate
+        INNER JOIN #RankingAffectedCategories AS affected ON affected.CategoryCode = candidate.AwardCategoryCode
+        UNION
+        SELECT CandidateId FROM #RankingDirtyCandidates
+        UNION
+        SELECT PlayAwardCategoryId FROM dbo.Rankings WHERE @FullRefresh = 1;
+
+        CREATE TABLE #RankingEligibleCandidates
+        (
+            PlayAwardCategoryId uniqueidentifier NOT NULL PRIMARY KEY,
+            PlayId uniqueidentifier NOT NULL,
+            AwardCategoryCode int NOT NULL
+        );
+        INSERT INTO #RankingEligibleCandidates (PlayAwardCategoryId, PlayId, AwardCategoryCode)
+        SELECT candidate.Id, candidate.PlayId, candidate.AwardCategoryCode
+        FROM dbo.PlayAwardCategories AS candidate
+        INNER JOIN #RankingAffectedCategories AS affected ON affected.CategoryCode = candidate.AwardCategoryCode
+        INNER JOIN dbo.Plays AS play ON play.Id = candidate.PlayId
+        WHERE play.RecordType = 0 AND play.IsPublished = 1 AND play.IsActive = 1
+          AND candidate.IsPublished = 1 AND candidate.IsCurrent = 1 AND candidate.IsActive = 1;
+
+        CREATE TABLE #RankingRecalculate (CandidateId uniqueidentifier NOT NULL PRIMARY KEY);
+        INSERT INTO #RankingRecalculate (CandidateId)
+        SELECT eligible.PlayAwardCategoryId
+        FROM #RankingEligibleCandidates AS eligible
+        LEFT JOIN dbo.Rankings AS previous ON previous.PlayAwardCategoryId = eligible.PlayAwardCategoryId
+        LEFT JOIN #RankingDirtyCandidates AS dirty ON dirty.CandidateId = eligible.PlayAwardCategoryId
+        WHERE @CandidateIdsJson IS NULL OR dirty.CandidateId IS NOT NULL
+           OR previous.Id IS NULL OR previous.IsPublished = 0;
+
+        ;WITH OrderedActiveVotes AS
         (
             SELECT
-                eligible.PlayAwardCategoryId,
+                dirty.CandidateId AS PlayAwardCategoryId,
                 vote.Score,
                 ROW_NUMBER() OVER
                 (
-                    PARTITION BY eligible.PlayAwardCategoryId
+                    PARTITION BY dirty.CandidateId
                     ORDER BY vote.Score, vote.Id
                 ) AS ScoreOrder,
                 COUNT_BIG(*) OVER
                 (
-                    PARTITION BY eligible.PlayAwardCategoryId
+                    PARTITION BY dirty.CandidateId
                 ) AS VoteCount
-            FROM EligibleCandidates AS eligible
+            FROM #RankingRecalculate AS dirty
             INNER JOIN dbo.JuryVotes AS vote
-                ON vote.PlayAwardCategoryId = eligible.PlayAwardCategoryId
+                ON vote.PlayAwardCategoryId = dirty.CandidateId
             WHERE vote.IsPublished = 1
               AND vote.IsActive = 1
         ),
@@ -88,12 +207,16 @@ BEGIN
                 eligible.PlayAwardCategoryId,
                 eligible.PlayId,
                 eligible.AwardCategoryCode,
-                CONVERT(int, COALESCE(voteStats.NumberOfActiveVote, 0))
+                CASE WHEN dirty.CandidateId IS NOT NULL
+                    THEN CONVERT(int, COALESCE(voteStats.NumberOfActiveVote, 0))
+                    ELSE previous.NumberOfActiveVote END
                     AS NumberOfActiveVote,
-                voteStats.ArithmeticMean,
-                trimmed.TrimmedMean,
-                voteStats.ArithmeticVariance
-            FROM EligibleCandidates AS eligible
+                CASE WHEN dirty.CandidateId IS NOT NULL THEN voteStats.ArithmeticMean ELSE previous.ArithmeticMean END AS ArithmeticMean,
+                CASE WHEN dirty.CandidateId IS NOT NULL THEN trimmed.TrimmedMean ELSE previous.TrimmedMean END AS TrimmedMean,
+                CASE WHEN dirty.CandidateId IS NOT NULL THEN voteStats.ArithmeticVariance ELSE previous.ArithmeticVariance END AS ArithmeticVariance
+            FROM #RankingEligibleCandidates AS eligible
+            LEFT JOIN #RankingRecalculate AS dirty ON dirty.CandidateId = eligible.PlayAwardCategoryId
+            LEFT JOIN dbo.Rankings AS previous ON previous.PlayAwardCategoryId = eligible.PlayAwardCategoryId
             LEFT JOIN VoteStatistics AS voteStats
                 ON voteStats.PlayAwardCategoryId =
                     eligible.PlayAwardCategoryId
@@ -220,9 +343,16 @@ BEGIN
                 source.ArithmeticVariance,
                 source.ConfidenceValue,
                 1
-            )
-        WHEN NOT MATCHED BY SOURCE AND target.IsPublished = 1
-            THEN UPDATE SET IsPublished = 0;
+            );
+
+        /* Restrict retirement separately: a partial source must never unpublish
+           rankings from other categories. Dirty IDs also cover removed rows. */
+        UPDATE target
+        SET IsPublished = 0
+        FROM dbo.Rankings AS target
+        INNER JOIN #RankingTargetScope AS affected ON affected.CandidateId = target.PlayAwardCategoryId
+        LEFT JOIN #RankingEligibleCandidates AS eligible ON eligible.PlayAwardCategoryId = target.PlayAwardCategoryId
+        WHERE target.IsPublished = 1 AND eligible.PlayAwardCategoryId IS NULL;
 
         EXEC sys.sp_set_session_context
             @key = N'RankingsRefreshAuthorized',
@@ -230,20 +360,47 @@ BEGIN
         EXEC sys.sp_set_session_context
             @key = N'RankingsRefreshInProgress',
             @value = NULL;
+        WHILE LEN(@AcquiredCategoryLocks) > 0
+        BEGIN
+            SET @CategoryLockDelimiter = CHARINDEX(N';', @AcquiredCategoryLocks);
+            SET @LockedCategory = CONVERT(int, LEFT(@AcquiredCategoryLocks, @CategoryLockDelimiter - 1));
+            SET @CategoryLockResource = N'AfifeAdmin.Rankings.Category.' + CONVERT(nvarchar(12), @LockedCategory);
+            EXEC sys.sp_releaseapplock @Resource = @CategoryLockResource, @LockOwner = N'Session';
+            SET @AcquiredCategoryLocks = SUBSTRING(@AcquiredCategoryLocks, @CategoryLockDelimiter + 1, LEN(@AcquiredCategoryLocks));
+        END;
         EXEC sys.sp_releaseapplock
             @Resource = N'AfifeAdmin.Rankings.Refresh',
             @LockOwner = N'Session';
     END TRY
     BEGIN CATCH
-        EXEC sys.sp_set_session_context
-            @key = N'RankingsRefreshAuthorized',
-            @value = NULL;
-        EXEC sys.sp_set_session_context
-            @key = N'RankingsRefreshInProgress',
-            @value = NULL;
-        EXEC sys.sp_releaseapplock
-            @Resource = N'AfifeAdmin.Rankings.Refresh',
-            @LockOwner = N'Session';
+        BEGIN TRY
+            EXEC sys.sp_set_session_context @key = N'RankingsRefreshAuthorized', @value = NULL;
+            EXEC sys.sp_set_session_context @key = N'RankingsRefreshInProgress', @value = NULL;
+        END TRY
+        BEGIN CATCH
+            PRINT N'Rankings session-context cleanup failed.';
+        END CATCH;
+        /* No temp-table access here: SQL 1205 can remove those tables. Cleanup
+           failures must not prevent release of other locks or mask the error. */
+        WHILE LEN(@AcquiredCategoryLocks) > 0
+        BEGIN
+            SET @CategoryLockDelimiter = CHARINDEX(N';', @AcquiredCategoryLocks);
+            SET @LockedCategory = CONVERT(int, LEFT(@AcquiredCategoryLocks, @CategoryLockDelimiter - 1));
+            SET @AcquiredCategoryLocks = SUBSTRING(@AcquiredCategoryLocks, @CategoryLockDelimiter + 1, LEN(@AcquiredCategoryLocks));
+            SET @CategoryLockResource = N'AfifeAdmin.Rankings.Category.' + CONVERT(nvarchar(12), @LockedCategory);
+            BEGIN TRY
+                EXEC sys.sp_releaseapplock @Resource = @CategoryLockResource, @LockOwner = N'Session';
+            END TRY
+            BEGIN CATCH
+                PRINT N'Rankings category-lock cleanup failed.';
+            END CATCH;
+        END;
+        BEGIN TRY
+            EXEC sys.sp_releaseapplock @Resource = N'AfifeAdmin.Rankings.Refresh', @LockOwner = N'Session';
+        END TRY
+        BEGIN CATCH
+            PRINT N'Rankings global-lock cleanup failed.';
+        END CATCH;
         THROW;
     END CATCH;
 END;

@@ -11,7 +11,8 @@ namespace YKBAfife.Controllers;
 
 public sealed class AccountController(
     IAdminAuthenticationService authenticationService,
-    IUserActivityLogger activityLogger) : Controller
+    IUserActivityLogger activityLogger,
+    TimeProvider clock) : Controller
 {
     [AllowAnonymous]
     [HttpGet("giris-yap")]
@@ -55,11 +56,7 @@ public sealed class AccountController(
         };
 
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-        var properties = new AuthenticationProperties
-        {
-            IsPersistent = false,
-            AllowRefresh = true
-        };
+        var properties = AdminSessionPolicy.CreateProperties(clock.GetUtcNow());
 
         await HttpContext.SignInAsync(
             CookieAuthenticationDefaults.AuthenticationScheme,
@@ -72,6 +69,39 @@ public sealed class AccountController(
         }
 
         return RedirectToAction("Index", "Home");
+    }
+
+    [Authorize]
+    [HttpPost("oturum/aktivite")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Activity(string? sessionId, long elapsedMilliseconds = 0)
+    {
+        if (!ModelState.IsValid || elapsedMilliseconds is < 0 or > 60_000)
+            return BadRequest();
+        var authentication = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        var now = clock.GetUtcNow();
+        if (!authentication.Succeeded || authentication.Principal is null || authentication.Properties is null ||
+            !AdminSessionPolicy.IsValid(authentication.Properties, now))
+            return Unauthorized();
+        if (sessionId != AdminSessionPolicy.GetSessionId(authentication.Properties))
+            return BadRequest(new { reload = true });
+
+        // A throttled event carries its age, so sending it later does not add
+        // idle time. Never move the current ticket's confirmed activity back.
+        var activityUtc = now.AddMilliseconds(-elapsedMilliseconds);
+        var properties = authentication.Properties;
+        if (activityUtc > properties.IssuedUtc)
+        {
+            properties = AdminSessionPolicy.CreateProperties(activityUtc, sessionId);
+            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme,
+                authentication.Principal, properties);
+        }
+        return Json(new
+        {
+            sessionId,
+            expiresAt = properties.ExpiresUtc!.Value.ToUnixTimeMilliseconds(),
+            serverNow = now.ToUnixTimeMilliseconds()
+        });
     }
 
     [Authorize]

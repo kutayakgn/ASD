@@ -295,6 +295,17 @@
     text-align: center;
 }
 
+.voting-history-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 24px;
+}
+
+.voting-history-reset-all {
+    min-height: 42px;
+    padding: 10px 20px;
+}
+
     .voting-history-empty.is-error {
         color: #b31d1d;
     }

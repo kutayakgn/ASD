@@ -59,8 +59,34 @@ try {
     & $dataRetentionScript -Configuration $Configuration
     if ($LASTEXITCODE -ne 0) { throw 'Migration data retention scenario failed.' }
 
+    & (Join-Path $PSScriptRoot 'test-credential-compatibility.ps1') -Configuration $Configuration
+    if ($LASTEXITCODE -ne 0) { throw 'Credential compatibility regression scenario failed.' }
+
+    & (Join-Path $PSScriptRoot 'test-shared-admin-data-protection.ps1') -Configuration $Configuration
+    if ($LASTEXITCODE -ne 0) { throw 'Shared admin Data Protection regression scenario failed.' }
+
+    & (Join-Path $PSScriptRoot 'test-admin-workflows.ps1') -Configuration $Configuration
+    if ($LASTEXITCODE -ne 0) { throw 'Admin HTTP workflow regression scenario failed.' }
+
+    & (Join-Path $PSScriptRoot 'test-bulk-vote-reset.ps1') -Configuration $Configuration
+    if ($LASTEXITCODE -ne 0) { throw 'Bulk vote reset regression scenario failed.' }
+
+    & (Join-Path $PSScriptRoot 'test-idle-session.ps1') -Configuration $Configuration
+    if ($LASTEXITCODE -ne 0) { throw 'Idle-session policy/browser regression scenario failed.' }
+
+    foreach ($browserTest in @('test-edit-password.js', 'test-voting-history.js')) {
+        node (Join-Path $PSScriptRoot $browserTest)
+        if ($LASTEXITCODE -ne 0) { throw "Browser regression failed: $browserTest" }
+    }
+
+    & (Join-Path $PSScriptRoot 'test-deployment-preservation.ps1') -Configuration $Configuration
+    if ($LASTEXITCODE -ne 0) { throw 'Deployment data preservation regression scenario failed.' }
+
     & $scopedFormSyncScript -Configuration $Configuration
     if ($LASTEXITCODE -ne 0) { throw 'Scoped Form synchronization regression scenario failed.' }
+
+    & (Join-Path $PSScriptRoot 'test-db-workload-scope.ps1') -Configuration $Configuration
+    if ($LASTEXITCODE -ne 0) { throw 'Scoped database workload regression scenario failed.' }
 
     dotnet publish $project --no-restore -c $Configuration -o $publishPath
     if ($LASTEXITCODE -ne 0) { throw 'Deployment publish validation failed.' }

@@ -49,6 +49,9 @@ builder.Services.AddDbContext<AfifeContext>((serviceProvider, options) =>
 builder.Services.AddHostedService<DatabaseMigrationHostedService>();
 builder.Services.AddScoped<IUserActivityLogger, UserActivityLogger>();
 builder.Services.AddScoped<IAdminAuthenticationService, AdminAuthenticationService>();
+builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
+builder.Services.AddScoped<AdminCookieAuthenticationEvents>();
+builder.Services.AddSharedAdminDataProtection(builder.Configuration);
 builder.Services.AddScoped<IPlayWatchReportService, PlayWatchReportService>();
 builder.Services.AddScoped<IPlayReportService, PlayReportService>();
 builder.Services.AddScoped<ICandidateReportService, CandidateReportService>();
@@ -74,8 +77,9 @@ builder.Services
         options.Cookie.SameSite = SameSiteMode.Lax;
         options.LoginPath = "/giris-yap";
         options.AccessDeniedPath = "/giris-yap";
-        options.ExpireTimeSpan = TimeSpan.FromHours(8);
-        options.SlidingExpiration = true;
+        options.ExpireTimeSpan = AdminSessionPolicy.Lifetime;
+        options.SlidingExpiration = false;
+        options.EventsType = typeof(AdminCookieAuthenticationEvents);
     });
 
 builder.Services.AddAuthorization(options =>

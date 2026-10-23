@@ -5,6 +5,8 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
+    IF NOT EXISTS (SELECT 1 FROM deleted) RETURN;
+
     UPDATE target
     SET IsPublished = 0,
         IsActive = 0,

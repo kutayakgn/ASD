@@ -21,14 +21,76 @@ function Get-AfifeSqlBatchCount([string] $Content) {
         Where-Object { -not [string]::IsNullOrWhiteSpace($_) }).Count
 }
 
-function Get-AfifeCanonicalSql([string] $ObjectRoot) {
+function Get-AfifeCanonicalSql(
+    [string] $ObjectRoot,
+    [switch] $ExcludeReferenceData,
+    [switch] $OnlyReferenceData
+) {
+    if ($ExcludeReferenceData -and $OnlyReferenceData) {
+        throw 'Select either routine SQL or reference SQL, not both.'
+    }
     $files = @(Get-ChildItem -LiteralPath $ObjectRoot -Recurse -File -Filter '*.sql' |
+        Where-Object {
+            $relative = $_.FullName.Substring($ObjectRoot.Length + 1).Replace('\', '/')
+            $isReference = $relative.StartsWith('50-ReferenceData/', [StringComparison]::Ordinal)
+            (-not $ExcludeReferenceData -or -not $isReference) -and
+                (-not $OnlyReferenceData -or $isReference)
+        } |
         Sort-Object FullName)
-    if ($files.Count -eq 0) { throw 'Canonical database SQL modules are missing.' }
+    if ($files.Count -eq 0) {
+        if ($OnlyReferenceData) { return '' }
+        throw 'Canonical database SQL modules are missing.'
+    }
     return ($files | ForEach-Object {
         [IO.File]::ReadAllText($_.FullName, [Text.Encoding]::UTF8).Trim() +
             [Environment]::NewLine + 'GO' + [Environment]::NewLine
     }) -join [Environment]::NewLine
+}
+
+function Get-AfifeMigrationSqlComposition(
+    [string] $ObjectRoot,
+    [string] $VersionRoot,
+    [string] $PreviousVersion
+) {
+    $canonicalSql = Get-AfifeCanonicalSql $ObjectRoot
+    $routineSql = Get-AfifeCanonicalSql $ObjectRoot -ExcludeReferenceData
+    $referenceSql = Get-AfifeCanonicalSql $ObjectRoot -OnlyReferenceData
+    $previousPath = Join-Path $VersionRoot "$PreviousVersion.sql"
+    $previousPackage = [IO.File]::ReadAllText($previousPath, [Text.Encoding]::UTF8)
+    $previousCanonical = Read-AfifeSqlSection $VersionRoot $PreviousVersion $(
+        if ($previousPackage -cmatch '<AFIFE:SHA256:CANONICAL=') { 'CANONICAL' } else { 'UP' })
+
+    if ($previousPackage -cmatch '<AFIFE:SHA256:REFERENCES=') {
+        $previousReferences = Read-AfifeSqlSection $VersionRoot $PreviousVersion 'REFERENCES'
+    }
+    else {
+        # The old format stored all canonical files in UP without file boundaries.
+        # We can safely identify its seed tail only when those sources are still
+        # unchanged. Fail closed rather than guessing old SQL statement boundaries.
+        $previousReferences = $referenceSql
+    }
+    $previousCanonicalLf = $previousCanonical.Replace("`r`n", "`n")
+    $previousReferencesLf = $previousReferences.Replace("`r`n", "`n")
+    $previousRoutines = $previousCanonicalLf
+    if (-not [string]::IsNullOrEmpty($previousReferencesLf)) {
+        $referenceTail = "`n" + $previousReferencesLf
+        if (-not $previousCanonicalLf.EndsWith($referenceTail, [StringComparison]::Ordinal)) {
+            throw ('Cannot safely identify the previous reference-data SQL. ' +
+                'Create the first safe-format migration with reference sources unchanged; ' +
+                'then capture an intentional reference-data edit in a separate migration.')
+        }
+        $previousRoutines = $previousCanonicalLf.Substring(0,
+            $previousCanonicalLf.Length - $referenceTail.Length)
+    }
+
+    $referencesChanged = -not (Test-AfifeSqlEquivalent $referenceSql $previousReferences)
+    return [pscustomobject]@{
+        CanonicalSql = $canonicalSql
+        ReferenceSql = $referenceSql
+        UpSql = $(if ($referencesChanged) { $canonicalSql } else { $routineSql })
+        DownSql = $previousRoutines
+        ReferencesChanged = $referencesChanged
+    }
 }
 
 function Get-AfifeCanonicalModuleNames([string] $ObjectRoot) {
@@ -188,7 +250,7 @@ function Get-AfifeNewModuleRollback(
 function Read-AfifeSqlSection(
     [string] $VersionRoot,
     [string] $Version,
-    [ValidateSet('UP', 'DOWN', 'SEED')] [string] $Section,
+    [ValidateSet('UP', 'DOWN', 'SEED', 'CANONICAL', 'REFERENCES')] [string] $Section,
     [string[]] $Visited = @()
 ) {
     if ($Version -cnotmatch '^[A-Za-z0-9_]+$') { throw 'Invalid SQL package version.' }
@@ -268,7 +330,7 @@ function New-AfifeSqlPackage(
         foreach ($module in $ModuleNames) { $lines.Add("-- $module") }
         $lines.Add('-- </AFIFE:MODULES>')
     }
-    foreach ($name in @('SEED', 'UP', 'DOWN')) {
+    foreach ($name in @('SEED', 'CANONICAL', 'REFERENCES', 'UP', 'DOWN')) {
         if (-not $Sections.Contains($name)) { continue }
         $section = $Sections[$name]
         $rawHash = Get-AfifeSqlHash $section.Sql

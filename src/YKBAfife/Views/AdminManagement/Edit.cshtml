@@ -54,10 +54,18 @@
             </div>
             <div class="add-jury-field">
                 <label asp-for="Password"></label>
-                <input asp-for="Password" type="password" minlength="8" maxlength="100"
+                <div class="edit-password" data-edit-password>
+                <input asp-for="Password" value="" type="password" minlength="8" maxlength="100"
                        pattern="@YKBAfife.Helpers.PasswordPolicy.Pattern"
-                       autocomplete="new-password" placeholder="De&#287;i&#351;tirmek istemiyorsan&#305;z bo&#351; b&#305;rak&#305;n"
+                       autocomplete="new-password" placeholder="••••••••"
+                       aria-describedby="password-help" data-edit-password-input
                        data-fail-message="@YKBAfife.Helpers.PasswordPolicy.ErrorMessage" />
+                    <button type="button" class="edit-password-toggle" data-edit-password-toggle
+                            aria-label="Yeni şifreyi göster" aria-pressed="false" disabled>
+                        <img src="~/icons/eye.svg" alt="" aria-hidden="true" />
+                    </button>
+                </div>
+                <small id="password-help" class="edit-password-help">Mevcut şifre korunur. Değiştirmek için yeni şifre yazın; göz simgesi yeni şifreyi gösterir.</small>
             </div>
             @if (Model.CanEditStatus)
 
@@ -88,4 +96,5 @@
 
 @section Scripts {
     <script src="~/js/add-admin.js" asp-append-version="true"></script>
+    <script src="~/js/edit-password.js" asp-append-version="true"></script>
 }

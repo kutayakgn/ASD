@@ -21,7 +21,6 @@ public sealed class EditJuryViewModel
     [Display(Name = "E-posta")]
     public string Email { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Şifre zorunludur.")]
     [StringLength(PasswordPolicy.MaximumLength, MinimumLength = PasswordPolicy.MinimumLength,
         ErrorMessage = PasswordPolicy.ErrorMessage)]
     [RegularExpression(PasswordPolicy.Pattern, ErrorMessage = PasswordPolicy.ErrorMessage)]

@@ -1,35 +1,15 @@
 CREATE OR ALTER TRIGGER dbo.TR_Seasons_RefreshStatistics
-ON dbo.Seasons
-AFTER INSERT, UPDATE
-AS
+ON dbo.Seasons AFTER INSERT, UPDATE AS
 BEGIN
     SET NOCOUNT ON;
-
-    IF EXISTS (SELECT 1 FROM deleted)
-       AND NOT (UPDATE(SeasonStartDate) OR UPDATE(SeasonEndDate) OR UPDATE(IsPublished))
-    BEGIN
-        RETURN;
-    END;
-
-    DECLARE @FromDate datetime2(7);
-    DECLARE @ToDate datetime2(7);
-
-    SELECT
-        @FromDate = MIN(changed.RangeDate),
-        @ToDate = MAX(changed.RangeDate)
-    FROM
+    DECLARE @SeasonIdsJson nvarchar(max) =
     (
-        SELECT CONVERT(datetime2(7), SeasonStartDate) AS RangeDate FROM inserted
-        UNION ALL
-        SELECT CONVERT(datetime2(7), SeasonEndDate) FROM inserted
-        UNION ALL
-        SELECT CONVERT(datetime2(7), SeasonStartDate) FROM deleted
-        UNION ALL
-        SELECT CONVERT(datetime2(7), SeasonEndDate) FROM deleted
-    ) AS changed;
-
-    IF @FromDate IS NOT NULL
-    BEGIN
-        EXEC dbo.usp_RefreshSeasonStatistics @FromDate, @ToDate;
-    END;
+        SELECT i.Id FROM inserted i LEFT JOIN deleted d ON d.Id = i.Id
+        WHERE d.Id IS NULL OR EXISTS
+            (SELECT i.SeasonStartDate, i.SeasonEndDate, i.IsPublished
+             EXCEPT SELECT d.SeasonStartDate, d.SeasonEndDate, d.IsPublished)
+        FOR JSON PATH
+    );
+    IF @SeasonIdsJson IS NULL OR @SeasonIdsJson = N'[]' RETURN;
+    EXEC dbo.usp_RefreshSeasonStatistics @SeasonIdsJson = @SeasonIdsJson;
 END;

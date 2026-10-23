@@ -547,12 +547,13 @@ namespace YKBAfife.Data.Migrations
                         .IsDescending()
                         .HasDatabaseName("IX_Blacklist_CreatedOn");
 
-                    b.HasIndex("PlayId");
-
                     b.HasIndex("JuryId", "PlayId")
                         .IsUnique()
                         .HasDatabaseName("UX_Blacklist_JuryId_PlayId_Published")
                         .HasFilter("[IsPublished] = 1");
+
+                    b.HasIndex("PlayId", "IsPublished")
+                        .HasDatabaseName("IX_Blacklist_PlayId_IsPublished");
 
                     b.ToTable("Blacklist", "dbo");
 
@@ -738,12 +739,18 @@ namespace YKBAfife.Data.Migrations
                         .HasDatabaseName("UX_Form_ApplicationNumber_Published")
                         .HasFilter("[IsPublished] = 1");
 
+                    b.HasIndex("CreatedDate")
+                        .HasDatabaseName("IX_Form_SeasonAssignment_Date");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("CreatedDate"), new[] { "SeasonId" });
+
                     b.HasIndex("LegacyId")
                         .IsUnique()
                         .HasDatabaseName("UX_Form_LegacyId")
                         .HasFilter("[LegacyId] IS NOT NULL");
 
-                    b.HasIndex("SeasonId");
+                    b.HasIndex("SeasonId")
+                        .HasDatabaseName("IX_Form_SeasonAssignment_Season");
 
                     b.ToTable("Form", "dbo");
 
@@ -1452,6 +1459,9 @@ namespace YKBAfife.Data.Migrations
 
                     SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("CreatedAt"), new[] { "IsPublished", "StatusCode" });
 
+                    b.HasIndex("Slug")
+                        .HasDatabaseName("IX_Plays_Slug");
+
                     b.HasIndex("SourceFormId")
                         .IsUnique()
                         .HasDatabaseName("UX_Plays_SourceFormId")
@@ -1459,6 +1469,12 @@ namespace YKBAfife.Data.Migrations
 
                     b.HasIndex("StatusCode")
                         .HasDatabaseName("IX_Plays_StatusCode");
+
+                    b.HasIndex(new[] { "SourceFormId" }, "IX_Plays_UnlinkedFormMatch")
+                        .HasDatabaseName("IX_Plays_UnlinkedFormMatch")
+                        .HasFilter("[SourceFormId] IS NULL");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex(new[] { "SourceFormId" }, "IX_Plays_UnlinkedFormMatch"), new[] { "RecordType", "PlayName", "TheaterName" });
 
                     b.ToTable("Plays", "dbo", t =>
                         {
@@ -1773,6 +1789,41 @@ namespace YKBAfife.Data.Migrations
                             t.HasCheckConstraint("CK_Seasons_SeasonDateRange", "[SeasonStartDate] < [SeasonEndDate]");
 
                             t.HasCheckConstraint("CK_Seasons_VotingDateRange", "[VotingStartDate] >= [SeasonStartDate] AND [VotingStartDate] < [VotingEndDate] AND [VotingEndDate] <= [SeasonEndDate]");
+                        });
+
+                    b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
+                });
+
+            modelBuilder.Entity("YKBAfife.Models.Entities.SharedAdminDataProtectionKey", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("newsequentialid()");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("sysutcdatetime()");
+
+                    b.Property<string>("FriendlyName")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<bool>("IsPublished")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Xml")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SharedAdminDataProtectionKeys", "dbo", t =>
+                        {
+                            t.HasCheckConstraint("CK_SharedAdminDataProtectionKeys_Published", "[IsPublished] = 1");
                         });
 
                     b.HasAnnotation("SqlServer:UseSqlOutputClause", false);

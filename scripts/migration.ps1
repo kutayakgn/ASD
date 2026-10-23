@@ -70,6 +70,7 @@ try {
                 throw 'The previous versioned SQL package is missing.'
             }
             $previousSql = Read-AfifeSqlSection $versionRoot $previousLogicalName 'UP'
+            $composition = Get-AfifeMigrationSqlComposition $objectRoot $versionRoot $previousLogicalName
             $previousModules = @(Read-AfifeModuleManifest $previousVersionFile)
             $currentModules = @(Get-CanonicalModuleNames)
             $removedModules = @($previousModules | Where-Object { $currentModules -cnotcontains $_ })
@@ -85,15 +86,19 @@ try {
             Invoke-Ef (@('migrations', 'add', $migrationName) + $common + @(
                 '--output-dir', 'Data/Migrations', '--no-build'))
 
-            $canonicalSql = Get-CanonicalDatabaseObjects
             $upReference = $null
-            $upSql = $canonicalSql
-            if (Test-AfifeSqlEquivalent $canonicalSql $previousSql) {
+            $upSql = $composition.UpSql
+            if (Test-AfifeSqlEquivalent $upSql $previousSql) {
                 $upReference = "${previousLogicalName}:UP"
                 $upSql = $previousSql # Reference hash covers the actual immutable target.
             }
-            $downSql = $previousSql
-            $downReference = "${previousLogicalName}:UP"
+            # Rollback restores prior routines, never prior reference seed writes.
+            $downSql = $composition.DownSql
+            $downReference = $null
+            if (Test-AfifeSqlEquivalent $downSql $previousSql) {
+                $downReference = "${previousLogicalName}:UP"
+                $downSql = $previousSql
+            }
             if (-not [string]::IsNullOrWhiteSpace($moduleRollback.AfterSql)) {
                 $downSql += [Environment]::NewLine + 'GO' + [Environment]::NewLine +
                     '-- Remove new procedures/functions after restoring prior definitions.' +
@@ -101,6 +106,11 @@ try {
                 $downReference = $null
             }
             $sections = @{
+                # Source snapshots are verified but never executed. They retain
+                # drift detection and intentional seed-change comparison while
+                # routine-only deployments preserve every existing data row.
+                CANONICAL = @{ Sql = $composition.CanonicalSql; Reference = $null }
+                REFERENCES = @{ Sql = $composition.ReferenceSql; Reference = $null }
                 UP = @{ Sql = $upSql; Reference = $upReference }
                 DOWN = @{ Sql = $downSql; Reference = $downReference }
             }
@@ -110,6 +120,8 @@ try {
             # Detect corrupt/incomplete packages before touching the migration source.
             [void](Read-AfifeSqlSection $versionRoot $migrationName 'UP')
             [void](Read-AfifeSqlSection $versionRoot $migrationName 'DOWN')
+            [void](Read-AfifeSqlSection $versionRoot $migrationName 'CANONICAL')
+            [void](Read-AfifeSqlSection $versionRoot $migrationName 'REFERENCES')
 
             $migrationFiles = @(Get-ChildItem -LiteralPath $migrationRoot -File `
                 -Filter "*_$migrationName.cs" |

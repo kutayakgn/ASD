@@ -79,7 +79,7 @@ public sealed class AdminActionAuditLogger(
             "AddJury" or "EditJury" or "DeleteJury" => "Users",
             "AddPlay" or "EditPlay" or "DeletePlay" or "UpdateJuryVotingStatus" or "UpdateKunyeGirisStatus" => "Plays",
             "AddCandidate" or "EditCandidate" or "DeleteCandidate" or "UpdateCandidateStatus" => "PlayAwardCategories",
-            "ResetJuryVote" => "JuryVotes",
+            "ResetJuryVote" or "ResetJuryVotes" => "JuryVotes",
             "UpdateTicketFee" => "JuryGameTicketFees",
             "AddBlacklist" or "DeleteBlacklist" => "Blacklist",
             "EditApplication" or "DeleteApplication" or "UpdateApplicationStatus" => "Form",

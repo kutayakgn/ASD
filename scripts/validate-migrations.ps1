@@ -39,6 +39,11 @@ try {
         if ($package -cmatch '<AFIFE:SHA256:SEED=') {
             [void](Read-AfifeSqlSection $versionRoot $logicalName 'SEED')
         }
+        foreach ($snapshot in @('CANONICAL', 'REFERENCES')) {
+            if ($package -cmatch "<AFIFE:SHA256:${snapshot}=") {
+                [void](Read-AfifeSqlSection $versionRoot $logicalName $snapshot)
+            }
+        }
     }
 
     $codeHits = $migrations | Select-String -Pattern '\.DeleteData\s*\('
@@ -64,9 +69,11 @@ try {
     $latestVersionFile = Join-Path $versionRoot "$latestLogicalName.sql"
     $manifest = @(Read-AfifeModuleManifest $latestVersionFile)
     $canonicalNames = @(Get-AfifeCanonicalModuleNames $objectRoot)
+    $latestPackage = [IO.File]::ReadAllText($latestVersionFile, [Text.Encoding]::UTF8)
+    $sourceSection = if ($latestPackage -cmatch '<AFIFE:SHA256:CANONICAL=') { 'CANONICAL' } else { 'UP' }
     if (@($manifest | Where-Object { $canonicalNames -cnotcontains $_ }).Count -gt 0 -or
         @($canonicalNames | Where-Object { $manifest -cnotcontains $_ }).Count -gt 0 -or
-        -not (Test-AfifeSqlEquivalent (Read-AfifeSqlSection $versionRoot $latestLogicalName 'UP') (Get-AfifeCanonicalSql $objectRoot))) {
+        -not (Test-AfifeSqlEquivalent (Read-AfifeSqlSection $versionRoot $latestLogicalName $sourceSection) (Get-AfifeCanonicalSql $objectRoot))) {
         throw ('Canonical SQL and the latest immutable migration package differ. ' +
             'Create a migration with scripts/migration.ps1 add <Name>; do not edit released packages.')
     }

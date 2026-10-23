@@ -5,6 +5,10 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
+    /* SQL fires statement triggers even when no rows match. An empty JSON
+       scope can become NULL, which the maintenance procedure treats as all. */
+    IF NOT EXISTS (SELECT 1 FROM inserted) RETURN;
+
     IF TRY_CONVERT(bit, SESSION_CONTEXT(N'FormSeasonAssignmentSyncInProgress')) = 1
     BEGIN
         UPDATE target

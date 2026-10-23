@@ -12,6 +12,7 @@ public sealed class AfifeContext(DbContextOptions<AfifeContext> options) : DbCon
     public DbSet<AdminLog> AdminLogs => Set<AdminLog>();
     public DbSet<JuryLog> JuryLogs => Set<JuryLog>();
     public DbSet<JuryPasswordResetToken> JuryPasswordResetTokens => Set<JuryPasswordResetToken>();
+    public DbSet<SharedAdminDataProtectionKey> SharedAdminDataProtectionKeys => Set<SharedAdminDataProtectionKey>();
     public DbSet<Play> Plays => Set<Play>();
     public DbSet<Season> Seasons => Set<Season>();
     public DbSet<AdditionalVoting> AdditionalVotings => Set<AdditionalVoting>();

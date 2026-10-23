@@ -10,5 +10,5 @@ BEGIN
     FROM dbo.Seasons AS season
     INNER JOIN deleted AS removed ON removed.Id = season.Id;
 
-    EXEC dbo.usp_ReassignFormSeasons;
+    /* The UPDATE trigger reassigns only these seasons' old/new ranges. */
 END;

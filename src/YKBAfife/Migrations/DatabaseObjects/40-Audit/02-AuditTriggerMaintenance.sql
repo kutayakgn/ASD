@@ -24,7 +24,9 @@ FROM sys.tables AS tableInfo
 INNER JOIN sys.schemas AS schemaInfo ON schemaInfo.schema_id = tableInfo.schema_id
 WHERE tableInfo.is_ms_shipped = 0
   AND tableInfo.temporal_type = 0
-  AND NOT (schemaInfo.name = N'dbo' AND tableInfo.name IN (N'AdminLogs', N'JuryLogs', N'UsersLog', N'JuryPasswordResetTokens', N'__EFMigrationsHistory'))
+  /* Crypto XML is secret framework metadata, not a business-row audit payload. */
+  AND NOT (schemaInfo.name = N'dbo' AND tableInfo.name IN (N'AdminLogs', N'JuryLogs', N'UsersLog', N'JuryPasswordResetTokens', N'SharedAdminDataProtectionKeys', N'__EFMigrationsHistory'))
+  AND NOT (schemaInfo.name = N'dbo' AND tableInfo.name LIKE N'\_\_Archived\_SharedAdminDataProtectionKeys\_%' ESCAPE N'\')
 ORDER BY schemaInfo.name, tableInfo.name;
 
 OPEN table_cursor;

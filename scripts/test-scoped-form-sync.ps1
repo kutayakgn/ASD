@@ -21,7 +21,12 @@ $migrationIds = @(Get-ChildItem -LiteralPath $migrationRoot -File -Filter '*.cs'
     ForEach-Object { $_.BaseName })
 if ($migrationIds.Count -lt 2) { throw 'Scoped synchronization rollback test requires at least two source migrations.' }
 $latestMigration = $migrationIds[-1]
-$previousMigration = $migrationIds[-2]
+$scopedMigrations = @($migrationIds | Where-Object { $_ -match '^\d{14}_ScopedFormSynchronization_v_' })
+if ($scopedMigrations.Count -ne 1) { throw 'Expected one ScopedFormSynchronization migration.' }
+$scopedMigration = $scopedMigrations[0]
+$scopedIndex = [Array]::IndexOf($migrationIds, $scopedMigration)
+if ($scopedIndex -lt 1) { throw 'Scoped synchronization requires a preceding migration for rollback verification.' }
+$previousMigration = $migrationIds[$scopedIndex - 1]
 $databaseName = 'YkbAfifeScopedFormTest_' + [Guid]::NewGuid().ToString('N')
 $connectionString = "Server=$Server;Database=$databaseName;Trusted_Connection=True;TrustServerCertificate=True"
 $previousConnection = $env:ConnectionStrings__AfifeConnectionString
@@ -54,6 +59,10 @@ try {
     $databaseCreated = $true
     $env:ConnectionStrings__AfifeConnectionString = $connectionString
 
+    Invoke-ScopedMigration $scopedMigration
+    Invoke-ScopedSqlTest 'test-scoped-form-sync.sql'
+
+    # Later migrations retain the same scoped API and must also pass the rules.
     Invoke-ScopedMigration $latestMigration
     Invoke-ScopedSqlTest 'test-scoped-form-sync.sql'
 
@@ -73,8 +82,12 @@ IF EXISTS
     sqlcmd -I -S $Server -d $databaseName -b -l 30 -t 180 -Q $downVerification
     if ($LASTEXITCODE -ne 0) { throw 'Scoped Form migration Down verification failed.' }
 
-    Invoke-ScopedMigration $latestMigration
+    Invoke-ScopedMigration $scopedMigration
     Invoke-ScopedSqlTest 'test-scoped-form-sync.sql'
+    if ($latestMigration -ne $scopedMigration) {
+        Invoke-ScopedMigration $latestMigration
+        Invoke-ScopedSqlTest 'test-scoped-form-sync.sql'
+    }
     Write-Host "Scoped Form synchronization Up/Down/Up regression passed for $databaseName."
 }
 finally {

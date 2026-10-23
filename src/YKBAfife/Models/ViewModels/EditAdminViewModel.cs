@@ -30,6 +30,7 @@ public sealed class EditAdminViewModel
     [StringLength(PasswordPolicy.MaximumLength, MinimumLength = PasswordPolicy.MinimumLength,
         ErrorMessage = PasswordPolicy.ErrorMessage)]
     [RegularExpression(PasswordPolicy.Pattern, ErrorMessage = PasswordPolicy.ErrorMessage)]
+    [DataType(DataType.Password)]
     [Display(Name = "Şifre")]
     public string? Password { get; set; }
 

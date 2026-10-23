@@ -91,6 +91,45 @@ try {
     Assert-AfifeSql ([regex]::Unescape($csharpContent) -ceq $twoTriggers) 'Generated C# string restores two DROP statements separated by an actual newline.'
     Assert-AfifeSql (('\r'.Length -eq 2) -and ('\\r'.Length -eq 3)) 'PowerShell single-quoted C# escape lengths are explicit.'
 
+    # New routine-only packages preserve every saved reference-data row. The
+    # full canonical/reference snapshots are integrity metadata, never UP SQL.
+    $compositionRoot = Join-Path $afifeSqlTestRoot 'CompositionObjects'
+    foreach ($folder in @('20-StoredProcedures', '50-ReferenceData')) {
+        New-Item -ItemType Directory -Path (Join-Path $compositionRoot $folder) -Force | Out-Null
+    }
+    $routinePath = Join-Path $compositionRoot '20-StoredProcedures/Sync.sql'
+    $referencePath = Join-Path $compositionRoot '50-ReferenceData/Labels.sql'
+    Write-AfifeUtf8 $routinePath 'CREATE OR ALTER PROCEDURE dbo.Sync AS SELECT 1;'
+    Write-AfifeUtf8 $referencePath "UPDATE dbo.Example SET Name = N'Canonical label';"
+    $oldCompositionSql = Get-AfifeCanonicalSql $compositionRoot
+    Write-AfifeUtf8 (Join-Path $versionRoot 'CompositionOld_v_20261023.sql') (New-AfifeSqlPackage 'CompositionOld_v_20261023' @{
+        UP = @{ Sql = $oldCompositionSql; Reference = $null }
+        DOWN = @{ Sql = $oldCompositionSql; Reference = $null }
+    })
+    $safe = Get-AfifeMigrationSqlComposition $compositionRoot $versionRoot 'CompositionOld_v_20261023'
+    Assert-AfifeSql (-not $safe.ReferencesChanged) 'Transition recognizes unchanged legacy reference source.'
+    Assert-AfifeSql ($safe.UpSql -match 'CREATE OR ALTER PROCEDURE' -and $safe.UpSql -notmatch 'UPDATE dbo.Example') 'Routine-only UP never executes saved label/color seed updates.'
+    Assert-AfifeSql ($safe.DownSql -match 'CREATE OR ALTER PROCEDURE' -and $safe.DownSql -notmatch 'UPDATE dbo.Example') 'Routine-only DOWN never replays prior seed writes.'
+    Assert-AfifeSql ((Read-AfifeSqlSection $versionRoot 'CompositionOld_v_20261023' 'UP') -ceq $oldCompositionSql) 'Safe packaging never changes the historical SQL package.'
+    Write-AfifeUtf8 (Join-Path $versionRoot 'CompositionSafe_v_20261023.sql') (New-AfifeSqlPackage 'CompositionSafe_v_20261023' @{
+        CANONICAL = @{ Sql = $safe.CanonicalSql; Reference = $null }
+        REFERENCES = @{ Sql = $safe.ReferenceSql; Reference = $null }
+        UP = @{ Sql = $safe.UpSql; Reference = $null }
+        DOWN = @{ Sql = $safe.DownSql; Reference = $null }
+    })
+    Assert-AfifeSql ((Read-AfifeSqlSection $versionRoot 'CompositionSafe_v_20261023' 'CANONICAL') -ceq $oldCompositionSql) 'Non-executed canonical snapshot retains full-source drift detection.'
+    Write-AfifeUtf8 $routinePath 'CREATE OR ALTER PROCEDURE dbo.Sync AS SELECT 2;'
+    $routineChange = Get-AfifeMigrationSqlComposition $compositionRoot $versionRoot 'CompositionSafe_v_20261023'
+    Assert-AfifeSql ($routineChange.UpSql -match 'SELECT 2' -and $routineChange.UpSql -notmatch 'UPDATE dbo.Example') 'Later routine edits still exclude unchanged reference sources.'
+    Assert-AfifeSql ($routineChange.DownSql -match 'SELECT 1' -and $routineChange.DownSql -notmatch 'UPDATE dbo.Example') 'Later DOWN restores previous routines without seeds.'
+    Write-AfifeUtf8 $referencePath "UPDATE dbo.Example SET Name = N'Intentionally revised label';"
+    $referenceChange = Get-AfifeMigrationSqlComposition $compositionRoot $versionRoot 'CompositionSafe_v_20261023'
+    Assert-AfifeSql ($referenceChange.ReferencesChanged -and $referenceChange.UpSql -match 'Intentionally revised label') 'An intentional reference-source edit is captured and executed by UP.'
+    Assert-AfifeSql ($referenceChange.DownSql -notmatch 'UPDATE dbo.Example') 'Reference-source rollback retains saved values instead of overwriting them with old seeds.'
+    Assert-AfifeSqlRejected {
+        Get-AfifeMigrationSqlComposition $compositionRoot $versionRoot 'CompositionOld_v_20261023'
+    } 'Legacy packages without source boundaries fail closed if reference sources changed before the first safe transition.'
+
     $priorSql = "SELECT 1;`r`nGO`r`n"
     Write-AfifeUtf8 (Join-Path $versionRoot 'Previous_v_20261014.sql') (New-AfifeSqlPackage 'Previous_v_20261014' @{
         UP = @{ Sql = $priorSql; Reference = $null }; DOWN = @{ Sql = $priorSql; Reference = $null }
@@ -182,7 +221,7 @@ try {
     $historicSections = [Collections.Generic.List[object]]::new()
     foreach ($historic in $historicPackages) {
         $source = [IO.File]::ReadAllText($historic.FullName, [Text.Encoding]::UTF8)
-        foreach ($section in @('UP', 'DOWN', 'SEED')) {
+        foreach ($section in @('UP', 'DOWN', 'SEED', 'CANONICAL', 'REFERENCES')) {
             if (-not [regex]::IsMatch($source, "(?m)^-- <AFIFE:SHA256:${section}=[A-F0-9]{64}>\r?$")) { continue }
             $sql = Read-AfifeSqlSection $repositoryVersionRoot $historic.BaseName $section
             $historicSections.Add([pscustomobject]@{ Version = $historic.BaseName; Section = $section; Sql = $sql })

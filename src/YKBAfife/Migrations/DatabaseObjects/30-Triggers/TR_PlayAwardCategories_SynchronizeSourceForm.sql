@@ -29,25 +29,48 @@ BEGIN
        )
         RETURN;
 
-    DECLARE @AffectedPlayId uniqueidentifier;
-    DECLARE affected_candidate_play_cursor CURSOR LOCAL FAST_FORWARD FOR
-        SELECT DISTINCT affected.PlayId
-        FROM
-        (
-            SELECT PlayId FROM inserted
-            UNION
-            SELECT PlayId FROM deleted
-        ) AS affected
-        INNER JOIN dbo.Plays AS play ON play.Id = affected.PlayId
-        WHERE play.SourceFormId IS NOT NULL;
+    DECLARE @AffectedPlayIdsJson nvarchar(max);
+    ;WITH ChangedCandidates AS
+    (
+        SELECT changed.PlayId AS NewPlayId, previous.PlayId AS OldPlayId
+        FROM inserted AS changed
+        FULL OUTER JOIN deleted AS previous ON previous.Id = changed.Id
+        WHERE (changed.AwardCategoryCode BETWEEN 1002 AND 1011
+               OR previous.AwardCategoryCode BETWEEN 1002 AND 1011)
+          AND
+          (
+              changed.Id IS NULL OR previous.Id IS NULL
+              OR EXISTS
+              (
+                  SELECT changed.PlayId, changed.AwardCategoryCode,
+                         CONVERT(varbinary(max), changed.Candidate),
+                         CONVERT(varbinary(max), changed.Role), changed.PhotoImageId,
+                         changed.IsPublished, changed.IsCurrent
+                  EXCEPT
+                  SELECT previous.PlayId, previous.AwardCategoryCode,
+                         CONVERT(varbinary(max), previous.Candidate),
+                         CONVERT(varbinary(max), previous.Role), previous.PhotoImageId,
+                         previous.IsPublished, previous.IsCurrent
+              )
+          )
+    ), AffectedPlays AS
+    (
+        SELECT NewPlayId AS PlayId FROM ChangedCandidates WHERE NewPlayId IS NOT NULL
+        UNION
+        SELECT OldPlayId FROM ChangedCandidates WHERE OldPlayId IS NOT NULL
+    )
+    SELECT @AffectedPlayIdsJson =
+    (
+        SELECT play.Id
+        FROM dbo.Plays AS play
+        INNER JOIN AffectedPlays AS affected ON affected.PlayId = play.Id
+        WHERE play.SourceFormId IS NOT NULL
+        FOR JSON PATH
+    );
 
-    OPEN affected_candidate_play_cursor;
-    FETCH NEXT FROM affected_candidate_play_cursor INTO @AffectedPlayId;
-    WHILE @@FETCH_STATUS = 0
-    BEGIN
-        EXEC dbo.usp_SynchronizePlayDataToForms @PlayId = @AffectedPlayId;
-        FETCH NEXT FROM affected_candidate_play_cursor INTO @AffectedPlayId;
-    END;
-    CLOSE affected_candidate_play_cursor;
-    DEALLOCATE affected_candidate_play_cursor;
+    /* Empty FOR JSON assignments can be SQL NULL; never expand a no-op DML
+       statement into the procedure's NULL/full-maintenance scope. */
+    IF @AffectedPlayIdsJson IS NULL OR @AffectedPlayIdsJson = N'[]' RETURN;
+    EXEC dbo.usp_SynchronizePlayDataToForms
+        @PlayIdsJson = @AffectedPlayIdsJson, @SyncCandidateData = 1;
 END;

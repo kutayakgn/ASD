@@ -1407,3 +1407,34 @@ body.has-photo-preview {
         max-height: 240px;
     }
 }
+
+.edit-password {
+    position: relative;
+    width: 100%;
+}
+.add-jury-field .edit-password input {
+    width: 100%;
+    padding-right: 48px;
+}
+.edit-password input::placeholder {
+    color: #171717;
+    opacity: 1;
+    letter-spacing: 2px;
+}
+.edit-password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    padding: 4px;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+}
+.edit-password-toggle img { width: 20px; height: 20px; }
+.edit-password-toggle:disabled { opacity: .4; cursor: default; }
+.edit-password-help { color: #666; font-size: 12px; line-height: 18px; }

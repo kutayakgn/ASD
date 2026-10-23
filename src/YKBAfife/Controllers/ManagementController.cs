@@ -290,7 +290,7 @@ public sealed partial class ManagementController(
         model.Id = id;
         model.Username = model.Username?.Trim() ?? string.Empty;
         model.Email = model.Email?.Trim() ?? string.Empty;
-        model.Password ??= string.Empty;
+        model.Password = string.IsNullOrWhiteSpace(model.Password) ? null : model.Password;
         model.FullName = string.Join(
             ' ',
             (model.FullName ?? string.Empty).Split(

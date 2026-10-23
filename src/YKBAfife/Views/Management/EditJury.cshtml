@@ -48,14 +48,22 @@
 
             <div class="add-jury-field">
                 <label asp-for="Password"></label>
-                <input asp-for="Password"
+                <div class="edit-password" data-edit-password>
+                <input asp-for="Password" value=""
                        type="password"
                        autocomplete="new-password"
-                       required
                        minlength="@YKBAfife.Helpers.PasswordPolicy.MinimumLength"
                        maxlength="@YKBAfife.Helpers.PasswordPolicy.MaximumLength"
                        pattern="@YKBAfife.Helpers.PasswordPolicy.Pattern"
-                       placeholder="Yeni şifre yazın" />
+                       placeholder="••••••••"
+                       aria-describedby="password-help"
+                       data-edit-password-input />
+                    <button type="button" class="edit-password-toggle" data-edit-password-toggle
+                            aria-label="Yeni şifreyi göster" aria-pressed="false" disabled>
+                        <img src="~/icons/eye.svg" alt="" aria-hidden="true" />
+                    </button>
+                </div>
+                <small id="password-help" class="edit-password-help">Mevcut şifre korunur. Değiştirmek için yeni şifre yazın; göz simgesi yeni şifreyi gösterir.</small>
                 <span asp-validation-for="Password"></span>
             </div>
 
@@ -162,4 +170,5 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script src="~/js/add-jury.js" asp-append-version="true"></script>
+    <script src="~/js/edit-password.js" asp-append-version="true"></script>
 }

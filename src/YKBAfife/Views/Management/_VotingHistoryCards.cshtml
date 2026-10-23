@@ -1,5 +1,6 @@
 @model YKBAfife.Models.ViewModels.VotingHistoryCardsViewModel
 
+<div data-voting-history-scope data-play-id="@Model.PlayId" data-jury-id="@Model.JuryId">
 @if (Model.Categories.Count == 0)
 {
     <p class="voting-history-empty">Bu oyun için yayınlanmış ödül kategorisi bulunamadı.</p>
@@ -47,3 +48,11 @@ else
         }
     </div>
 }
+    <div class="voting-history-actions">
+        <button type="button" class="voting-history-reset voting-history-reset-all"
+                data-reset-all-votes
+                disabled="@(!Model.Categories.Any(category => category.Candidates.Any(candidate => candidate.HasVote)))">
+            Tüm Oylamaları Sıfırla
+        </button>
+    </div>
+</div>

@@ -93,6 +93,7 @@ internal static partial class DatabaseSchemaValidator
                      !x.EndsWith(".JuryLogs", StringComparison.OrdinalIgnoreCase) &&
                      !x.EndsWith(".UsersLog", StringComparison.OrdinalIgnoreCase) &&
                      !x.EndsWith(".JuryPasswordResetTokens", StringComparison.OrdinalIgnoreCase) &&
+                     !x.EndsWith(".SharedAdminDataProtectionKeys", StringComparison.OrdinalIgnoreCase) &&
                      !x.EndsWith(".__EFMigrationsHistory", StringComparison.OrdinalIgnoreCase)))
         {
             var parts = table.Split('.', 2);
@@ -210,11 +211,16 @@ internal static partial class DatabaseSchemaValidator
                 continue;
             }
 
-            if (row != expected.Value)
+            // Labels and status colors are editable application data. Startup
+            // validates integration codes and behavior, without resetting or
+            // rejecting administrators' saved presentation choices.
+            if (row.IsPublished != expected.Value.IsPublished ||
+                row.Flag != expected.Value.Flag ||
+                (expected.Key.Type == "AwardCategory" && row.Value != expected.Value.Value))
             {
                 invalid.Add(
                     $"reference data {expected.Key.Type} code {expected.Key.Code} " +
-                    $"expected [{expected.Value}] but found [{row}]");
+                    "has invalid publication or category behavior flags");
             }
         }
 
@@ -306,7 +312,8 @@ internal static partial class DatabaseSchemaValidator
             JOIN sys.tables t ON t.object_id = dc.parent_object_id
             JOIN sys.schemas s ON s.schema_id = t.schema_id
             WHERE c.name = N'IsPublished'
-              AND REPLACE(REPLACE(REPLACE(dc.definition, N'(', N''), N')', N''), N' ', N'') = N'1'
+              AND UPPER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(dc.definition, N'(', N''), N')', N''), N' ', N''), N'[', N''), N']', N''))
+                  IN (N'1', N'CAST1ASBIT', N'CONVERTBIT,1')
             UNION ALL
             SELECT N'X', candidateIndex.name
             FROM sys.indexes AS candidateIndex
