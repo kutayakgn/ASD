@@ -1416,6 +1416,10 @@ body.has-photo-preview {
     width: 100%;
     padding-right: 48px;
 }
+.edit-password input::-ms-clear,
+.edit-password input::-ms-reveal {
+    display: none;
+}
 .edit-password input::placeholder {
     color: #171717;
     opacity: 1;
