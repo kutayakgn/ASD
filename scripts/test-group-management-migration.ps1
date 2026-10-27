@@ -23,6 +23,9 @@ $previousMigration = $migrationIds[$targetIndex - 1]
 $deletionMigrations = @($migrationIds | Where-Object { $_ -match '^\d{14}_GroupDeletionRules_v_' })
 if ($deletionMigrations.Count -ne 1) { throw 'Expected exactly one additive group-deletion migration.' }
 $deletionMigration = $deletionMigrations[0]
+$compatibilityMigrations = @($migrationIds | Where-Object { $_ -match '^\d{14}_DuplicateGroupCascadeCompatibility_v_' })
+if ($compatibilityMigrations.Count -ne 1) { throw 'Expected exactly one duplicate-group-cascade compatibility migration.' }
+$compatibilityMigration = $compatibilityMigrations[0]
 $databaseName = 'YkbAfifeGroupMigrationTest_' + [Guid]::NewGuid().ToString('N')
 $previousConnection = $env:ConnectionStrings__AfifeConnectionString
 $databaseCreated = $false
@@ -91,6 +94,13 @@ CREATE TABLE dbo.GroupMigrationExistingCascade
     Payload nvarchar(100) NOT NULL,
     CONSTRAINT FK_GroupMigrationExistingCascade_Code FOREIGN KEY (GroupCode) REFERENCES dbo.[Group](Code) ON UPDATE CASCADE
 );
+/* Company databases can retain a legacy-named FK while adoption adds the
+   canonical name. Both relationships must remain enabled and trusted, with
+   only one cascading path for this exact column mapping. */
+ALTER TABLE dbo.Users WITH CHECK ADD CONSTRAINT FK_Users_Groups
+    FOREIGN KEY (GroupCode) REFERENCES dbo.[Group](Code) ON UPDATE NO ACTION ON DELETE NO ACTION;
+ALTER TABLE dbo.GroupMigrationExtra WITH CHECK ADD CONSTRAINT FK_GroupMigrationExtra_LegacyCode
+    FOREIGN KEY (GroupCode) REFERENCES dbo.[Group](Code) ON UPDATE NO ACTION ON DELETE NO ACTION;
 DECLARE @Published uniqueidentifier = NEWID(), @Hidden uniqueidentifier = NEWID();
 INSERT dbo.[Group] (Id, Code, GroupName, CreatedAt, IsPublished)
 VALUES (@Published, 987601, N'Migration published group', '2099-01-01', 1),
@@ -138,6 +148,9 @@ IF @Snapshot <> HASHBYTES('SHA2_256', CONCAT(
 IF (SELECT COUNT(*) FROM sys.foreign_keys WHERE name IN (N'FK_Users_Group', N'FK_GroupMigrationExtra_Code', N'FK_GroupMigrationExistingCascade_Code')
     AND update_referential_action = 1 AND delete_referential_action = 0 AND is_disabled = 0 AND is_not_trusted = 0) <> 3
     THROW 53624, N'Not every Code foreign key became an enabled trusted update cascade.', 1;
+IF (SELECT COUNT(*) FROM sys.foreign_keys WHERE name IN (N'FK_Users_Groups', N'FK_GroupMigrationExtra_LegacyCode')
+    AND update_referential_action = 0 AND delete_referential_action = 0 AND is_disabled = 0 AND is_not_trusted = 0) <> 2
+    THROW 53644, N'Equivalent legacy foreign keys did not remain trusted NO ACTION relationships.', 1;
 IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_GroupMigrationExtra_Id' AND update_referential_action = 0)
     THROW 53625, N'Unrelated Group.Id reference was changed.', 1;
 IF NOT EXISTS (SELECT 1 FROM sys.indexes AS lookupIndex
@@ -146,7 +159,7 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes AS lookupIndex
     WHERE lookupIndex.object_id = OBJECT_ID(N'dbo.GroupMigrationExtra') AND lookupIndex.is_disabled = 0
       AND indexColumn.key_ordinal = 1 AND columnRecord.name = N'GroupCode')
     THROW 53626, N'Dependent lookup index was not installed.', 1;
-PRINT N'PASS: deployment preserves every existing value and configures indexed Code cascades, including external tables.';
+PRINT N'PASS: pending historical migration accepts company-named duplicate FKs, retains trusted NO ACTION duplicates and preserves every existing row.';
 UPDATE dbo.[Group] SET Code = Code + 100 WHERE Code IN (987601, 987602);
 IF (SELECT COUNT(*) FROM dbo.Users WHERE Username LIKE N'group.migration.%' AND GroupCode IN (987701, 987702)) <> 2
    OR (SELECT COUNT(*) FROM dbo.GroupMigrationExtra WHERE GroupCode IN (987701, 987702)) <> 2
@@ -168,6 +181,9 @@ PRINT N'PASS: multirow published/hidden group Code changes atomically update use
 IF (SELECT COUNT(*) FROM sys.foreign_keys WHERE name IN (N'FK_Users_Group', N'FK_GroupMigrationExtra_Code')
     AND update_referential_action = 0 AND is_disabled = 0 AND is_not_trusted = 0) <> 2
     THROW 53629, N'Down did not restore original FK update rules.', 1;
+IF (SELECT COUNT(*) FROM sys.foreign_keys WHERE name IN (N'FK_Users_Groups', N'FK_GroupMigrationExtra_LegacyCode')
+    AND update_referential_action = 0 AND is_disabled = 0 AND is_not_trusted = 0) <> 2
+    THROW 53645, N'Down changed the original duplicate NO ACTION relationships.', 1;
 IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_GroupMigrationExistingCascade_Code' AND update_referential_action = 1)
     THROW 53630, N'Down replaced a pre-existing CASCADE rule.', 1;
 IF OBJECT_ID(N'dbo.TR_Group_ProtectAssignments', N'TR') IS NOT NULL
@@ -302,6 +318,96 @@ IF NOT EXISTS (SELECT 1 FROM dbo.[Group] WHERE Code = 988105 AND IsPublished = 0
         AND GroupCode = 988105 AND PasswordHash = N'opaque preserved deletion hash ')
     THROW 53643, N'Additive Up did not restore permissive admin-only soft removal with membership intact.', 1;
 PRINT N'PASS: additive Up/Down/Up preserves account/hash/membership values and restores the revised deletion rule.';
+'@
+    # Reproduce a previously installed legacy-name cascade before applying the
+    # new additive migration. No business row changes are needed to repair DDL.
+    Invoke-GroupMigrationSql @'
+ALTER TABLE dbo.Users DROP CONSTRAINT FK_Users_Group;
+ALTER TABLE dbo.Users WITH CHECK ADD CONSTRAINT FK_Users_Group FOREIGN KEY (GroupCode)
+    REFERENCES dbo.[Group](Code) ON UPDATE NO ACTION ON DELETE NO ACTION;
+EXEC sys.sp_addextendedproperty @name = N'Afife:GroupCodeOriginalUpdateAction', @value = 0,
+    @level0type = N'SCHEMA', @level0name = N'dbo', @level1type = N'TABLE', @level1name = N'Users',
+    @level2type = N'CONSTRAINT', @level2name = N'FK_Users_Group';
+ALTER TABLE dbo.Users DROP CONSTRAINT FK_Users_Groups;
+ALTER TABLE dbo.Users WITH CHECK ADD CONSTRAINT FK_Users_Groups FOREIGN KEY (GroupCode)
+    REFERENCES dbo.[Group](Code) ON UPDATE CASCADE ON DELETE NO ACTION;
+EXEC sys.sp_addextendedproperty @name = N'Afife:GroupCodeOriginalUpdateAction', @value = 0,
+    @level0type = N'SCHEMA', @level0name = N'dbo', @level1type = N'TABLE', @level1name = N'Users',
+    @level2type = N'CONSTRAINT', @level2name = N'FK_Users_Groups';
+DECLARE @BeforeCompatibility varbinary(32) = HASHBYTES('SHA2_256', CONCAT(
+    (SELECT * FROM dbo.[Group] ORDER BY Id FOR JSON PATH, INCLUDE_NULL_VALUES),
+    (SELECT * FROM dbo.Users ORDER BY Id FOR JSON PATH, INCLUDE_NULL_VALUES),
+    (SELECT * FROM dbo.GroupMigrationExtra ORDER BY Id FOR JSON PATH, INCLUDE_NULL_VALUES),
+    (SELECT * FROM dbo.GroupMigrationExistingCascade ORDER BY Id FOR JSON PATH, INCLUDE_NULL_VALUES)));
+EXEC sys.sp_addextendedproperty @name = N'AfifeTest:GroupCascadeCompatibilitySnapshot', @value = @BeforeCompatibility;
+'@
+    Invoke-GroupMigration $compatibilityMigration
+    Invoke-GroupMigrationSql @'
+DECLARE @BeforeCompatibility varbinary(32) =
+    (SELECT CONVERT(varbinary(32), value) FROM sys.extended_properties
+     WHERE class = 0 AND name = N'AfifeTest:GroupCascadeCompatibilitySnapshot');
+IF @BeforeCompatibility <> HASHBYTES('SHA2_256', CONCAT(
+    (SELECT * FROM dbo.[Group] ORDER BY Id FOR JSON PATH, INCLUDE_NULL_VALUES),
+    (SELECT * FROM dbo.Users ORDER BY Id FOR JSON PATH, INCLUDE_NULL_VALUES),
+    (SELECT * FROM dbo.GroupMigrationExtra ORDER BY Id FOR JSON PATH, INCLUDE_NULL_VALUES),
+    (SELECT * FROM dbo.GroupMigrationExistingCascade ORDER BY Id FOR JSON PATH, INCLUDE_NULL_VALUES)))
+    THROW 53646, N'Corrective migration changed existing group, account/hash or external dependent data.', 1;
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_Users_Group'
+    AND update_referential_action = 0 AND delete_referential_action = 0 AND is_disabled = 0 AND is_not_trusted = 0)
+    OR NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_Users_Groups'
+    AND update_referential_action = 1 AND delete_referential_action = 0 AND is_disabled = 0 AND is_not_trusted = 0)
+    THROW 53647, N'Corrective migration did not preserve the already-installed trusted legacy cascade winner.', 1;
+IF (SELECT COUNT(*) FROM sys.foreign_keys AS relationship
+    INNER JOIN sys.extended_properties AS originalRule ON originalRule.class = 1
+        AND originalRule.major_id = relationship.object_id AND originalRule.minor_id = 0
+        AND originalRule.name = N'Afife:GroupCodeOriginalUpdateAction'
+    WHERE relationship.name IN (N'FK_Users_Group', N'FK_Users_Groups')
+      AND CONVERT(int, originalRule.value) = 0) <> 2
+    THROW 53648, N'Corrective migration replaced the original FK update-rule snapshot.', 1;
+UPDATE dbo.[Group] SET Code = Code + 200 WHERE Code IN (987701, 987702);
+IF (SELECT COUNT(*) FROM dbo.Users WHERE Username LIKE N'group.migration.%' AND GroupCode IN (987901, 987902)) <> 2
+    OR (SELECT COUNT(*) FROM dbo.GroupMigrationExtra WHERE GroupCode IN (987901, 987902)) <> 2
+    OR (SELECT COUNT(*) FROM dbo.GroupMigrationExistingCascade WHERE GroupCode IN (987901, 987902)) <> 2
+    THROW 53649, N'Code updates failed to propagate through the existing cascade alongside duplicate NO ACTION constraints.', 1;
+UPDATE dbo.[Group] SET Code = Code - 200 WHERE Code IN (987901, 987902);
+IF @BeforeCompatibility <> HASHBYTES('SHA2_256', CONCAT(
+    (SELECT * FROM dbo.[Group] ORDER BY Id FOR JSON PATH, INCLUDE_NULL_VALUES),
+    (SELECT * FROM dbo.Users ORDER BY Id FOR JSON PATH, INCLUDE_NULL_VALUES),
+    (SELECT * FROM dbo.GroupMigrationExtra ORDER BY Id FOR JSON PATH, INCLUDE_NULL_VALUES),
+    (SELECT * FROM dbo.GroupMigrationExistingCascade ORDER BY Id FOR JSON PATH, INCLUDE_NULL_VALUES)))
+    THROW 53650, N'Code round-trip changed an unrelated group/account/hash field or lost a dependent relationship.', 1;
+PRINT N'PASS: additive compatibility migration preserves a valid legacy cascade without row changes; all Code references still propagate atomically.';
+'@
+    Invoke-GroupMigration $deletionMigration
+    Invoke-GroupMigrationSql @'
+DECLARE @BeforeCompatibility varbinary(32) =
+    (SELECT CONVERT(varbinary(32), value) FROM sys.extended_properties
+     WHERE class = 0 AND name = N'AfifeTest:GroupCascadeCompatibilitySnapshot');
+IF @BeforeCompatibility <> HASHBYTES('SHA2_256', CONCAT(
+    (SELECT * FROM dbo.[Group] ORDER BY Id FOR JSON PATH, INCLUDE_NULL_VALUES),
+    (SELECT * FROM dbo.Users ORDER BY Id FOR JSON PATH, INCLUDE_NULL_VALUES),
+    (SELECT * FROM dbo.GroupMigrationExtra ORDER BY Id FOR JSON PATH, INCLUDE_NULL_VALUES),
+    (SELECT * FROM dbo.GroupMigrationExistingCascade ORDER BY Id FOR JSON PATH, INCLUDE_NULL_VALUES)))
+    THROW 53651, N'Compatibility Down changed existing data.', 1;
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_Users_Group'
+    AND update_referential_action = 0 AND is_disabled = 0 AND is_not_trusted = 0)
+    OR NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_Users_Groups'
+    AND update_referential_action = 1 AND is_disabled = 0 AND is_not_trusted = 0)
+    THROW 53652, N'Compatibility Down reintroduced an unsafe duplicate cascading path.', 1;
+PRINT N'PASS: compatibility Down retains the trusted legacy cascade and every existing account/group value.';
+'@
+    Invoke-GroupMigration $compatibilityMigration
+    Invoke-GroupMigrationSql @'
+DECLARE @BeforeCompatibility varbinary(32) =
+    (SELECT CONVERT(varbinary(32), value) FROM sys.extended_properties
+     WHERE class = 0 AND name = N'AfifeTest:GroupCascadeCompatibilitySnapshot');
+IF @BeforeCompatibility <> HASHBYTES('SHA2_256', CONCAT(
+    (SELECT * FROM dbo.[Group] ORDER BY Id FOR JSON PATH, INCLUDE_NULL_VALUES),
+    (SELECT * FROM dbo.Users ORDER BY Id FOR JSON PATH, INCLUDE_NULL_VALUES),
+    (SELECT * FROM dbo.GroupMigrationExtra ORDER BY Id FOR JSON PATH, INCLUDE_NULL_VALUES),
+    (SELECT * FROM dbo.GroupMigrationExistingCascade ORDER BY Id FOR JSON PATH, INCLUDE_NULL_VALUES)))
+    THROW 53653, N'Compatibility Up/Down/Up changed existing data.', 1;
+PRINT N'PASS: compatibility Up/Down/Up preserves every existing group, user/hash and external dependent row.';
 '@
     Write-Host "Group migration Up/Down/Up regression passed for $databaseName."
 }

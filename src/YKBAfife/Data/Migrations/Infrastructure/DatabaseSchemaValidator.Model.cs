@@ -95,8 +95,20 @@ internal static partial class DatabaseSchemaValidator
                 // SQL-managed update cascade; every other FK stays NO ACTION.
                 var expectedUpdateAction = principalSchema == "dbo" && principalTable == "Group" &&
                     foreignKey.PrincipalKey.Properties.Any(property => property.GetColumnName(principalStore) == "Code") ? 1 : 0;
-                if (!actual.ForeignKeys.TryGetValue(key, out var row) || row.Disabled || row.Untrusted ||
-                    row.DeleteAction != 0 || row.UpdateAction != expectedUpdateAction ||
+                actual.ForeignKeys.TryGetValue(key, out var row);
+                // A company schema can preserve its legacy-named cascade FK
+                // beside the equivalent model-named NO ACTION FK. Require the
+                // same dependent/principal objects and every ordered column;
+                // a cascade elsewhere on the table is never a substitute.
+                var validUpdateAction = row is not null && (row.UpdateAction == expectedUpdateAction ||
+                    expectedUpdateAction == 1 && row.UpdateAction == 0 &&
+                    actual.ForeignKeys.Values.Any(sibling =>
+                        sibling.ParentObjectId == row.ParentObjectId && sibling.PrincipalObjectId == row.PrincipalObjectId &&
+                        !sibling.Disabled && !sibling.Untrusted && sibling.DeleteAction == 0 && sibling.UpdateAction == 1 &&
+                        sibling.Columns.SequenceEqual(row.Columns, StringComparer.OrdinalIgnoreCase) &&
+                        sibling.PrincipalColumns.SequenceEqual(row.PrincipalColumns, StringComparer.OrdinalIgnoreCase)));
+                if (row is null || row.Disabled || row.Untrusted ||
+                    row.DeleteAction != 0 || !validUpdateAction ||
                     !string.Equals(row.PrincipalTable, $"{principalSchema}.{principalTable}", StringComparison.OrdinalIgnoreCase) ||
                     !row.Columns.SequenceEqual(foreignKey.Properties.Select(Column), StringComparer.OrdinalIgnoreCase) ||
                     !row.PrincipalColumns.SequenceEqual(foreignKey.PrincipalKey.Properties.Select(property => property.GetColumnName(principalStore)!), StringComparer.OrdinalIgnoreCase))
@@ -148,7 +160,7 @@ internal static partial class DatabaseSchemaValidator
 
             SELECT s.name + N'.' + t.name + N'.' + f.name, ps.name + N'.' + pt.name,
                    f.is_disabled, f.is_not_trusted, f.delete_referential_action, f.update_referential_action,
-                   c.name, pc.name
+                   c.name, pc.name, f.parent_object_id, f.referenced_object_id
             FROM sys.foreign_keys f JOIN sys.tables t ON t.object_id = f.parent_object_id
             JOIN sys.schemas s ON s.schema_id = t.schema_id
             JOIN sys.tables pt ON pt.object_id = f.referenced_object_id
@@ -187,7 +199,8 @@ internal static partial class DatabaseSchemaValidator
         {
             var key = reader.GetString(0);
             if (!result.ForeignKeys.TryGetValue(key, out var row))
-                result.ForeignKeys[key] = row = new ForeignKeyRule(reader.GetString(1), reader.GetBoolean(2), reader.GetBoolean(3), reader.GetByte(4), reader.GetByte(5));
+                result.ForeignKeys[key] = row = new ForeignKeyRule(reader.GetString(1), reader.GetBoolean(2), reader.GetBoolean(3),
+                    reader.GetByte(4), reader.GetByte(5), reader.GetInt32(8), reader.GetInt32(9));
             row.Columns.Add(reader.GetString(6)); row.PrincipalColumns.Add(reader.GetString(7));
         }
         await reader.NextResultAsync(cancellationToken);
@@ -238,7 +251,8 @@ internal static partial class DatabaseSchemaValidator
     {
         public List<string> Columns { get; } = [];
     }
-    private sealed record ForeignKeyRule(string PrincipalTable, bool Disabled, bool Untrusted, byte DeleteAction, byte UpdateAction)
+    private sealed record ForeignKeyRule(string PrincipalTable, bool Disabled, bool Untrusted,
+        byte DeleteAction, byte UpdateAction, int ParentObjectId, int PrincipalObjectId)
     {
         public List<string> Columns { get; } = [];
         public List<string> PrincipalColumns { get; } = [];

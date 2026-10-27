@@ -96,6 +96,7 @@ CheckSoftDelete(new Config { Id = Guid.NewGuid(), IsPublished = true, ConfigValu
     entity => !entity.IsPublished && entity.ConfigValue == "false");
 
 MigrationPayloadRuntimeRegression.Run(Assert);
+GroupCascadeCompatibilityRegression.Run(Assert);
 
 Console.WriteLine($"Entity model parity: {assertions} assertions passed; no DB connection required.");
 

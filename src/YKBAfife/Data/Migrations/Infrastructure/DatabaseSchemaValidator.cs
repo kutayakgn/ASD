@@ -111,7 +111,7 @@ internal static partial class DatabaseSchemaValidator
 
         foreach (var foreignKey in catalog.CascadingForeignKeys)
         {
-            missing.Add($"foreign key {foreignKey} must use ON DELETE NO ACTION and ON UPDATE NO ACTION (CASCADE only for dbo.Group.Code)");
+            missing.Add($"foreign key {foreignKey} must use ON DELETE NO ACTION and ON UPDATE NO ACTION (one CASCADE per exact dbo.Group.Code mapping)");
         }
 
         foreach (var obsoleteIndex in catalog.ObsoleteCandidateIndexes)
@@ -296,17 +296,49 @@ internal static partial class DatabaseSchemaValidator
             WHERE t.name LIKE N'\_\_Archived\_%' ESCAPE N'\'
             UNION ALL
             SELECT N'F', fk.name FROM sys.foreign_keys fk
+            CROSS APPLY
+            (
+                SELECT CASE WHEN EXISTS
+                (
+                    SELECT 1 FROM sys.foreign_key_columns AS groupReference
+                    INNER JOIN sys.columns AS referencedColumn
+                        ON referencedColumn.object_id = groupReference.referenced_object_id
+                       AND referencedColumn.column_id = groupReference.referenced_column_id
+                    WHERE groupReference.constraint_object_id = fk.object_id
+                      AND groupReference.referenced_object_id = OBJECT_ID(N'dbo.[Group]')
+                      AND referencedColumn.name = N'Code'
+                ) THEN 1 ELSE 0 END AS ReferencesGroupCode
+            ) AS mappingKind
             WHERE fk.delete_referential_action <> 0
-               OR fk.update_referential_action <> CASE WHEN EXISTS
+               OR (mappingKind.ReferencesGroupCode = 0 AND fk.update_referential_action <> 0)
+               OR (mappingKind.ReferencesGroupCode = 1 AND
                (
-                   SELECT 1 FROM sys.foreign_key_columns AS groupReference
-                   INNER JOIN sys.columns AS referencedColumn
-                       ON referencedColumn.object_id = groupReference.referenced_object_id
-                      AND referencedColumn.column_id = groupReference.referenced_column_id
-                   WHERE groupReference.constraint_object_id = fk.object_id
-                     AND groupReference.referenced_object_id = OBJECT_ID(N'dbo.[Group]')
-                     AND referencedColumn.name = N'Code'
-               ) THEN 1 ELSE 0 END
+                   fk.is_disabled = 1 OR fk.is_not_trusted = 1
+                   OR fk.update_referential_action NOT IN (0, 1)
+                   OR (fk.update_referential_action = 0 AND NOT EXISTS
+                   (
+                       SELECT 1 FROM sys.foreign_keys AS sibling
+                       WHERE sibling.parent_object_id = fk.parent_object_id
+                         AND sibling.referenced_object_id = fk.referenced_object_id
+                         AND sibling.update_referential_action = 1 AND sibling.delete_referential_action = 0
+                         AND sibling.is_disabled = 0 AND sibling.is_not_trusted = 0
+                         AND (SELECT COUNT(*) FROM sys.foreign_key_columns WHERE constraint_object_id = sibling.object_id) =
+                             (SELECT COUNT(*) FROM sys.foreign_key_columns WHERE constraint_object_id = fk.object_id)
+                         AND NOT EXISTS
+                         (
+                             SELECT 1 FROM sys.foreign_key_columns AS currentPair
+                             WHERE currentPair.constraint_object_id = fk.object_id
+                               AND NOT EXISTS
+                               (
+                                   SELECT 1 FROM sys.foreign_key_columns AS siblingPair
+                                   WHERE siblingPair.constraint_object_id = sibling.object_id
+                                     AND siblingPair.constraint_column_id = currentPair.constraint_column_id
+                                     AND siblingPair.parent_column_id = currentPair.parent_column_id
+                                     AND siblingPair.referenced_column_id = currentPair.referenced_column_id
+                               )
+                         )
+                   ))
+               ))
             UNION ALL
             SELECT N'Q', s.name + N'.' + t.name
             FROM sys.key_constraints pk

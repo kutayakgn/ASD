@@ -55,6 +55,10 @@ IF OBJECT_ID(N'dbo.CK_Users_Username_InstagramFormat', N'C') IS NOT NULL
     if ($LASTEXITCODE -ne 0) { throw 'Company fixture creation failed.' }
 
     sqlcmd -I -S $server -d $databaseName -b -Q @"
+/* Preserve the historical plural name as well as the canonical FK. The whole
+   history-adoption chain and application schema validator must tolerate this. */
+ALTER TABLE dbo.Users WITH CHECK ADD CONSTRAINT FK_Users_Groups FOREIGN KEY (GroupCode)
+REFERENCES dbo.[Group](Code) ON UPDATE NO ACTION ON DELETE NO ACTION;
 DELETE FROM dbo.__EFMigrationsHistory;
 INSERT INTO dbo.__EFMigrationsHistory (MigrationId, ProductVersion)
 VALUES (N'20260812082231_ScopeUserEmailUniquenessByRole', N'8.0.29');
@@ -80,6 +84,12 @@ BEGIN
     ORDER BY MigrationSource, MigrationId;
     THROW 53007, N'Company database migration history does not match the source migration chain.', 1;
 END;
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_Users_Group'
+    AND update_referential_action = 1 AND delete_referential_action = 0 AND is_disabled = 0 AND is_not_trusted = 0)
+    OR NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_Users_Groups'
+    AND update_referential_action = 0 AND delete_referential_action = 0 AND is_disabled = 0 AND is_not_trusted = 0)
+    THROW 53720, N'Company legacy/canonical duplicate FKs do not retain one safe trusted cascade path.', 1;
 
 IF NOT EXISTS
 (
@@ -533,6 +543,32 @@ EXEC dbo.usp_RefreshRankings;
     [System.IO.File]::WriteAllText($verificationPath, $verification, [System.Text.UTF8Encoding]::new($false))
     sqlcmd -I -S $server -d $databaseName -b -f 65001 -i $verificationPath
     if ($LASTEXITCODE -ne 0) { throw 'Upgraded database verification failed.' }
+
+    # A valid company database may already cascade through the plural legacy
+    # constraint. Startup must accept its exact-equivalent canonical NO ACTION
+    # sibling instead of requiring a second cascading path.
+    sqlcmd -I -S $server -d $databaseName -b -Q @"
+DECLARE @BeforeLegacyWinner varbinary(32) = HASHBYTES('SHA2_256', CONCAT(
+    (SELECT * FROM dbo.[Group] ORDER BY Id FOR JSON PATH, INCLUDE_NULL_VALUES),
+    (SELECT * FROM dbo.Users ORDER BY Id FOR JSON PATH, INCLUDE_NULL_VALUES)));
+ALTER TABLE dbo.Users DROP CONSTRAINT FK_Users_Group;
+ALTER TABLE dbo.Users WITH CHECK ADD CONSTRAINT FK_Users_Group FOREIGN KEY (GroupCode)
+REFERENCES dbo.[Group](Code) ON UPDATE NO ACTION ON DELETE NO ACTION;
+ALTER TABLE dbo.Users DROP CONSTRAINT FK_Users_Groups;
+ALTER TABLE dbo.Users WITH CHECK ADD CONSTRAINT FK_Users_Groups FOREIGN KEY (GroupCode)
+REFERENCES dbo.[Group](Code) ON UPDATE CASCADE ON DELETE NO ACTION;
+IF @BeforeLegacyWinner <> HASHBYTES('SHA2_256', CONCAT(
+    (SELECT * FROM dbo.[Group] ORDER BY Id FOR JSON PATH, INCLUDE_NULL_VALUES),
+    (SELECT * FROM dbo.Users ORDER BY Id FOR JSON PATH, INCLUDE_NULL_VALUES)))
+    THROW 53721, N'Legacy cascade fixture changed group/account data.', 1;
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_Users_Group'
+    AND update_referential_action = 0 AND delete_referential_action = 0 AND is_disabled = 0 AND is_not_trusted = 0)
+    OR NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_Users_Groups'
+    AND update_referential_action = 1 AND delete_referential_action = 0 AND is_disabled = 0 AND is_not_trusted = 0)
+    THROW 53722, N'Legacy-name cascade fixture is not enabled/trusted.', 1;
+PRINT N'PASS: legacy cascade winner and canonical NO ACTION sibling are ready for application startup validation.';
+"@
+    if ($LASTEXITCODE -ne 0) { throw 'Legacy cascade startup fixture failed.' }
 
     $stdoutPath = Join-Path $env:TEMP ($databaseName + '.stdout.log')
     $stderrPath = Join-Path $env:TEMP ($databaseName + '.stderr.log')

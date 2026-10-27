@@ -57,7 +57,8 @@ internal static partial class MigrationSqlResources
         }
 
         ExecuteSql(migrationBuilder, ReadVersionSection(
-            migrationName, directionFile[..^4].ToUpperInvariant(), []));
+            migrationName, directionFile[..^4].ToUpperInvariant(), []),
+            applyHistoricalCompatibility: true);
     }
 
     public static void AdoptSquashedBaseline(MigrationBuilder migrationBuilder)
@@ -107,7 +108,8 @@ internal static partial class MigrationSqlResources
         MigrationBuilder migrationBuilder,
         string sql,
         bool skipWhenBaselineExists = false,
-        bool onlyWhenBaselineExists = false)
+        bool onlyWhenBaselineExists = false,
+        bool applyHistoricalCompatibility = false)
     {
         foreach (var batch in GoBatchRegex().Split(sql))
         {
@@ -115,6 +117,11 @@ internal static partial class MigrationSqlResources
             if (command.Length == 0)
             {
                 continue;
+            }
+
+            if (applyHistoricalCompatibility)
+            {
+                command = ApplyHistoricalGroupCascadeCompatibility(command);
             }
 
             if (skipWhenBaselineExists)
