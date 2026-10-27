@@ -271,10 +271,9 @@ public sealed partial class ManagementController
         await using var photoStream = new MemoryStream();
         await photo.CopyToAsync(photoStream, cancellationToken);
         var data = photoStream.ToArray();
-        var contentType = photo.ContentType.Trim().ToLowerInvariant();
-        if (!IsSupportedPhoto(data, contentType, Path.GetFileName(photo.FileName)))
+        if (!ImageUploadFormat.TryNormalize(data, photo.FileName, out var contentType, out var fileName))
             return (null, null, null, "Yalnızca JPEG, PNG veya WebP formatında fotoğraf yükleyebilirsiniz.");
 
-        return (data, contentType, Path.GetFileName(photo.FileName), null);
+        return (data, contentType, fileName, null);
     }
 }

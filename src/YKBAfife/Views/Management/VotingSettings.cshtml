@@ -65,6 +65,18 @@
                 </div>
             </div>
         </section>
+        <section class="settings-accordion-item" data-settings-section>
+            <h2 class="settings-accordion-heading">
+                <button type="button" class="settings-accordion-trigger" aria-expanded="false" aria-controls="group-settings-content" data-settings-trigger>
+                    <span>Jüri Grupları</span><img src="~/icons/angle-down.svg" alt="" aria-hidden="true" />
+                </button>
+            </h2>
+            <div id="group-settings-content" class="settings-accordion-content" data-settings-content hidden>
+                <div class="settings-accordion-content-inner">
+                    @await Component.InvokeAsync("ComplexTable", new { model = Model.GroupTable })
+                </div>
+            </div>
+        </section>
     </div>
 </section>
 

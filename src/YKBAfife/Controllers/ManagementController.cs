@@ -1,10 +1,10 @@
 using System.Data;
-using System.Buffers.Binary;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using YKBAfife.Business.Helpers;
 using YKBAfife.Data;
 using YKBAfife.Helpers;
@@ -72,6 +72,7 @@ public sealed partial class ManagementController(
                 user.FirstName,
                 user.LastName,
                 user.Phone,
+                user.GroupCode,
                 user.PhotoImageId,
                 user.IsActive,
                 user.IsJuryPresident,
@@ -86,6 +87,13 @@ public sealed partial class ManagementController(
         {
             return NotFound();
         }
+
+        var groupName = jury.GroupCode.HasValue
+            ? await context.Groups.IgnoreQueryFilters().AsNoTracking()
+                .Where(group => group.Code == jury.GroupCode.Value)
+                .Select(group => group.GroupName)
+                .SingleOrDefaultAsync(cancellationToken)
+            : null;
 
         var metrics = await context.UserLogs
             .AsNoTracking()
@@ -132,6 +140,8 @@ public sealed partial class ManagementController(
             Email = jury.Email,
             FullName = (jury.FirstName + " " + jury.LastName).Trim(),
             Phone = jury.Phone ?? "-",
+            GroupCode = jury.GroupCode,
+            GroupName = groupName,
             HasPhoto = jury.PhotoImageId.HasValue,
             IsActive = jury.IsActive,
             IsJuryPresident = jury.IsJuryPresident,
@@ -247,6 +257,7 @@ public sealed partial class ManagementController(
                 Email = user.Email,
                 FullName = (user.FirstName + " " + user.LastName).Trim(),
                 Phone = user.Phone ?? string.Empty,
+                GroupCode = user.GroupCode,
                 IsActive = user.IsActive,
                 IsJuryPresident = user.IsJuryPresident
             })
@@ -263,6 +274,7 @@ public sealed partial class ManagementController(
             .Select(user => user.PhotoImageId)
             .SingleAsync(cancellationToken);
         await PopulateEditJuryPhotoStateAsync(jury, photoId, cancellationToken);
+        await PopulateEditJuryGroupsAsync(jury, cancellationToken);
         return View(jury);
     }
 
@@ -298,8 +310,18 @@ public sealed partial class ManagementController(
                 StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
         model.Phone = model.Phone?.Trim() ?? string.Empty;
 
+        var invalidGroupCode = ModelState.TryGetValue(nameof(model.GroupCode), out var groupCodeState) &&
+            groupCodeState.Errors.Count > 0;
         ModelState.Clear();
         TryValidateModel(model);
+
+        if (invalidGroupCode || model.GroupCode.HasValue &&
+            !await context.Groups.AsNoTracking().AnyAsync(
+                group => group.Code == model.GroupCode.Value && group.IsPublished,
+                cancellationToken))
+        {
+            ModelState.AddModelError(nameof(model.GroupCode), "Lütfen yayında olan geçerli bir jüri grubu seçiniz.");
+        }
 
         if (model.IsJuryPresident && model.IsActive != true)
         {
@@ -344,9 +366,7 @@ public sealed partial class ManagementController(
                 await using var photoStream = new MemoryStream();
                 await model.Photo.CopyToAsync(photoStream, cancellationToken);
                 photoData = photoStream.ToArray();
-                photoContentType = model.Photo.ContentType.Trim().ToLowerInvariant();
-                photoFileName = Path.GetFileName(model.Photo.FileName);
-                if (!IsSupportedPhoto(photoData, photoContentType, photoFileName))
+                if (!ImageUploadFormat.TryNormalize(photoData, model.Photo.FileName, out photoContentType, out photoFileName))
                 {
                     ModelState.AddModelError(
                         nameof(model.Photo),
@@ -358,6 +378,7 @@ public sealed partial class ManagementController(
         if (!ModelState.IsValid)
         {
             await PopulateEditJuryPhotoStateAsync(model, jury.PhotoImageId, cancellationToken);
+            await PopulateEditJuryGroupsAsync(model, cancellationToken);
             return View(model);
         }
 
@@ -376,6 +397,7 @@ public sealed partial class ManagementController(
         jury.Username = model.Username;
         jury.Email = model.Email;
         jury.Phone = model.Phone;
+        jury.GroupCode = model.GroupCode;
         jury.IsActive = model.IsActive!.Value;
         jury.IsJuryPresident = model.IsJuryPresident;
         jury.UpdatedAt = TurkeyTime.Now;
@@ -419,13 +441,39 @@ public sealed partial class ManagementController(
             }
         }
 
-        if (model.IsJuryPresident)
+        try
         {
-            await ClearOtherJuryPresidentAsync(jury.Id, currentUserId, cancellationToken);
-        }
+            if (model.IsJuryPresident)
+            {
+                await ClearOtherJuryPresidentAsync(jury.Id, currentUserId, cancellationToken);
+            }
 
-        await context.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch (Exception exception) when (IsJuryGroupSaveConflict(exception))
+        {
+            // A trigger or a deadlock may already have rolled back the SQL transaction.
+            if (transaction.GetDbTransaction().Connection is not null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+            await transaction.DisposeAsync();
+            context.ChangeTracker.Clear();
+            logger.LogWarning(exception, "Jüri grubu eşzamanlı değişiklik nedeniyle kaydedilemedi. JuryId: {JuryId}", id);
+
+            model.Password = null;
+            model.Photo = null;
+            model.RemovePhoto = false;
+            ModelState.Remove(nameof(model.Password));
+            ModelState.Remove(nameof(model.Photo));
+            ModelState.Remove(nameof(model.RemovePhoto));
+            ModelState.AddModelError(nameof(model.GroupCode),
+                "Jüri grubu kaydedilemedi. Değişiklikler uygulanmadı. Lütfen grup seçimini kontrol edip tekrar deneyiniz.");
+            await PopulateEditJuryPhotoStateAsync(model, oldPhotoId, cancellationToken);
+            await PopulateEditJuryGroupsAsync(model, cancellationToken);
+            return View(model);
+        }
 
 
         if (!string.Equals(oldEmail, jury.Email, StringComparison.OrdinalIgnoreCase))
@@ -528,10 +576,7 @@ public sealed partial class ManagementController(
                 await using var photoStream = new MemoryStream();
                 await model.Photo.CopyToAsync(photoStream, cancellationToken);
                 photoData = photoStream.ToArray();
-                photoContentType = model.Photo.ContentType.Trim().ToLowerInvariant();
-                photoFileName = Path.GetFileName(model.Photo.FileName);
-
-                if (!IsSupportedPhoto(photoData, photoContentType, photoFileName))
+                if (!ImageUploadFormat.TryNormalize(photoData, model.Photo.FileName, out photoContentType, out photoFileName))
                 {
                     ModelState.AddModelError(
                         nameof(model.Photo),
@@ -607,6 +652,38 @@ public sealed partial class ManagementController(
         return RedirectToAction(nameof(AddJury));
     }
 
+    private static bool IsJuryGroupSaveConflict(Exception exception)
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is not Microsoft.Data.SqlClient.SqlException sqlException) continue;
+            foreach (Microsoft.Data.SqlClient.SqlError error in sqlException.Errors)
+            {
+                if (error.Number is 52821 or 1205 ||
+                    error.Number == 547 && error.Message.Contains("FK_Users_Group", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private async Task PopulateEditJuryGroupsAsync(
+        EditJuryViewModel model,
+        CancellationToken cancellationToken)
+    {
+        var groups = await context.Groups.AsNoTracking()
+            .Where(group => group.IsPublished)
+            .OrderBy(group => group.Code)
+            .Select(group => new { group.Code, group.GroupName })
+            .ToListAsync(cancellationToken);
+        model.Groups = groups.Select(group => new SelectListItem(
+            group.GroupName,
+            group.Code.ToString(System.Globalization.CultureInfo.InvariantCulture)))
+            .ToArray();
+    }
+
     private async Task PopulateEditJuryPhotoStateAsync(
         EditJuryViewModel model,
         Guid? photoImageId,
@@ -649,46 +726,6 @@ public sealed partial class ManagementController(
                 .SetProperty(user => user.IsJuryPresident, false)
                 .SetProperty(user => user.UpdatedAt, TurkeyTime.Now)
                 .SetProperty(user => user.UpdatedBy, currentUserId), cancellationToken);
-    private static bool IsSupportedPhoto(
-        byte[] data,
-        string contentType,
-        string? fileName)
-    {
-        var extension = Path.GetExtension(fileName ?? string.Empty).ToLowerInvariant();
-
-        if (contentType == "image/jpeg")
-        {
-            return extension is ".jpg" or ".jpeg" &&
-                   data.Length >= 4 &&
-                   data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF &&
-                   data[^2] == 0xFF && data[^1] == 0xD9;
-        }
-
-        if (contentType == "image/png")
-        {
-            byte[] signature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-            byte[] ending = [0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82];
-            return extension == ".png" &&
-                   data.Length >= 33 &&
-                   data.AsSpan(0, signature.Length).SequenceEqual(signature) &&
-                   data.AsSpan(12, 4).SequenceEqual("IHDR"u8) &&
-                   data.AsSpan(data.Length - ending.Length).SequenceEqual(ending);
-        }
-
-        if (contentType != "image/webp" || extension != ".webp" || data.Length < 16 ||
-            !data.AsSpan(0, 4).SequenceEqual("RIFF"u8) ||
-            !data.AsSpan(8, 4).SequenceEqual("WEBP"u8))
-        {
-            return false;
-        }
-
-        var chunk = data.AsSpan(12, 4);
-        return (chunk.SequenceEqual("VP8 "u8) ||
-                chunk.SequenceEqual("VP8L"u8) ||
-                chunk.SequenceEqual("VP8X"u8)) &&
-               BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(4, 4)) ==
-               (uint)(data.Length - 8);
-    }
 
 
 
@@ -1731,9 +1768,7 @@ public sealed partial class ManagementController(
             await using var photoStream = new MemoryStream();
             await input.Photo.CopyToAsync(photoStream, cancellationToken);
             photoData = photoStream.ToArray();
-            photoContentType = input.Photo.ContentType.Trim().ToLowerInvariant();
-            photoFileName = Path.GetFileName(input.Photo.FileName);
-            if (!IsSupportedPhoto(photoData, photoContentType, photoFileName))
+            if (!ImageUploadFormat.TryNormalize(photoData, input.Photo.FileName, out photoContentType, out photoFileName))
             {
                 return RedirectToCandidateSectionWithPopup(
                     slug,
@@ -2654,7 +2689,8 @@ public sealed partial class ManagementController(
             AdditionalVotingTable = AdditionalVotingComplexTableFactory.Create(additionalVotingReport),
             PlayStatusTable = PlayStatusSettingsComplexTableFactory.Create(playStatuses),
             AnnouncementTable = AnnouncementSettingsComplexTableFactory.Create(announcements),
-            JuryHomePageTable = JuryHomePageTableSettingsComplexTableFactory.Create(juryHomePageTables)
+            JuryHomePageTable = JuryHomePageTableSettingsComplexTableFactory.Create(juryHomePageTables),
+            GroupTable = await CreateGroupSettingsTableAsync(cancellationToken)
         });
     }
 

@@ -91,8 +91,12 @@ internal static partial class DatabaseSchemaValidator
                 var principalTable = foreignKey.PrincipalEntityType.GetTableName()!;
                 var principalSchema = foreignKey.PrincipalEntityType.GetSchema() ?? "dbo";
                 var principalStore = StoreObjectIdentifier.Table(principalTable, principalSchema);
+                // EF has no ON UPDATE mapping. Editable Group.Code is the sole
+                // SQL-managed update cascade; every other FK stays NO ACTION.
+                var expectedUpdateAction = principalSchema == "dbo" && principalTable == "Group" &&
+                    foreignKey.PrincipalKey.Properties.Any(property => property.GetColumnName(principalStore) == "Code") ? 1 : 0;
                 if (!actual.ForeignKeys.TryGetValue(key, out var row) || row.Disabled || row.Untrusted ||
-                    row.DeleteAction != 0 || row.UpdateAction != 0 ||
+                    row.DeleteAction != 0 || row.UpdateAction != expectedUpdateAction ||
                     !string.Equals(row.PrincipalTable, $"{principalSchema}.{principalTable}", StringComparison.OrdinalIgnoreCase) ||
                     !row.Columns.SequenceEqual(foreignKey.Properties.Select(Column), StringComparer.OrdinalIgnoreCase) ||
                     !row.PrincipalColumns.SequenceEqual(foreignKey.PrincipalKey.Properties.Select(property => property.GetColumnName(principalStore)!), StringComparer.OrdinalIgnoreCase))

@@ -1,6 +1,7 @@
 @model YKBAfife.Models.ViewModels.EditJuryViewModel
 @{
     ViewData["Title"] = "Jüriyi Düzenle";
+    var groupHasError = ViewData.ModelState.TryGetValue(nameof(Model.GroupCode), out var groupState) && groupState.Errors.Count > 0;
 }
 
 <section class="play-details-page add-jury-page">
@@ -88,6 +89,40 @@
                 <span asp-validation-for="Phone"></span>
             </div>
 
+            <div class="add-jury-field">
+                <label asp-for="GroupCode" id="jury-group-label"></label>
+                <div class="add-play-jury-select jury-group-select" data-jury-group-select>
+                    <select asp-for="GroupCode" asp-items="Model.Groups" data-jury-group-value
+                            aria-describedby="jury-group-error" aria-invalid="@(groupHasError ? "true" : null)">
+                        <option value="">Grupsuz</option>
+                    </select>
+                    <div data-jury-group-custom hidden>
+                        <div class="add-play-select-trigger" role="combobox" tabindex="0"
+                             aria-labelledby="jury-group-label" aria-haspopup="listbox"
+                             aria-describedby="jury-group-error" aria-invalid="@(groupHasError ? "true" : null)"
+                             aria-expanded="false" aria-controls="jury-group-options" data-jury-group-trigger>
+                            <div class="add-play-selected-values" data-jury-group-selected></div>
+                            <img src="~/icons/angle-down.svg" alt="" aria-hidden="true" />
+                        </div>
+                        <div id="jury-group-options" class="add-play-jury-menu" role="listbox"
+                             aria-labelledby="jury-group-label" data-jury-group-menu hidden>
+                            <button type="button" class="add-play-check-option jury-group-option" role="option"
+                                    aria-selected="false" tabindex="-1" data-jury-group-option data-value="">
+                                <span class="add-play-check-mark" aria-hidden="true"></span><span>Grupsuz</span>
+                            </button>
+                            @foreach (var group in Model.Groups)
+                            {
+                                <button type="button" class="add-play-check-option jury-group-option" role="option"
+                                        aria-selected="false" tabindex="-1" data-jury-group-option data-value="@group.Value">
+                                    <span class="add-play-check-mark" aria-hidden="true"></span><span>@group.Text</span>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <span asp-validation-for="GroupCode" id="jury-group-error" aria-live="polite"></span>
+            </div>
+
             <fieldset class="add-jury-status">
                 <legend>Statü</legend>
                 <div class="add-jury-status-options">
@@ -171,4 +206,5 @@
     <partial name="_ValidationScriptsPartial" />
     <script src="~/js/add-jury.js" asp-append-version="true"></script>
     <script src="~/js/edit-password.js" asp-append-version="true"></script>
+    <script src="~/js/jury-group-select.js" asp-append-version="true"></script>
 }

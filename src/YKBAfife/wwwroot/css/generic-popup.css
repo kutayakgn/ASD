@@ -16,6 +16,7 @@
 .generic-popup-dialog {
     display: flex;
     width: min(100%, 640px);
+    max-height: calc(100dvh - 48px);
     padding: 16px 24px;
     align-items: center;
     flex-direction: column;
@@ -38,6 +39,14 @@
     font-weight: 400;
     line-height: 20px;
     white-space: pre-line;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-wrap: anywhere;
+}
+
+.generic-popup-icon,
+.generic-popup-actions {
+    flex-shrink: 0;
 }
 
 .generic-popup-message a {

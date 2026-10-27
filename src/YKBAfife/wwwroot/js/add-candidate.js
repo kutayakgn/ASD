@@ -261,7 +261,6 @@
             const file = photoInput?.files?.[0];
             if (file && !supportsRoleAndPhoto) errors.push("Bu ödül kategorisine fotoğraf eklenemez.");
             if (file && file.size > 150 * 1024 * 1024) errors.push("Görsel boyutu 150 MB'dan büyük olamaz.");
-            if (file && !["image/jpeg", "image/png", "image/webp"].includes(file.type)) errors.push("Yalnızca JPEG, PNG veya WebP formatında fotoğraf yükleyebilirsiniz.");
             if (errors.length === 0) return;
             event.preventDefault();
             event.stopImmediatePropagation();

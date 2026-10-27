@@ -1,0 +1,20 @@
+@model YKBAfife.Models.ViewModels.GroupFormViewModel
+@{
+    ViewData["Title"] = "Grubu Düzenle";
+}
+<section class="play-details-page add-jury-page" aria-labelledby="edit-group-title">
+    <a asp-action="VotingSettings" class="play-details-back">
+        <img src="~/icons/arrow-left.svg" alt="" aria-hidden="true" />
+        <span>Diğer Ayarlar'a Dön</span>
+    </a>
+    <header class="play-details-toolbar"><h1 id="edit-group-title">Grubu Düzenle</h1></header>
+    <form asp-action="EditGroup" asp-route-id="@Model.Id" method="post" class="add-jury-form" data-generic-confirm data-confirm-message="Grubu güncellemek istediğinize emin misiniz?">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="add-jury-validation-summary" role="alert"></div>
+        <partial name="_GroupFormFields" model="Model" />
+        <div class="add-jury-actions">
+            <a asp-action="VotingSettings" class="add-jury-cancel">İptal</a>
+            <button type="submit" class="add-jury-submit">Kaydet</button>
+        </div>
+    </form>
+</section>

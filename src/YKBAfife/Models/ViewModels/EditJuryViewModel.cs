@@ -1,5 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using YKBAfife.Helpers;
 
 namespace YKBAfife.Models.ViewModels;
@@ -40,6 +42,12 @@ public sealed class EditJuryViewModel
         ErrorMessage = PhonePolicy.ErrorMessage)]
     [Display(Name = "Telefon")]
     public string Phone { get; set; } = string.Empty;
+
+    [Display(Name = "Jüri Grubu")]
+    public int? GroupCode { get; set; }
+
+    [BindNever]
+    public IReadOnlyList<SelectListItem> Groups { get; set; } = [];
 
     [Required(ErrorMessage = "Statü seçimi zorunludur.")]
     [Display(Name = "Statü")]

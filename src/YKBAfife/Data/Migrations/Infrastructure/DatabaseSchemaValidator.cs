@@ -111,7 +111,7 @@ internal static partial class DatabaseSchemaValidator
 
         foreach (var foreignKey in catalog.CascadingForeignKeys)
         {
-            missing.Add($"foreign key {foreignKey} must use ON UPDATE/DELETE NO ACTION");
+            missing.Add($"foreign key {foreignKey} must use ON DELETE NO ACTION and ON UPDATE NO ACTION (CASCADE only for dbo.Group.Code)");
         }
 
         foreach (var obsoleteIndex in catalog.ObsoleteCandidateIndexes)
@@ -297,7 +297,16 @@ internal static partial class DatabaseSchemaValidator
             UNION ALL
             SELECT N'F', fk.name FROM sys.foreign_keys fk
             WHERE fk.delete_referential_action <> 0
-               OR fk.update_referential_action <> 0
+               OR fk.update_referential_action <> CASE WHEN EXISTS
+               (
+                   SELECT 1 FROM sys.foreign_key_columns AS groupReference
+                   INNER JOIN sys.columns AS referencedColumn
+                       ON referencedColumn.object_id = groupReference.referenced_object_id
+                      AND referencedColumn.column_id = groupReference.referenced_column_id
+                   WHERE groupReference.constraint_object_id = fk.object_id
+                     AND groupReference.referenced_object_id = OBJECT_ID(N'dbo.[Group]')
+                     AND referencedColumn.name = N'Code'
+               ) THEN 1 ELSE 0 END
             UNION ALL
             SELECT N'Q', s.name + N'.' + t.name
             FROM sys.key_constraints pk

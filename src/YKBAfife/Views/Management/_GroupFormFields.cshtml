@@ -1,0 +1,13 @@
+@model YKBAfife.Models.ViewModels.GroupFormViewModel
+<div class="season-form-grid">
+    <div class="add-jury-field">
+        <label asp-for="Code"></label>
+        <input asp-for="Code" type="number" step="1" required />
+        <span asp-validation-for="Code" class="add-jury-field-error"></span>
+    </div>
+    <div class="add-jury-field">
+        <label asp-for="GroupName"></label>
+        <input asp-for="GroupName" maxlength="100" required />
+        <span asp-validation-for="GroupName" class="add-jury-field-error"></span>
+    </div>
+</div>

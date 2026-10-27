@@ -373,6 +373,55 @@ body.play-filter-open {
     min-width: 0;
 }
 
+.jury-group-option {
+    width: 100%;
+    color: #171717;
+    background: #fff;
+    border: 0;
+    font-family: inherit;
+    text-align: left;
+    overflow-wrap: anywhere;
+}
+
+.jury-group-option:hover,
+.jury-group-option:focus-visible,
+.jury-group-option[aria-selected="true"] {
+    background: #e9e5da;
+}
+
+.jury-group-option[aria-selected="true"] .add-play-check-mark {
+    background: #171717;
+    border-color: #171717;
+}
+
+.jury-group-option[aria-selected="true"] .add-play-check-mark::after {
+    position: absolute;
+    top: 2px;
+    left: 6px;
+    width: 6px;
+    height: 11px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    content: "";
+    transform: rotate(45deg);
+}
+
+.jury-group-select .add-play-selection-token {
+    max-width: 100%;
+    min-height: 24px;
+    height: auto;
+    text-align: left;
+}
+
+.jury-group-select .add-play-selection-token > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.jury-group-select .add-play-selection-remove-icon {
+    flex-shrink: 0;
+}
+
 .add-play-select-trigger,
 .add-play-status-trigger {
     display: flex;

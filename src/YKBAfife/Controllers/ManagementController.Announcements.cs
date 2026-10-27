@@ -266,11 +266,10 @@ public sealed partial class ManagementController
         await using var stream = new MemoryStream();
         await file.CopyToAsync(stream, cancellationToken);
         var data = stream.ToArray();
-        var contentType = file.ContentType.Trim().ToLowerInvariant();
-        if (!IsSupportedPhoto(data, contentType, Path.GetFileName(file.FileName)))
+        if (!ImageUploadFormat.TryNormalize(data, file.FileName, out var contentType, out var fileName))
             return new(null, null, null, $"{fieldName} yalnızca JPG, PNG veya WEBP olabilir.");
 
-        return new(data, contentType, Path.GetFileName(file.FileName), null);
+        return new(data, contentType, fileName, null);
     }
 
     private void SetAnnouncementValidationPopup()

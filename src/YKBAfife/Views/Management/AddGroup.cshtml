@@ -1,0 +1,20 @@
+@model YKBAfife.Models.ViewModels.GroupFormViewModel
+@{
+    ViewData["Title"] = "Grup Ekle";
+}
+<section class="play-details-page add-jury-page" aria-labelledby="add-group-title">
+    <a asp-action="VotingSettings" class="play-details-back">
+        <img src="~/icons/arrow-left.svg" alt="" aria-hidden="true" />
+        <span>Diğer Ayarlar'a Dön</span>
+    </a>
+    <header class="play-details-toolbar"><h1 id="add-group-title">Grup Ekle</h1></header>
+    <form asp-action="AddGroup" method="post" class="add-jury-form" data-generic-confirm data-confirm-message="Grubu eklemek istediğinize emin misiniz?">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="add-jury-validation-summary" role="alert"></div>
+        <partial name="_GroupFormFields" model="Model" />
+        <div class="add-jury-actions">
+            <a asp-action="VotingSettings" class="add-jury-cancel">İptal</a>
+            <button type="submit" class="add-jury-submit">Kaydet</button>
+        </div>
+    </form>
+</section>

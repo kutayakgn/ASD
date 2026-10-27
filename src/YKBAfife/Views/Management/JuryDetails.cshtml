@@ -74,6 +74,10 @@
                 <dd>@DisplayValue(Model.Phone)</dd>
             </div>
             <div class="play-detail-field">
+                <dt>Jüri Grubu</dt>
+                <dd>@(Model.GroupCode.HasValue ? DisplayValue(Model.GroupName) : "Grupsuz")</dd>
+            </div>
+            <div class="play-detail-field">
                 <dt>Son Login Tarihi</dt>
                 <dd>@DateValue(Model.LastLoginAt)</dd>
             </div>
