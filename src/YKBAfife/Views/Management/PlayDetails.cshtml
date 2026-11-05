@@ -93,6 +93,17 @@
 			<dt>Eklenme Yöntemi</dt>
 			<dd>@(Model.RecordType ? "Admin Giriş" : "Künye Giriş")</dd>
 		</div>
+		@if (!Model.RecordType)
+		{
+			<div class="play-detail-field">
+				<dt>Prömiyer Tarihi</dt>
+				<dd>@(Model.PremiereDate?.ToString("dd.MM.yyyy") ?? "-")</dd>
+			</div>
+			<div class="play-detail-field">
+				<dt>Röpriz</dt>
+				<dd>@(Model.PreviousProductionVersion switch { true => "Evet", false => "Hayır", _ => "-" })</dd>
+			</div>
+		}
 		<div class="play-detail-field">
 			<dt>Ekleyen</dt>
 			<dd>@AuditValue(Model.CreatedByName, Model.CreatedAt)</dd>

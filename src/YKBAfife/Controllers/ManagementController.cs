@@ -1264,6 +1264,14 @@ public sealed partial class ManagementController(
             return NotFound();
         }
 
+        var sourceForm = !play.RecordType && play.SourceFormId.HasValue
+            ? await context.Forms
+                .AsNoTracking()
+                .Where(form => form.Id == play.SourceFormId.Value)
+                .Select(form => new { form.PremiereDate, form.PreviousProductionVersion })
+                .SingleOrDefaultAsync(cancellationToken)
+            : null;
+
         var playStatus = await context.PlayStatuses
             .AsNoTracking()
             .Where(status => status.StatusCode == play.StatusCode)
@@ -1375,6 +1383,8 @@ public sealed partial class ManagementController(
             PlayStatus = playStatus?.StatusName ?? "-",
             PlayStatusColor = NormalizeStatusColor(playStatus?.StatusColor),
             RecordType = play.RecordType,
+            PremiereDate = sourceForm?.PremiereDate,
+            PreviousProductionVersion = sourceForm?.PreviousProductionVersion,
             CreatedAt = play.CreatedAt,
             CreatedByName = play.CreatedBy.HasValue && auditUsers.TryGetValue(play.CreatedBy.Value, out var creator)
                 ? creator
@@ -2690,7 +2700,8 @@ public sealed partial class ManagementController(
             PlayStatusTable = PlayStatusSettingsComplexTableFactory.Create(playStatuses),
             AnnouncementTable = AnnouncementSettingsComplexTableFactory.Create(announcements),
             JuryHomePageTable = JuryHomePageTableSettingsComplexTableFactory.Create(juryHomePageTables),
-            GroupTable = await CreateGroupSettingsTableAsync(cancellationToken)
+            GroupTable = await CreateGroupSettingsTableAsync(cancellationToken),
+            BirthdaySettings = await LoadBirthdaySettingsAsync(cancellationToken)
         });
     }
 

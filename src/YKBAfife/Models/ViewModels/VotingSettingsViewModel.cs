@@ -10,4 +10,5 @@ public sealed class VotingSettingsViewModel
     public ComplexTableViewModel AnnouncementTable { get; init; } = new();
     public ComplexTableViewModel JuryHomePageTable { get; init; } = new();
     public ComplexTableViewModel GroupTable { get; init; } = new();
+    public BirthdaySettingsViewModel BirthdaySettings { get; init; } = new();
 }

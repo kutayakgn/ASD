@@ -1827,7 +1827,7 @@ VALUES
             var filteredRows =
      from play in _context.Plays
          .AsNoTracking()
-         .Where(play => play.IsPublished && play.IsActive && play.JuriOylamaStatus)
+         .Where(play => play.IsPublished && play.IsActive && play.JuriOylamaStatus && play.StatusCode == 1)
      join form in _context.Form
          .AsNoTracking()
          .Where(form => form.IsPublished && form.IsActive)

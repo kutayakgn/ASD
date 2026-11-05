@@ -13,6 +13,8 @@ public sealed class PlayDetailsViewModel
     public string PlayStatus { get; init; } = string.Empty;
     public string PlayStatusColor { get; init; } = "#6b7280";
     public bool RecordType { get; init; }
+    public DateOnly? PremiereDate { get; init; }
+    public bool? PreviousProductionVersion { get; init; }
     public DateTime? CreatedAt { get; init; }
     public string? CreatedByName { get; init; }
     public DateTime? UpdatedAt { get; init; }

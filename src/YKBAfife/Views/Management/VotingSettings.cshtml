@@ -67,6 +67,38 @@
         </section>
         <section class="settings-accordion-item" data-settings-section>
             <h2 class="settings-accordion-heading">
+                <button type="button" class="settings-accordion-trigger" aria-expanded="false" aria-controls="birthday-settings-content" data-settings-trigger>
+                    <span>Doğum Günü Ayarları</span><img src="~/icons/angle-down.svg" alt="" aria-hidden="true" />
+                </button>
+            </h2>
+            <div id="birthday-settings-content" class="settings-accordion-content" data-settings-content hidden>
+                <div class="settings-accordion-content-inner">
+                    <form asp-action="SaveBirthdaySettings" method="post" class="add-jury-form birthday-settings-form" data-birthday-settings-form novalidate>
+                        @Html.AntiForgeryToken()
+                        <div class="birthday-settings-grid">
+                            <div class="add-jury-field">
+                                <label for="birthday-settings-message">Mesaj</label>
+                                <input id="birthday-settings-message" name="Message" type="text" value="@Model.BirthdaySettings.Message"
+                                       maxlength="200" required aria-describedby="birthday-settings-message-error" />
+                                <span id="birthday-settings-message-error" class="field-validation-error" data-birthday-settings-error="Message"></span>
+                            </div>
+                            <div class="add-jury-field">
+                                <label for="birthday-settings-days">Gösterim Süresi (Gün)</label>
+                                <input id="birthday-settings-days" name="DisplayDays" type="number" value="@Model.BirthdaySettings.DisplayDays"
+                                       min="0" max="10" step="1" required aria-describedby="birthday-settings-days-error" />
+                                <span id="birthday-settings-days-error" class="field-validation-error" data-birthday-settings-error="DisplayDays"></span>
+                            </div>
+                        </div>
+                        <p class="birthday-settings-result" role="status" aria-live="polite" data-birthday-settings-result></p>
+                        <div class="add-jury-actions">
+                            <button type="submit" class="add-jury-submit">Kaydet</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+        <section class="settings-accordion-item" data-settings-section>
+            <h2 class="settings-accordion-heading">
                 <button type="button" class="settings-accordion-trigger" aria-expanded="false" aria-controls="group-settings-content" data-settings-trigger>
                     <span>Jüri Grupları</span><img src="~/icons/angle-down.svg" alt="" aria-hidden="true" />
                 </button>
@@ -82,4 +114,5 @@
 
 @section Scripts {
     <script src="~/js/settings-accordion.js" asp-append-version="true"></script>
+    <script src="~/js/birthday-settings.js" asp-append-version="true"></script>
 }
