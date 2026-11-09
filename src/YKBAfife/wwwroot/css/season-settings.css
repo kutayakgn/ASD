@@ -309,6 +309,27 @@
     gap: 24px;
 }
 
+.birthday-settings-message-label {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 8px;
+    margin-bottom: 4px;
+}
+
+.birthday-settings-message-label label {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 20px;
+}
+
+.birthday-settings-message-label small {
+    color: #666;
+    font-size: 12px;
+    line-height: 18px;
+}
+
 .birthday-settings-form .field-validation-error,
 .birthday-settings-result.is-error {
     color: #b42318;

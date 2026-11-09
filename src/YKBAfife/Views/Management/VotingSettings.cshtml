@@ -77,9 +77,12 @@
                         @Html.AntiForgeryToken()
                         <div class="birthday-settings-grid">
                             <div class="add-jury-field">
-                                <label for="birthday-settings-message">Mesaj</label>
+                                <div class="birthday-settings-message-label">
+                                    <label for="birthday-settings-message">Mesaj</label>
+                                    <small id="birthday-settings-message-hint">İsim kullanmak istediğiniz yere x yazınız. Örn: "Doğum günün kutlu olsun x!"</small>
+                                </div>
                                 <input id="birthday-settings-message" name="Message" type="text" value="@Model.BirthdaySettings.Message"
-                                       maxlength="200" required aria-describedby="birthday-settings-message-error" />
+                                       maxlength="200" required aria-describedby="birthday-settings-message-hint birthday-settings-message-error" />
                                 <span id="birthday-settings-message-error" class="field-validation-error" data-birthday-settings-error="Message"></span>
                             </div>
                             <div class="add-jury-field">
