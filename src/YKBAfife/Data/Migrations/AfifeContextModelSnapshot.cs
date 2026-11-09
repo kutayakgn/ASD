@@ -1840,6 +1840,9 @@ namespace YKBAfife.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateOnly?>("BirthDate")
+                        .HasColumnType("date");
+
                     b.Property<DateTime?>("CreatedAt")
                         .HasColumnType("datetime2");
 

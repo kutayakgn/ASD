@@ -74,6 +74,10 @@
                 <dd>@DisplayValue(Model.Phone)</dd>
             </div>
             <div class="play-detail-field">
+                <dt>Doğum Tarihi</dt>
+                <dd>@(Model.BirthDate?.ToString("dd.MM.yyyy") ?? "-")</dd>
+            </div>
+            <div class="play-detail-field">
                 <dt>Jüri Grubu</dt>
                 <dd>@(Model.GroupCode.HasValue ? DisplayValue(Model.GroupName) : "Grupsuz")</dd>
             </div>

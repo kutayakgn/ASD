@@ -11,6 +11,7 @@ public class User
     public string FirstName { get; set; } = null!;
     public string LastName { get; set; } = null!;
     public string? Phone { get; set; }
+    public DateOnly? BirthDate { get; set; }
     public Guid? PhotoImageId { get; set; }
     public string Username { get; set; } = null!;
     public string PasswordHash { get; set; } = null!;

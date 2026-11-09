@@ -43,6 +43,10 @@ public sealed class EditJuryViewModel
     [Display(Name = "Telefon")]
     public string Phone { get; set; } = string.Empty;
 
+    [DataType(DataType.Date)]
+    [Display(Name = "Doğum Tarihi")]
+    public DateOnly? BirthDate { get; set; }
+
     [Display(Name = "Jüri Grubu")]
     public int? GroupCode { get; set; }
 

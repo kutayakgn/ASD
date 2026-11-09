@@ -8,6 +8,7 @@ public sealed class JuryDetailsViewModel
     public string Email { get; init; } = string.Empty;
     public string FullName { get; init; } = string.Empty;
     public string Phone { get; init; } = string.Empty;
+    public DateOnly? BirthDate { get; init; }
     public int? GroupCode { get; init; }
     public string? GroupName { get; init; }
     public bool HasPhoto { get; init; }

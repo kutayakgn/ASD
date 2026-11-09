@@ -19,8 +19,11 @@
         const trigger = picker.querySelector("[data-date-trigger]");
         const panel = picker.querySelector("[data-date-panel]");
         const title = picker.querySelector("[data-calendar-title]");
+        const monthTitle = title?.querySelector("[data-calendar-month]");
+        const yearSelect = title?.querySelector("[data-calendar-year]");
         const days = picker.querySelector("[data-calendar-days]");
         const apply = picker.querySelector("[data-calendar-apply]");
+        const clear = picker.querySelector("[data-calendar-clear]");
         if (!display || !value || !trigger || !panel || !title || !days || !apply) return;
         const page = picker.closest(".admin-main") || document.querySelector(".admin-main") || document.body;
         const clearPageExtension = () => window.requestAnimationFrame(() => {
@@ -53,7 +56,26 @@
             : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 
         const render = () => {
-            title.textContent = visibleMonth.toLocaleDateString("tr-TR", { month: "long", year: "numeric" });
+            if (monthTitle && yearSelect) {
+                monthTitle.textContent = visibleMonth.toLocaleDateString("tr-TR", { month: "long" });
+                const year = visibleMonth.getFullYear();
+                const firstYear = Math.min(1900, year);
+                const lastYear = Math.max(new Date().getFullYear() + 20, year);
+                if (yearSelect.dataset.firstYear !== String(firstYear) || yearSelect.dataset.lastYear !== String(lastYear)) {
+                    yearSelect.replaceChildren();
+                    for (let optionYear = firstYear; optionYear <= lastYear; optionYear += 1) {
+                        const option = document.createElement("option");
+                        option.value = String(optionYear);
+                        option.textContent = String(optionYear);
+                        yearSelect.append(option);
+                    }
+                    yearSelect.dataset.firstYear = String(firstYear);
+                    yearSelect.dataset.lastYear = String(lastYear);
+                }
+                yearSelect.value = String(year);
+            } else {
+                title.textContent = visibleMonth.toLocaleDateString("tr-TR", { month: "long", year: "numeric" });
+            }
             days.replaceChildren();
             const firstDay = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth(), 1);
             const mondayOffset = (firstDay.getDay() + 6) % 7;
@@ -108,6 +130,13 @@
         trigger.addEventListener("click", toggle);
         display.addEventListener("click", toggle);
 
+        yearSelect?.addEventListener("change", () => {
+            const year = Number(yearSelect.value);
+            if (!Number.isInteger(year) || year < 1 || year > 9999) return;
+            visibleMonth.setFullYear(year);
+            render();
+        });
+
         panel.addEventListener("click", (event) => {
             const day = event.target.closest("[data-date]");
             if (day) {
@@ -138,6 +167,16 @@
             selectedDate = new Date(pendingDate);
             value.value = toIso(selectedDate);
             display.value = toDisplay(selectedDate);
+            value.dispatchEvent(new Event("change", { bubbles: true }));
+            close();
+            trigger.focus({ preventScroll: true });
+        });
+
+        clear?.addEventListener("click", () => {
+            selectedDate = null;
+            pendingDate = null;
+            value.value = "";
+            display.value = "";
             value.dispatchEvent(new Event("change", { bubbles: true }));
             close();
             trigger.focus({ preventScroll: true });

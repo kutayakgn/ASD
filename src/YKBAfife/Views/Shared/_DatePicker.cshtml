@@ -49,7 +49,10 @@
                     <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
                 </button>
             </div>
-            <strong aria-live="polite" data-calendar-title></strong>
+            <strong aria-live="polite" data-calendar-title>
+                <span data-calendar-month></span>
+                <select class="application-calendar-year" aria-label="@Model.Label yılı" data-calendar-year></select>
+            </strong>
             <div class="application-calendar-navigation">
                 <button type="button" aria-label="Sonraki ay" data-calendar-action="next-month">
                     <img src="~/icons/angle-right-solid-full.svg" alt="" aria-hidden="true" />
@@ -65,7 +68,11 @@
             <span>Cum</span><span>Cmt</span><span>Paz</span>
         </div>
         <div class="application-calendar-days" role="grid" data-calendar-days></div>
-        <div class="application-calendar-footer">
+        <div class="application-calendar-footer gap-2">
+            @if (Model.AllowClear && !Model.IsRequired)
+            {
+                <button type="button" class="application-calendar-apply" data-calendar-clear>Tarihi Temizle</button>
+            }
             <button type="button" class="application-calendar-apply" data-calendar-apply>Tarih Seç</button>
         </div>
     </div>

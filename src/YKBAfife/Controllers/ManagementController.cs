@@ -72,6 +72,7 @@ public sealed partial class ManagementController(
                 user.FirstName,
                 user.LastName,
                 user.Phone,
+                user.BirthDate,
                 user.GroupCode,
                 user.PhotoImageId,
                 user.IsActive,
@@ -140,6 +141,7 @@ public sealed partial class ManagementController(
             Email = jury.Email,
             FullName = (jury.FirstName + " " + jury.LastName).Trim(),
             Phone = jury.Phone ?? "-",
+            BirthDate = jury.BirthDate,
             GroupCode = jury.GroupCode,
             GroupName = groupName,
             HasPhoto = jury.PhotoImageId.HasValue,
@@ -257,6 +259,7 @@ public sealed partial class ManagementController(
                 Email = user.Email,
                 FullName = (user.FirstName + " " + user.LastName).Trim(),
                 Phone = user.Phone ?? string.Empty,
+                BirthDate = user.BirthDate,
                 GroupCode = user.GroupCode,
                 IsActive = user.IsActive,
                 IsJuryPresident = user.IsJuryPresident
@@ -312,8 +315,15 @@ public sealed partial class ManagementController(
 
         var invalidGroupCode = ModelState.TryGetValue(nameof(model.GroupCode), out var groupCodeState) &&
             groupCodeState.Errors.Count > 0;
+        var invalidBirthDate = ModelState.TryGetValue(nameof(model.BirthDate), out var birthDateState) &&
+            birthDateState.Errors.Count > 0;
         ModelState.Clear();
         TryValidateModel(model);
+
+        if (invalidBirthDate)
+        {
+            ModelState.AddModelError(nameof(model.BirthDate), "Geçerli bir doğum tarihi seçiniz.");
+        }
 
         if (invalidGroupCode || model.GroupCode.HasValue &&
             !await context.Groups.AsNoTracking().AnyAsync(
@@ -397,6 +407,7 @@ public sealed partial class ManagementController(
         jury.Username = model.Username;
         jury.Email = model.Email;
         jury.Phone = model.Phone;
+        jury.BirthDate = model.BirthDate;
         jury.GroupCode = model.GroupCode;
         jury.IsActive = model.IsActive!.Value;
         jury.IsJuryPresident = model.IsJuryPresident;

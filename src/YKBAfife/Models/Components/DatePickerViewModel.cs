@@ -8,5 +8,6 @@ public sealed class DatePickerViewModel
     public DateOnly? Value { get; init; }
     public string ValidationMessage { get; init; } = string.Empty;
     public bool IsRequired { get; init; } = true;
+    public bool AllowClear { get; init; }
     public bool TrackChanges { get; init; } = true;
 }

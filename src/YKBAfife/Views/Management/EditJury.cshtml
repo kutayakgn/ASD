@@ -90,6 +90,20 @@
             </div>
 
             <div class="add-jury-field">
+                <partial name="_DatePicker" model="@(new YKBAfife.Models.Components.DatePickerViewModel
+                {
+                    Id = "jury-birth-date",
+                    InputName = nameof(Model.BirthDate),
+                    Label = "Doğum Tarihi",
+                    Value = Model.BirthDate,
+                    IsRequired = false,
+                    AllowClear = true,
+                    TrackChanges = false
+                })" />
+                <span asp-validation-for="BirthDate"></span>
+            </div>
+
+            <div class="add-jury-field">
                 <label asp-for="GroupCode" id="jury-group-label"></label>
                 <div class="add-play-jury-select jury-group-select" data-jury-group-select>
                     <select asp-for="GroupCode" asp-items="Model.Groups" data-jury-group-value
@@ -204,6 +218,7 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/date-picker.js" asp-append-version="true"></script>
     <script src="~/js/add-jury.js" asp-append-version="true"></script>
     <script src="~/js/edit-password.js" asp-append-version="true"></script>
     <script src="~/js/jury-group-select.js" asp-append-version="true"></script>

@@ -941,6 +941,8 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
             .HasMaxLength(100);
         entity.Property(x => x.Phone)
             .HasMaxLength(30);
+        entity.Property(x => x.BirthDate)
+            .HasColumnType("date");
         entity.Property(x => x.Username)
             .HasMaxLength(100);
         entity.Property(x => x.PasswordHash)
