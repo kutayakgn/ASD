@@ -265,7 +265,9 @@
 }
 
 .application-calendar-day:hover,
-.application-calendar-day:focus-visible {
+.application-calendar-day:focus-visible,
+.application-calendar-time-option:hover,
+.application-calendar-time-option:focus-visible {
     border-color: #918150;
     outline: none;
 }
@@ -278,7 +280,9 @@
     border-color: #c9b989;
 }
 
-.application-calendar-day.is-selected {
+.application-calendar-day.is-selected,
+.application-calendar-time-option.is-selected,
+.application-calendar-time-column option:checked {
     color: #171717;
     background: #d8cfb5;
     border-color: #d8cfb5;
@@ -289,6 +293,159 @@
     display: flex;
     padding: 16px 16px 0;
     justify-content: flex-end;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.application-calendar-with-time {
+    right: 0;
+    left: auto;
+    width: min(640px, calc(100vw - 32px));
+}
+
+.application-calendar-with-time .application-calendar-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 164px;
+}
+
+.application-calendar-date {
+    min-width: 0;
+}
+
+.application-calendar-time {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    border-left: 1px solid #e3dfd3;
+}
+
+.application-calendar-time-header {
+    display: flex;
+    min-height: 64px;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid #e3dfd3;
+    font-size: 18px;
+    line-height: 24px;
+}
+
+.application-calendar-time-columns {
+    display: grid;
+    flex: 1;
+    min-height: 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 8px;
+}
+
+.application-calendar-time-column {
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+    flex-direction: column;
+}
+
+.application-calendar-time-column label {
+    margin: 0 0 8px;
+    font-size: 12px;
+    line-height: 20px;
+    text-align: center;
+}
+
+.application-calendar-with-time .application-calendar-time-column select,
+.application-calendar-with-time .application-calendar-time-options {
+    width: 100%;
+    height: 0;
+    min-height: 220px;
+    flex: 1;
+    padding: 0;
+    border: 0;
+    background: #fff;
+    color: #171717;
+    font: 400 16px/24px Outfit;
+    text-align: center;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+}
+
+.application-calendar-time-column option {
+    padding: 6px 4px;
+}
+
+.application-calendar-with-time .application-calendar-time-options {
+    height: 100%;
+    max-height: 240px;
+    overflow-y: scroll;
+    overflow-x: hidden;
+}
+
+.application-calendar-time-option {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 6px 4px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: center;
+}
+
+
+@media (max-width: 600px) {
+    .application-calendar-with-time .application-calendar-layout {
+        grid-template-columns: minmax(0, 1fr) 100px;
+    }
+
+    .application-calendar-with-time .application-calendar-header {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        padding-inline: 4px;
+    }
+
+    .application-calendar-with-time .application-calendar-header > strong {
+        gap: 0;
+        font-size: 12px;
+    }
+
+    .application-calendar-with-time .application-calendar-year {
+        min-width: 50px;
+        width: 50px;
+        padding: 0;
+    }
+
+    .application-calendar-with-time .application-calendar-navigation {
+        gap: 0;
+    }
+
+    .application-calendar-with-time .application-calendar-navigation button,
+    .application-calendar-with-time .application-calendar-navigation img {
+        width: 18px;
+        height: 18px;
+    }
+
+    .application-calendar-with-time .application-calendar-weekdays,
+    .application-calendar-with-time .application-calendar-days {
+        padding-inline: 4px;
+        column-gap: 0;
+        font-size: 12px;
+    }
+
+    .application-calendar-with-time .application-calendar-day {
+        width: 24px;
+        height: 24px;
+    }
+
+    .application-calendar-time-columns {
+        gap: 4px;
+        padding-inline: 4px;
+    }
+
+    .application-calendar-with-time .application-calendar-time-column select,
+    .application-calendar-with-time .application-calendar-time-options {
+        font-size: 14px;
+    }
 }
 
 .application-calendar-apply {
@@ -308,11 +465,116 @@
     outline: none;
 }
 
+.application-displays-list {
+    display: flex;
+    flex-direction: column;
+  
+}
+
+.application-display-row + .application-display-row {
+   
+}
+
+.application-display-heading {
+    margin: 0 0 20px;
+    color: #171717;
+    font: 600 18px/24px Outfit;
+}
+
+.application-display-row-actions {
+    display: flex;
+    justify-content: flex-end;
+   
+}
+
+.application-display-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #171717;
+    font: 500 14px/24px Outfit;
+    text-decoration: none;
+}
+
+.application-display-action img {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+}
+
+.application-display-action:hover,
+.application-display-action:focus-visible {
+    color: #918150;
+}
+
+.application-display-action:focus-visible {
+    outline: 2px solid #918150;
+    outline-offset: 4px;
+}
+
+.application-display-add-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top:6px;
+   
+}
+
+.application-display-add img {
+    filter: brightness(0);
+}
+
+.application-display-details {
+    margin: 0;
+}
+
+.application-display-detail-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 12px 20px 12px 0px;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+    line-height: 20px;
+}
+
+.application-display-detail-row dt {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 12px;
+    flex: 0 0 auto;
+    margin: 0;
+    font-weight: 400;
+}
+
+.application-display-detail-row dd {
+    min-width: 0;
+    margin: 0;
+    font-weight: 600;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
 @media (max-width: 760px) {
     .application-details-grid,
     .application-form-grid {
         grid-template-columns: 1fr;
         gap: 20px;
+    }
+
+    .application-display-detail-row {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 8px;
+        padding-inline: 12px;
+    }
+
+    .application-display-detail-row dd {
+        text-align: left;
     }
 
     .application-calendar-header {

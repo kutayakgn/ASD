@@ -2,6 +2,10 @@
 @{
     var value = Model.Value?.ToString("yyyy-MM-dd") ?? string.Empty;
     var displayValue = Model.Value?.ToString("dd / MM / yyyy") ?? string.Empty;
+    if (Model.IncludeTime && Model.Value.HasValue && Model.TimeValue.HasValue)
+    {
+        displayValue += " " + Model.TimeValue.Value.ToString("HH:mm");
+    }
     var calendarId = $"{Model.Id}-calendar";
 }
 <div class="add-jury-field application-date-field"
@@ -24,6 +28,13 @@
                data-date-value
                data-track-change="@Model.TrackChanges"
                data-initial-value="@value" />
+        @if (Model.IncludeTime)
+        {
+            <input id="@(Model.Id)-time" name="@Model.TimeInputName" type="hidden"
+                   value="@Model.TimeValue?.ToString("HH:mm")" data-time-value
+                   data-track-change="@Model.TrackChanges"
+                   data-initial-value="@Model.TimeValue?.ToString("HH:mm")" />
+        }
         <button type="button"
                 class="application-date-trigger"
                 aria-label="@Model.Label takvimini aç"
@@ -35,10 +46,12 @@
     </div>
 
     <div id="@calendarId"
-         class="application-calendar"
+         class="application-calendar@(Model.IncludeTime ? " application-calendar-with-time" : string.Empty)"
          aria-label="@Model.Label seçimi"
          data-date-panel
          hidden>
+        <div class="application-calendar-layout">
+        <div class="application-calendar-date">
         <div class="application-calendar-header">
             <div class="application-calendar-navigation">
                 <button type="button" aria-label="Önceki yıl" data-calendar-action="prev-year">
@@ -68,12 +81,44 @@
             <span>Cum</span><span>Cmt</span><span>Paz</span>
         </div>
         <div class="application-calendar-days" role="grid" data-calendar-days></div>
+        </div>
+            @if (Model.IncludeTime)
+            {
+                <div class="application-calendar-time">
+                    <div class="application-calendar-time-header">
+                        <strong aria-live="polite" data-calendar-time-title>@(Model.TimeValue?.ToString("HH:mm") ?? "--:--")</strong>
+                    </div>
+                    <div class="application-calendar-time-columns">
+                    <div class="application-calendar-time-column">
+                    <label for="@(Model.Id)-hour">Saat</label>
+                    <select id="@(Model.Id)-hour" size="8" aria-label="@Model.Label saati" data-calendar-hour>
+                        <option value="">—</option>
+                        @for (var hour = 0; hour < 24; hour++)
+                        {
+                            <option value="@hour.ToString("00")" selected="@(Model.TimeValue?.Hour == hour)">@hour.ToString("00")</option>
+                        }
+                    </select>
+                    </div>
+                    <div class="application-calendar-time-column">
+                    <label for="@(Model.Id)-minute">Dakika</label>
+                    <select id="@(Model.Id)-minute" size="8" aria-label="@Model.Label dakikası" data-calendar-minute>
+                        <option value="">—</option>
+                        @for (var minute = 0; minute < 60; minute++)
+                        {
+                            <option value="@minute.ToString("00")" selected="@(Model.TimeValue?.Minute == minute)">@minute.ToString("00")</option>
+                        }
+                    </select>
+                    </div>
+                    </div>
+                </div>
+            }
+        </div>
         <div class="application-calendar-footer gap-2">
             @if (Model.AllowClear && !Model.IsRequired)
             {
                 <button type="button" class="application-calendar-apply" data-calendar-clear>Tarihi Temizle</button>
             }
-            <button type="button" class="application-calendar-apply" data-calendar-apply>Tarih Seç</button>
+            <button type="button" class="application-calendar-apply" data-calendar-apply>  @(Model.IncludeTime ? "Tarih ve Saat Seç" :"Tarih Seç") </button>
         </div>
     </div>
 </div>

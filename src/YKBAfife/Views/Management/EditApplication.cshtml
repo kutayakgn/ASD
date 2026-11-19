@@ -1,8 +1,6 @@
 @model YKBAfife.Models.ViewModels.EditApplicationViewModel
 @{
     ViewData["Title"] = "Başvuruyu Düzenle";
-    var dateValue = Model.PremiereDate?.ToString("yyyy-MM-dd") ?? string.Empty;
-    var dateDisplay = Model.PremiereDate?.ToString("dd / MM / yyyy") ?? string.Empty;
 }
 
 <section class="play-details-page add-jury-page application-edit-page" aria-labelledby="edit-application-title">
@@ -25,6 +23,7 @@
           data-confirm-message="Başvuruyu güncellemek istediğinize emin misiniz?">
         @Html.AntiForgeryToken()
         <input asp-for="Id" type="hidden" />
+        <input asp-for="DisplaysEdited" type="hidden" data-displays-edited />
         <div asp-validation-summary="ModelOnly" class="add-jury-validation-summary" role="alert"></div>
 
         <section class="application-form-section" aria-labelledby="edit-application-play-title">
@@ -63,71 +62,14 @@
                            data-fail-message="Tiyatro adı zorunludur." />
                 </div>
 
-                <div class="add-jury-field application-date-field"
-                     data-date-picker
-                     data-initial-date="@dateValue">
-                    <label for="PremiereDateDisplay">Prömiyer Tarihi</label>
-                    <div class="application-date-input">
-                        <input id="PremiereDateDisplay"
-                               type="text"
-                               value="@dateDisplay"
-                               placeholder="GG / AA / YYYY"
-                               readonly
-                               required
-                               data-date-display
-                               data-fail-message="Prömiyer tarihi zorunludur." />
-                        <input asp-for="PremiereDate"
-                               type="hidden"
-                               value="@dateValue"
-                               data-date-value
-                               data-track-change
-                               data-initial-value="@dateValue" />
-                        <button type="button"
-                                class="application-date-trigger"
-                                aria-label="Prömiyer tarihi takvimini aç"
-                                aria-expanded="false"
-                                aria-controls="premiere-date-calendar"
-                                data-date-trigger>
-                            <img src="~/icons/calendar.svg" alt="" aria-hidden="true" />
-                        </button>
-                    </div>
-
-                    <div id="premiere-date-calendar"
-                         class="application-calendar"
-                         aria-label="Prömiyer tarihi seçimi"
-                         data-date-panel
-                         hidden>
-                        <div class="application-calendar-header">
-                            <div class="application-calendar-navigation">
-                                <button type="button" aria-label="Önceki yıl" data-calendar-action="prev-year">
-                                    <img src="~/icons/double-angle-left-solid-full.svg" alt="" aria-hidden="true" />
-                                   
-                                </button>
-                                <button type="button" aria-label="Önceki ay" data-calendar-action="prev-month">
-                                    <img src="~/icons/angle-left-solid-full.svg" alt="" aria-hidden="true" />
-                                </button>
-                            </div>
-                            <strong aria-live="polite" data-calendar-title></strong>
-                            <div class="application-calendar-navigation">
-                                <button type="button" aria-label="Sonraki ay" data-calendar-action="next-month">
-                                    <img src="~/icons/angle-right-solid-full.svg" alt="" aria-hidden="true" />
-                                </button>
-                                <button type="button" aria-label="Sonraki yıl" data-calendar-action="next-year">
-                                    <img src="~/icons/double-angle-right-solid-full.svg" alt="" aria-hidden="true" />
-                                    
-                                </button>
-                            </div>
-                        </div>
-                        <div class="application-calendar-weekdays" aria-hidden="true">
-                            <span>Pzt</span><span>Sal</span><span>Çar</span><span>Per</span>
-                            <span>Cum</span><span>Cmt</span><span>Paz</span>
-                        </div>
-                        <div class="application-calendar-days" role="grid" data-calendar-days></div>
-                        <div class="application-calendar-footer">
-                            <button type="button" class="application-calendar-apply" data-calendar-apply>Tarih Seç</button>
-                        </div>
-                    </div>
-                </div>
+                <partial name="_DatePicker" model="@(new YKBAfife.Models.Components.DatePickerViewModel
+                {
+                    Id = "PremiereDate",
+                    InputName = nameof(Model.PremiereDate),
+                    Label = "Prömiyer Tarihi",
+                    Value = Model.PremiereDate,
+                    ValidationMessage = "Prömiyer tarihi zorunludur."
+                })" />
             </div>
         </section>
 
@@ -174,6 +116,38 @@
             </div>
         </section>
 
+        <div class="play-details-divider" role="separator"></div>
+
+        <section class="application-form-section" aria-labelledby="edit-application-displays-title">
+            <h2 id="edit-application-displays-title">Gösterimler</h2>
+            @if (!Model.DisplaysAvailable)
+            {
+                <p>Gösterim bilgileri görüntülenemiyor.</p>
+            }
+            else
+            {
+                <div data-application-displays>
+                    <div class="application-displays-list" data-application-display-list>
+                        @for (var index = 0; index < Model.Displays.Count; index++)
+                        {
+                            @await Html.PartialAsync("_ApplicationDisplayFields", Model.Displays[index],
+                                new Microsoft.AspNetCore.Mvc.ViewFeatures.ViewDataDictionary(ViewData) { ["DisplayIndex"] = index })
+                        }
+                    </div>
+                    <p data-display-empty hidden="@(Model.Displays.Count > 0)">Gösterim bulunmuyor.</p>
+                    <div class="application-display-add-actions">
+                        <button type="button" class="application-display-action application-display-add" data-display-add>
+                            <img src="~/icons/plus.svg" alt="" aria-hidden="true" /><span>Gösterim Ekle</span>
+                        </button>
+                    </div>
+                    <template data-display-template>
+                        @await Html.PartialAsync("_ApplicationDisplayFields", new YKBAfife.Models.ViewModels.ApplicationDisplayViewModel(),
+                            new Microsoft.AspNetCore.Mvc.ViewFeatures.ViewDataDictionary(ViewData) { ["DisplayIndex"] = "__index__" })
+                    </template>
+                </div>
+            }
+        </section>
+
         <div class="add-jury-actions">
             <a asp-action="ApplicationDetails" asp-route-id="@Model.Id" class="add-jury-cancel">İptal</a>
             <button type="submit" class="add-jury-submit">Kaydet</button>
@@ -182,5 +156,6 @@
 </section>
 
 @section Scripts {
+    <script src="~/js/date-picker.js" asp-append-version="true"></script>
     <script src="~/js/application-edit.js" asp-append-version="true"></script>
 }

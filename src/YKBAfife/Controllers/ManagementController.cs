@@ -2385,25 +2385,32 @@ public sealed partial class ManagementController(
     [HttpGet("basvurular/{id:guid}")]
     public async Task<IActionResult> ApplicationDetails(Guid id, CancellationToken cancellationToken)
     {
-        var model = await context.Forms.AsNoTracking()
+        var record = await context.Forms.AsNoTracking()
             .Where(form => form.Id == id && form.IsPublished)
-            .Select(form => new ApplicationDetailsViewModel
+            .Select(form => new
             {
-                Id = form.Id,
-                ApplicationNumber = form.ApplicationNumber,
-                PlayName = form.RepertoireName,
-                TheatreName = form.TheatreName,
-                ApplicantName = form.ApplicantName,
-                ApplicantRole = form.ApplicantRole,
-                Email = form.Email,
-                Phone = form.Phone,
-                ContactName = form.ContactName,
-                ContactPhone = form.ContactPhone,
-                PremiereDate = form.PremiereDate,
-                IsActive = form.IsActive
+                Model = new ApplicationDetailsViewModel
+                {
+                    Id = form.Id,
+                    ApplicationNumber = form.ApplicationNumber,
+                    PlayName = form.RepertoireName,
+                    TheatreName = form.TheatreName,
+                    ApplicantName = form.ApplicantName,
+                    ApplicantRole = form.ApplicantRole,
+                    Email = form.Email,
+                    Phone = form.Phone,
+                    ContactName = form.ContactName,
+                    ContactPhone = form.ContactPhone,
+                    PremiereDate = form.PremiereDate,
+                    IsActive = form.IsActive
+                },
+                form.Display
             })
             .SingleOrDefaultAsync(cancellationToken);
-        return model is null ? NotFound() : View(model);
+        if (record is null) return NotFound();
+        record.Model.DisplaysAvailable = ApplicationDisplays.TryParse(record.Display, out var displays);
+        record.Model.Displays = ApplicationDisplays.InDisplayOrder(displays);
+        return View(record.Model);
     }
 
     [AdminMutationAudit]
@@ -2445,25 +2452,32 @@ public sealed partial class ManagementController(
     [HttpGet("basvurular/{id:guid}/duzenle")]
     public async Task<IActionResult> EditApplication(Guid id, CancellationToken cancellationToken)
     {
-        var model = await context.Forms.AsNoTracking()
+        var record = await context.Forms.AsNoTracking()
             .Where(form => form.Id == id && form.IsPublished)
-            .Select(form => new EditApplicationViewModel
+            .Select(form => new
             {
-                Id = form.Id,
-                ApplicationNumber = form.ApplicationNumber,
-                IsActive = form.IsActive,
-                PlayName = form.RepertoireName,
-                TheatreName = form.TheatreName,
-                PremiereDate = form.PremiereDate,
-                ApplicantName = form.ApplicantName,
-                ApplicantRole = form.ApplicantRole,
-                Phone = form.Phone,
-                Email = form.Email,
-                ContactName = form.ContactName,
-                ContactPhone = form.ContactPhone
+                Model = new EditApplicationViewModel
+                {
+                    Id = form.Id,
+                    ApplicationNumber = form.ApplicationNumber,
+                    IsActive = form.IsActive,
+                    PlayName = form.RepertoireName,
+                    TheatreName = form.TheatreName,
+                    PremiereDate = form.PremiereDate,
+                    ApplicantName = form.ApplicantName,
+                    ApplicantRole = form.ApplicantRole,
+                    Phone = form.Phone,
+                    Email = form.Email,
+                    ContactName = form.ContactName,
+                    ContactPhone = form.ContactPhone
+                },
+                form.Display
             })
             .SingleOrDefaultAsync(cancellationToken);
-        return model is null ? NotFound() : View(model);
+        if (record is null) return NotFound();
+        record.Model.DisplaysAvailable = ApplicationDisplays.TryParse(record.Display, out var displays);
+        record.Model.Displays = ApplicationDisplays.InDisplayOrder(displays);
+        return View(record.Model);
     }
 
     [AdminMutationAudit]
@@ -2483,6 +2497,20 @@ public sealed partial class ManagementController(
 
         var form = await context.Forms.SingleOrDefaultAsync(item => item.Id == id && item.IsPublished, cancellationToken);
         if (form is null) return NotFound();
+
+        model.DisplaysAvailable = ApplicationDisplays.TryParse(form.Display, out var existingDisplays);
+        var displayJson = form.Display;
+        if (model.DisplaysEdited)
+        {
+            if (!ApplicationDisplays.TrySerialize(form.Display, model.Displays, out displayJson, out var displayError))
+            {
+                ModelState.AddModelError(nameof(model.Displays), displayError ?? "Gösterim bilgilerini kontrol ediniz.");
+            }
+        }
+        else
+        {
+            model.Displays = ApplicationDisplays.InDisplayOrder(existingDisplays);
+        }
 
         if (!ModelState.IsValid || !model.PremiereDate.HasValue)
         {
@@ -2508,7 +2536,8 @@ public sealed partial class ManagementController(
             form.Phone != model.Phone ||
             form.Email != model.Email ||
             (form.ContactName ?? string.Empty) != (model.ContactName ?? string.Empty) ||
-            (form.ContactPhone ?? string.Empty) != (model.ContactPhone ?? string.Empty);
+            (form.ContactPhone ?? string.Empty) != (model.ContactPhone ?? string.Empty) ||
+            !string.Equals(form.Display, displayJson, StringComparison.Ordinal);
         if (!hasChanges)
         {
             TempData["GenericPopup.Type"] = "fail";
@@ -2527,6 +2556,7 @@ public sealed partial class ManagementController(
         form.Email = model.Email;
         form.ContactName = model.ContactName;
         form.ContactPhone = model.ContactPhone;
+        form.Display = displayJson;
         form.UpdatedDate = TurkeyTime.Now;
         await context.SaveChangesAsync(cancellationToken);
 
@@ -2547,6 +2577,7 @@ public sealed partial class ManagementController(
         model.Email = model.Email?.Trim() ?? string.Empty;
         model.ContactName = string.IsNullOrWhiteSpace(model.ContactName) ? null : model.ContactName.Trim();
         model.ContactPhone = string.IsNullOrWhiteSpace(model.ContactPhone) ? null : model.ContactPhone.Trim();
+        model.Displays ??= [];
     }
 
     [HttpGet("blacklists")]

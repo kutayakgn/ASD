@@ -823,7 +823,7 @@ img[src*="/icons/"] {
 
 .add-jury-actions {
     display: flex;
-    margin-top: 16px;
+    margin-top: 22px;
     align-items: center;
     justify-content: flex-end;
     gap: 12px;

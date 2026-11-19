@@ -54,4 +54,31 @@
             <div class="play-detail-field"><dt>İletişim Kurulacak Telefon</dt><dd>@DisplayValue(Model.ContactPhone)</dd></div>
         </dl>
     </section>
+
+    <div class="play-details-divider" role="separator"></div>
+
+    <section class="application-info-section" aria-labelledby="application-displays-title">
+        <h2 id="application-displays-title">Gösterimler</h2>
+        @if (!Model.DisplaysAvailable)
+        {
+            <p>Gösterim bilgileri görüntülenemiyor.</p>
+        }
+        else if (Model.Displays.Count == 0)
+        {
+            <p>Gösterim bulunmuyor.</p>
+        }
+        else
+        {
+            <dl class="application-details-grid">
+                @for (var index = 0; index < Model.Displays.Count; index++)
+                {
+                    var display = Model.Displays[index];
+                    <div class="play-detail-field">
+                        <dt>@(index + 1). Gösterim</dt>
+                        <dd>@DisplayValue(display.Location), @(display.Date?.ToString("dd . MM . yyyy") ?? "-")@(display.Time.HasValue ? $", {display.Time.Value:HH:mm}" : string.Empty)</dd>
+                    </div>
+                }
+            </dl>
+        }
+    </section>
 </section>

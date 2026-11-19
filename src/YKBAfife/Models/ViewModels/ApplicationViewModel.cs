@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using YKBAfife.Models.Components;
 
 namespace YKBAfife.Models.ViewModels;
@@ -41,6 +42,8 @@ public sealed class ApplicationsViewModel
 
 public sealed class ApplicationDetailsViewModel
 {
+    public List<ApplicationDisplayViewModel> Displays { get; set; } = [];
+    public bool DisplaysAvailable { get; set; } = true;
     public Guid Id { get; init; }
     public string ApplicationNumber { get; init; } = string.Empty;
     public string PlayName { get; init; } = string.Empty;
@@ -57,6 +60,12 @@ public sealed class ApplicationDetailsViewModel
 
 public sealed class EditApplicationViewModel
 {
+    public List<ApplicationDisplayViewModel> Displays { get; set; } = [];
+    public bool DisplaysEdited { get; set; }
+
+    [BindNever]
+    public bool DisplaysAvailable { get; set; } = true;
+
     public Guid Id { get; set; }
 
     [Required(ErrorMessage = "Başvuru no zorunludur.")]

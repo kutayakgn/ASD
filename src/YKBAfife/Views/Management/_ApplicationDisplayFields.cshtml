@@ -1,0 +1,40 @@
+@model YKBAfife.Models.ViewModels.ApplicationDisplayViewModel
+@{
+    var index = ViewData["DisplayIndex"]?.ToString() ?? "__index__";
+    var prefix = $"Displays[{index}]";
+    var locationId = $"application-display-{index}-location";
+    var heading = int.TryParse(index, out var rowIndex) ? $"{rowIndex + 1}. Gösterim" : "Gösterim";
+}
+<div class="application-display-row" data-application-display-row data-display-index="@index">
+    <input type="hidden" name="@(prefix).OriginalIndex" value="@Model.OriginalIndex" />
+    <h3 class="application-display-heading" data-display-heading>@heading</h3>
+    <div class="application-form-grid">
+        <div class="add-jury-field">
+            <label for="@locationId">Gösterim Yeri</label>
+            <input id="@locationId" name="@(prefix).Location" value="@Model.Location" type="text" required
+                   data-display-location data-track-change data-initial-value="@Model.Location"
+                   data-fail-message="Gösterim yeri zorunludur." />
+            @Html.ValidationMessage($"{prefix}.Location", null, new { @class = "field-validation-error" })
+        </div>
+        <div class="add-jury-field">
+            <partial name="_DatePicker" model="@(new YKBAfife.Models.Components.DatePickerViewModel
+            {
+                Id = $"application-display-{index}-date",
+                InputName = $"{prefix}.Date",
+                Label = "Gösterim Tarihi",
+                Value = Model.Date,
+                ValidationMessage = "Gösterim tarihi zorunludur.",
+                IncludeTime = true,
+                TimeValue = Model.Time,
+                TimeInputName = $"{prefix}.Time"
+            })" />
+            @Html.ValidationMessage($"{prefix}.Date", null, new { @class = "field-validation-error" })
+            @Html.ValidationMessage($"{prefix}.Time", null, new { @class = "field-validation-error" })
+        </div>
+    </div>
+    <div class="application-display-row-actions">
+        <button type="button" class="application-display-action application-display-remove" data-display-remove>
+            <img src="~/icons/trash.svg" alt="" aria-hidden="true" /><span>Gösterimi Kaldır</span>
+        </button>
+    </div>
+</div>
